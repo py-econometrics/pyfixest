@@ -1,16 +1,20 @@
+from __future__ import annotations
+
 from typing import cast
 
-import formulaic
 import numpy as np
 import pandas as pd
-from scipy.sparse import csr_matrix
+from scipy.sparse import csr_matrix, hstack
 from scipy.sparse.linalg import spsolve
 
 from pyfixest.did.did import DID
+from pyfixest.errors import NanInClusterVarError
 from pyfixest.estimation import feols
-from pyfixest.estimation.formula import model_matrix
+from pyfixest.estimation.formula import FORMULAIC_TRANSFORMS
 from pyfixest.estimation.formula.parse import Formula
+from pyfixest.estimation.internals.model_state import VarianceCovariance, VcovSpec
 from pyfixest.estimation.models.feols_ import Feols
+from pyfixest.estimation.post_estimation.fixed_effects import build_fixed_effect_dummies
 
 
 class DID2S(DID):
@@ -38,7 +42,7 @@ class DID2S(DID):
         Datetime variables are currently not accepted. Never treated units
         must have a value of 0.
     xfml : str
-        The formula for the covariates.
+        The formula for the regressors.
     att : str
         Whether to estimate the pooled average treatment effect on the treated
         (ATT) or the canonical event study design with all leads and lags / the
@@ -78,16 +82,11 @@ class DID2S(DID):
 
         if self._xfml is not None:
             self._fml1 = f" ~ {xfml} | {idname} + {tname}"
-            self._fml2 = f" ~ 0 + is_treated + {xfml}"
+            self._fml2 = f" ~ is_treated + {xfml}"
         else:
             self._fml1 = f" ~ 0 | {idname} + {tname}"
-            self._fml2 = " ~ 0 + is_treated"
+            self._fml2 = " ~ is_treated"
 
-        # first and second stage residuals
-        self._first_u = np.array([])
-        self._second_u = np.array([])
-
-        # column name with weights. None by default
         self._weights_name = weights
 
     def estimate(self):
@@ -99,31 +98,20 @@ class DID2S(DID):
             _second_stage=self._fml2,
             weights=self._weights_name,
             treatment="is_treated",
-        )  # returns triple Feols, first_u, second_u
+            cluster=cast(str, self._cluster),
+        )
 
     def vcov(self):
         """
         Variance-covariance matrix.
 
-        Calculates the variance-covariance matrix of the coefficient estimates
-        for the Difference-in-Differences (DiD) estimator.
+        The vcov matrix is calculated via the [Feols](/reference/estimation.models.feols_.Feols.qmd) object.
 
-        Returns
-        -------
-        array_like
-            The variance-covariance matrix of the coefficient estimates.
+        Notes
+        -----
+        Method not needed.
         """
-        return _did2s_vcov(
-            data=self._data,
-            yname=self._yname,
-            first_stage=self._fml1,
-            second_stage=self._fml2,
-            treatment="is_treated",
-            first_u=self._first_u,
-            second_u=self._second_u,
-            cluster=self._cluster,
-            weights=self._weights_name,
-        )
+        pass
 
     def iplot(
         self,
@@ -159,6 +147,7 @@ def _did2s_estimate(
     _first_stage: str,
     _second_stage: str,
     treatment: str,
+    cluster: str,
     weights: str | None = None,
 ):
     """
@@ -176,6 +165,8 @@ def _did2s_estimate(
         The formula for the second stage.
     treatment: str
         The name of the treatment variable. Must be boolean.
+    cluster: str
+        The name of the cluster variable.
     weights : Optional[str].
         Default is None. Weights for WLS estimation. If None, all observations
         are weighted equally. If a string, the name of the column in `data` that
@@ -184,37 +175,111 @@ def _did2s_estimate(
     Returns
     -------
     object
-        A fitted model object of class feols and the first and second stage residuals.
+        A fitted Feols model with the DID2S variance-covariance matrix.
     """
+    # Gardner's cluster score sum must include every estimation observation.
+    # Validate before either stage, rather than silently omitting NA clusters
+    # from the covariance while retaining their outcomes in the fit.
+    if yname not in data.columns:
+        raise ValueError(
+            f"did2s() yname={yname!r} must name an existing outcome column."
+        )
+    if cluster not in data.columns:
+        raise ValueError(
+            f"The cluster variable {cluster} is not in the data. "
+            "Pass the name of an existing cluster column to did2s()."
+        )
+    if data[cluster].isna().any():
+        raise NanInClusterVarError(
+            f"The cluster variable {cluster} contains missing values. "
+            "Drop those observations before calling did2s()."
+        )
+    n_clusters = data[cluster].nunique()
+    if n_clusters < 2:
+        raise ValueError(
+            f"did2s() requires at least two clusters. Column {cluster!r} has "
+            f"{n_clusters} distinct values. Check the data and cluster assignment."
+        )
+
     _first_stage_full = f"{yname} {_first_stage}"
     _second_stage_full = f"{yname}_hat {_second_stage}"
 
+    for name, stage in (("first_stage", _first_stage), ("second_stage", _second_stage)):
+        example = "~ 0 | unit + time" if name == "first_stage" else "~ i(relative_time)"
+        if not isinstance(stage, str):
+            raise TypeError(
+                f"did2s() {name} must be a formula string; got {type(stage).__name__}. "
+                f"For example, pass {name}={example!r}."
+            )
+        if not stage.lstrip().startswith("~"):
+            raise ValueError(
+                f"{name} must start with '~', got {stage!r}. "
+                f"For example, pass {name}={example!r}."
+            )
+    first_formulas = Formula.parse(_first_stage_full)
+    second_formulas = Formula.parse(_second_stage_full)
+    for name, formulas in (
+        ("first_stage", first_formulas),
+        ("second_stage", second_formulas),
+    ):
+        if len(formulas) != 1 or len(formulas[0].dependent) != 1:
+            raise ValueError(
+                f"{name} must specify a single model. Pass one formula without "
+                "stepwise operators."
+            )
+        if formulas[0].is_instrumental_variable:
+            raise ValueError(
+                f"{name} must not contain instrumental variables. "
+                "Use a stage formula without an instrument block."
+            )
+    if not first_formulas[0].is_fixed_effects:
+        raise ValueError(
+            "First stage formula must contain fixed effects. Add them after '|', "
+            "as in first_stage='~ 0 | unit + time'."
+        )
+    if first_formulas[0].has_varying_slopes:
+        raise ValueError(
+            "First stage formula must not contain varying slopes such as "
+            "`unit[year]`. did2s() imputes untreated outcomes from the estimated "
+            "fixed effects, which are not available for varying slopes."
+        )
+    if second_formulas[0].is_fixed_effects:
+        raise ValueError(
+            "Second stage formula must not contain fixed effects. Put fixed effects "
+            "in first_stage and use second_stage for the treatment terms."
+        )
+    if not any(term == "1" for term in second_formulas[0].exogenous):
+        raise ValueError(
+            "The second stage formula must not remove the intercept with '0' or '-1'. "
+            "The intercept is dropped automatically after categorical encoding."
+        )
+
     if treatment is not None:
         if treatment not in data.columns:
-            raise ValueError(f"The variable {treatment} is not in the data.")
+            raise ValueError(
+                f"Treatment column {treatment!r} is not in the data. Pass the name "
+                "of an existing Boolean or numeric treatment indicator."
+            )
         treat_u = data[treatment].unique()
         if len(treat_u) != 2:
             raise ValueError(
-                f"The treatment variable {treatment} must have 2 unique values but it has unique values {treat_u}."
+                f"The treatment variable {treatment} must have 2 unique values; "
+                f"found {len(treat_u)} (including {treat_u[:5].tolist()!r}). "
+                "Use 0 for untreated observations and 1 for treated observations."
             )
         if data[treatment].dtype in ["bool", "int64", "int32", "float64", "float32"]:
             data[treatment] = data[treatment].astype(bool)
         else:
             raise ValueError(
-                f"The treatment variable {treatment} must be boolean or numeric but it is of type {data[treatment].dtype}."
+                f"The treatment variable {treatment} must have dtype bool, int32, "
+                f"int64, float32, or float64; got {data[treatment].dtype}. Encode "
+                "untreated and treated observations as False/True or 0/1 with one "
+                "of these dtypes."
             )
         _not_yet_treated_data = data[data[treatment] == False]  # noqa: E712
     else:
         _not_yet_treated_data = data[data["is_treated"] == False]  # noqa: E712
 
-    # check if first stage formulas has fixed effects
-    if "|" not in _first_stage:
-        raise ValueError("First stage formula must contain fixed effects.")
-    # check if second stage formulas has fixed effects
-    if "|" in _second_stage:
-        raise ValueError("Second stage formula must not contain fixed effects.")
-
-    # estimate first stage
     fit1 = cast(
         Feols,
         feols(
@@ -225,18 +290,16 @@ def _did2s_estimate(
         ),
     )  # iid as it might be faster than CRV
 
-    # obtain estimated fixed effects
     fit1.fixef()
 
-    # demean data
     Y_hat = fit1.predict(newdata=data)
-    if np.isnan(Y_hat).any():
-        # levels present in the full data but absent from the first stage fit
-        # (fit on not-yet-treated observations only) predict to NaN
+    missing_predictions = int(np.isnan(Y_hat).sum())
+    if missing_predictions:
         raise ValueError(
-            "First-stage predictions contain NaN values because some fixed effect "
-            "levels were not observed in the not-yet-treated first-stage sample. "
-            "Drop those observations before calling did2s()."
+            f"First-stage predictions contain NaN values for {missing_predictions} "
+            "observations. Check for missing first-stage regressors or fixed-effect "
+            "levels absent from the not-yet-treated first-stage sample. "
+            "Check which observations have usable first-stage inputs before refitting."
         )
     _first_u = data[f"{yname}"].to_numpy().flatten() - Y_hat
     data[f"{yname}_hat"] = _first_u
@@ -252,120 +315,96 @@ def _did2s_estimate(
             weights=weights,
         ),
     )
-    _second_u = fit2.resid()
-
-    return fit2, _first_u, _second_u
+    vcov, G = _did2s_vcov(
+        data=data,
+        first_stage=fit1,
+        second_stage=fit2,
+        treatment=treatment,
+        cluster=cluster,
+    )
+    fit2.variance_covariance = _did2s_covariance(
+        fit=fit2, vcov=vcov, G=G, cluster=cluster
+    )
+    return fit2
 
 
 def _did2s_vcov(
+    *,
+    first_stage: Feols,
+    second_stage: Feols,
     data: pd.DataFrame,
-    yname: str,
-    first_stage: str,
-    second_stage: str,
     treatment: str,
-    first_u: np.ndarray,
-    second_u: np.ndarray,
     cluster: str,
-    weights: str | None = None,
 ):
     """
-    Variance-Covariance matrix for DID2S.
+    Variance-covariance matrix for DID2S.
 
-    Compute a variance covariance matrix for Gardner's 2-stage Difference-in-Differences
+    Compute a variance-covariance matrix for Gardner's 2-stage Difference-in-Differences
     Estimator.
 
     Parameters
     ----------
+    first_stage: Feols
+        The fitted first-stage model on not-yet-treated observations.
+    second_stage: Feols
+        The fitted model from the second DID2S stage, using first-stage
+        residuals as the dependent variable. The variance estimator uses
+        this fit's residuals and observation weights.
     data: pandas.DataFrame
-        The DataFrame containing all variables.
-    yname: str
-        The name of the dependent variable.
-    first_stage: str
-        The formula for the first stage.
-    second_stage: str
-        The formula for the second stage.
+        The DataFrame containing all variables, aligned with the second-stage fit.
     treatment: str
         The name of the treatment variable.
-    first_u: np.ndarray
-        The first stage residuals.
-    second_u: np.ndarray
-        The second stage residuals.
     cluster: str
         The name of the cluster variable.
-    weights : Optional[str].
-        Default is None. Weights for WLS estimation. If None, all observations
-        are weighted equally. If a string, the name of the column in `data` that
-        contains the weights.
 
     Returns
     -------
-        A variance covariance matrix.
+        A variance-covariance matrix.
     """
     cluster_col = data[cluster]
     _, clustid = pd.factorize(cluster_col)
 
-    _G = clustid.nunique()  # actually not used here, neither in did2s
+    # `clustid` (factorize's `uniques`) is an `Index` for a Series input; the
+    # pandas stubs also allow `ndarray`, which lacks `.nunique()`.
+    _G = cast(pd.Index, clustid).nunique()
 
-    if weights is None:
+    # Work on copies: square-root weighting must not mutate the fitted state.
+    first_u = second_stage.model_matrix.dependent.to_numpy().flatten()
+    second_u = second_stage.resid().copy()
+    observation_weights = second_stage.observation_weights.values
+    if observation_weights is None:
         weights_array = np.repeat(1.0, data.shape[0])
     else:
-        weights_array = np.sqrt(data[weights].to_numpy())
+        weights_array = np.sqrt(observation_weights)
 
-    # some formula parsing to get the correct formula for the first and second stage model matrix
-    first_stage_x, first_stage_fe = first_stage.split("|")
-    first_stage_fe_list = [f"C({i.strip()})" for i in first_stage_fe.split("+")]
-    first_stage_fe_fml = "+".join(first_stage_fe_list)
-    first_stage_fml = f"{first_stage_x}+{first_stage_fe_fml}"
-
-    # note for future Alex: intercept needs to be dropped! it is not as fixed
-    # effects are converted to dummies, hence has_fixed checks are False
-
-    # Create Formula objects for the new model_matrix system.
-    # First stage: use `- 1` so that C() dummy encoding keeps all levels,
-    # matching the feols demeaning approach (which implicitly includes all
-    # fixed-effect levels). Removing `- 1` would cause formulaic to drop
-    # reference levels, changing the GMM vcov standard errors.
-    FML1 = Formula(
-        _formula=formulaic.Formula(
-            f"{yname} ~ {first_stage_fml.replace('~', '').strip()} - 1"
-        )
+    # Replay fitted encodings on the full sample: raw FE expressions must never
+    # be evaluated as Python (in particular, `a^b` is not a bitwise XOR).
+    model_spec = first_stage.model.model_spec
+    assert model_spec is not None
+    context = FORMULAIC_TRANSFORMS | dict(first_stage.options.context)
+    fe_codes = model_spec["fe"].get_model_matrix(
+        data, context=context, na_action="ignore"
     )
-    # Second stage: do NOT use `- 1`. Formulaic needs the intercept present
-    # for full-rank encoding (dropping a reference level for factors like
-    # i(treat)). The intercept column is then removed by drop_intercept=True
-    # below, matching what feols does in _did2s_estimate.
-    FML2 = Formula(
-        _formula=formulaic.Formula(f"{yname} ~ {second_stage.replace('~', '').strip()}")
+    dummies = build_fixed_effect_dummies(
+        codes=fe_codes, formulaic_columns=fe_codes.columns
+    )
+    covariates = model_spec["second_stage"].rhs.get_model_matrix(data, context=context)[
+        first_stage._coefnames
+    ]
+    X1 = (
+        hstack([csr_matrix(covariates.to_numpy()), dummies.matrix], format="csr")
+        .multiply(weights_array[:, None])
+        .tocsr()
+    )
+    X2 = csr_matrix(
+        second_stage.model_matrix.independent[second_stage._coefnames].to_numpy()
+        * weights_array[:, None]
     )
 
-    mm_first_stage = model_matrix.create_model_matrix(
-        formula=FML1,
-        data=data,
-        weights=None,
-        drop_singletons=False,
-        ensure_full_rank=True,
-        drop_intercept=True,
-    )
-    X1 = mm_first_stage.independent
-
-    mm_second_stage = model_matrix.create_model_matrix(
-        formula=FML2,
-        data=data,
-        weights=None,
-        drop_singletons=False,
-        ensure_full_rank=True,
-        drop_intercept=True,
-    )
-    X2 = mm_second_stage.independent
-
-    X1 = csr_matrix(X1.to_numpy() * weights_array[:, None])
-    X2 = csr_matrix(X2.to_numpy() * weights_array[:, None])
-
-    # Weight first and second stage residuals
     first_u *= weights_array
     second_u *= weights_array
 
-    X10 = X1.copy().tocsr()  # type: ignore
+    X10 = X1.copy().tocsr()
     treated_rows = np.where(data[treatment], 0, 1)
     X10 = X10.multiply(treated_rows[:, None])
 
@@ -373,13 +412,13 @@ def _did2s_vcov(
     X2X1 = X2.T.dot(X1)
     X2X2 = X2.T.dot(X2)  # tocsc() to fix spsolve efficiency warning
 
-    V = spsolve(X10X10.tocsc(), X2X1.T.tocsc()).T  # type: ignore
+    V = spsolve(X10X10.tocsc(), X2X1.T.tocsc()).T
 
     k = X2.shape[1]
     vcov = np.zeros((k, k))
 
     X10 = X10.tocsr()
-    X2 = X2.tocsr()  # type: ignore
+    X2 = X2.tocsr()
 
     for _, g in enumerate(clustid):
         idx_g: np.ndarray = cluster_col.values == g
@@ -397,3 +436,27 @@ def _did2s_vcov(
         vcov += cov_g
 
     return vcov, _G
+
+
+def _did2s_covariance(
+    *, fit: Feols, vcov: np.ndarray, G: int, cluster: str
+) -> VarianceCovariance:
+    """Package the cluster-robust GMM variance-covariance matrix for DID2S.
+
+    The second-stage fit was estimated with ``vcov="iid"``; its degrees of
+    freedom and adjustment factor are kept. The spec records the cluster
+    variable, so `wald_test`, `wildboottest`, and `ccv` treat the fit as
+    clustered.
+    """
+    inner = fit.variance_covariance
+    return VarianceCovariance(
+        vcov=vcov,
+        meat=None,
+        ssc=np.ones(1),
+        df_k=inner.df_k,
+        df_t=inner.df_t,
+        spec=VcovSpec(
+            vcov_type="CRV", vcov_type_detail="CRV1 (GMM)", clustervar=(cluster,)
+        ),
+        G=(int(G),),
+    )

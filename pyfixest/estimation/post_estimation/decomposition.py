@@ -1,17 +1,20 @@
 import itertools
 import warnings
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, cast
 
 import numpy as np
 import pandas as pd
 from joblib import Parallel, delayed
 from numpy.typing import NDArray
-from scipy.sparse import diags, hstack, spmatrix, vstack
-from scipy.sparse.linalg import lsqr
+from scipy.sparse import csc_matrix, diags, hstack, vstack
 from tqdm import tqdm
 
-# Panel name mappings for consistent API
+from pyfixest.estimation.internals.solvers import solve_lsqr
+from pyfixest.utils.dev_utils import _find_stack_level
+
+_GELBACH_TASK = "The Gelbach decomposition"
+
 PANEL_ALIASES = {
     "levels": "Levels (units)",
     "share_full": "Share of Full Effect",
@@ -101,8 +104,8 @@ class GelbachDecomposition:
 
     Implements the Gelbach (2016) decomposition method to decompose the effect of a
     focal variable into explained and unexplained components. The method
-    compares coefficients from a "short" regression (outcome on treatment) with a
-    "long" regression (outcome on focal variable plus covariates).
+    compares the treatment coefficient across two models. The short model
+    uses treatment alone, and the long model adds the other regressors.
 
     Initial implementation by Apoorva Lal at
     https://gist.github.com/apoorvalal/e7dc9f3e52dcd9d51854b28b3e8a7ba4.
@@ -132,9 +135,9 @@ class GelbachDecomposition:
     only_coef : bool, optional
         If True, skip bootstrap inference and only compute point estimates, by default True.
     atol : float, optional
-        Absolute tolerance for linear solver, by default None.
+        Absolute tolerance for linear solver, by default 1e-6.
     btol : float, optional
-        Relative tolerance for linear solver, by default None.
+        Relative tolerance for linear solver, by default 1e-6.
 
     Attributes
     ----------
@@ -149,7 +152,6 @@ class GelbachDecomposition:
 
     """
 
-    # Core parameters
     decomp_var: str
     coefnames: list[str]
     depvarname: str
@@ -159,13 +161,13 @@ class GelbachDecomposition:
     combine_covariates: dict[str, list[str]] | None = None
     agg_first: bool | None = False
     only_coef: bool = True
-    atol: float | None = None
-    btol: float | None = None
+    atol: float = 1e-6
+    btol: float = 1e-6
 
-    # Define attributes initialized post-creation
     cluster_dict: dict[Any, Any] | None = field(init=False, default=None)
     unique_clusters: np.ndarray | None = field(init=False, default=None)
     mask: np.ndarray = field(init=False)
+    x1_indices: list[int] = field(init=False)
     mediator_names: list[str] = field(init=False)
     X_dict: dict[Any, Any] = field(init=False, default_factory=dict)
     X1_dict: dict[Any, Any] = field(init=False, default_factory=dict)
@@ -179,18 +181,17 @@ class GelbachDecomposition:
             else [self.decomp_var, *self.x1_vars]
         )
 
-        # build index for all variables in X1: decomp_var, x1_vars
-        x1_indices = [self.coefnames.index(var) for var in x1_variables]
+        self._check_covariates()
+        self.x1_indices = [self.coefnames.index(var) for var in x1_variables]
         self.mask = np.ones(len(self.coefnames), dtype=bool)
-        self.mask[x1_indices] = False
+        self.mask[self.x1_indices] = False
 
         self.mediator_names = [
             name for name in self.coefnames if self.mask[self.coefnames.index(name)]
         ]
 
-        # Handle clustering setup if cluster_df is provided
         if self.cluster_df is not None and not self.only_coef:
-            self.unique_clusters = self.cluster_df.unique()
+            self.unique_clusters = cast(np.ndarray, self.cluster_df.unique())
             self.cluster_dict = {
                 cluster: self.cluster_df[self.cluster_df == cluster].index
                 for cluster in self.unique_clusters
@@ -204,33 +205,51 @@ class GelbachDecomposition:
                 x: [x] for x in self.mediator_names if x != "Intercept"
             }
         else:
-            self.combine_covariates_dict = self.combine_covariates
+            self.combine_covariates_dict = dict(self.combine_covariates)
 
         if self.combine_covariates is not None and not self.agg_first:
             warnings.warn(
-                "You have provided combine_covariates, but agg_first is False. We recommend setting agg_first=True as this might massively decrease the computation time (in particular when boostrapping CIs)."
+                "You have provided combine_covariates, but agg_first is False. We recommend setting agg_first=True as this might massively decrease the computation time (in particular when boostrapping CIs).",
+                UserWarning,
+                stacklevel=_find_stack_level(),
             )
 
-        self._check_covariates()
         self._check_combine_covariates()
+        self.combine_covariates_dict = {
+            name: list(covariates)
+            for name, covariates in self.combine_covariates_dict.items()
+        }
+
+        grouped = set(
+            itertools.chain.from_iterable(self.combine_covariates_dict.values())
+        )
+        remainder = [
+            name
+            for name in self.mediator_names
+            if name != "Intercept" and name not in grouped
+        ]
+        if remainder:
+            self.combine_covariates_dict.setdefault("Other", []).extend(remainder)
 
     def _check_covariates(self):
         if self.decomp_var not in self.coefnames:
             raise ValueError(
-                f"The decomposition variable '{self.decomp_var}' is not in the coefficient names."
+                f"The decomposition variable '{self.decomp_var}' is not in the coefficient names. "
+                "Choose decomp_var from fit.coef().index."
             )
         if self.x1_vars is not None:
             for var in self.x1_vars:
                 if var not in self.coefnames:
                     raise ValueError(
-                        f"The variable '{var}' is not in the coefficient names."
+                        f"The variable '{var}' in x1_vars is not in the coefficient names. "
+                        "Use estimated coefficient names from fit.coef().index."
                     )
         if self.x1_vars is not None and self.decomp_var in self.x1_vars:
             raise ValueError(
-                f"The decomposition variable '{self.decomp_var}' cannot be included in the x1_vars argument."
+                f"The decomposition variable '{self.decomp_var}' cannot be included in the "
+                "x1_vars argument. Pass it only as decomp_var."
             )
 
-        # Check x1_vars don't overlap with combine_covariates keys
         if self.x1_vars is not None and self.combine_covariates is not None:
             combine_values = set(
                 list(itertools.chain.from_iterable(self.combine_covariates.values()))
@@ -239,21 +258,24 @@ class GelbachDecomposition:
             overlap = x1_set & combine_values
             if overlap:
                 raise ValueError(
-                    f"Variables {sorted(overlap)} cannot be in both x1_vars and combine_covariates keys."
+                    f"Variables {sorted(overlap)} cannot be in both x1_vars and combine_covariates "
+                    "groups. Assign each term to the baseline or to a mediator group."
                 )
 
     def _check_combine_covariates(self):
-        # Check that each value in self.combine_covariates_dict is in self.mediator_names
-        for _, values in self.combine_covariates_dict.items():
+        for group, values in self.combine_covariates_dict.items():
             if not isinstance(values, list):
-                raise TypeError("Values in combine_covariates_dict must be lists.")
+                raise TypeError(
+                    f"combine_covariates[{group!r}] must be a list of coefficient names. "
+                    "For example, pass combine_covariates={'group': ['x1', 'x2']}."
+                )
             for v in values:
                 if v not in self.mediator_names:
                     raise ValueError(
-                        f"The variable '{v}' is not in the mediator names."
+                        f"The variable '{v}' in combine_covariates[{group!r}] is not in the mediator "
+                        "names. Choose a coefficient outside decomp_var and x1_vars."
                     )
 
-        # Check for overlap in values between different keys
         all_values = {
             k: set([v] if isinstance(v, str) else v)
             for k, v in self.combine_covariates_dict.items()
@@ -263,12 +285,13 @@ class GelbachDecomposition:
                 if key1 != key2 and values1 & values2:
                     overlap = values1 & values2
                     raise ValueError(
-                        f"Variables {overlap} are in both '{key1}' and '{key2}' groups."
+                        f"Variables {overlap} are in both '{key1}' and '{key2}' groups. "
+                        "Assign each mediator to one group."
                     )
 
     def fit(
         self,
-        X: spmatrix,
+        X: csc_matrix,
         Y: np.ndarray,
         weights: np.ndarray | None = None,
         store: bool = True,
@@ -278,7 +301,8 @@ class GelbachDecomposition:
             self.X = X
             self.Y = Y
 
-            self.X1 = self.X[:, ~self.mask]
+            # keep X1 columns in the order of names_X1, not the formula order
+            self.X1 = self.X[:, self.x1_indices]
             self.X1 = hstack([np.ones((self.X1.shape[0], 1)), self.X1])
             self.X2 = self.X[:, self.mask]
 
@@ -295,7 +319,8 @@ class GelbachDecomposition:
                     self.N = int(N)
                 else:
                     raise ValueError(
-                        "The sum of weights is not an integer, which is not supported with frequency weights."
+                        f"The sum of weights is not an integer (got {N:g}), which is not supported "
+                        "with frequency weights. Check the counts in the weights column."
                     )
             else:
                 self.N = X.shape[0]
@@ -322,7 +347,6 @@ class GelbachDecomposition:
                 self.results,
             ) = results
 
-            # Prepare cluster bootstrap if relevant
             self.X_dict = {}
             self.Y_dict = {}
 
@@ -335,9 +359,7 @@ class GelbachDecomposition:
             return self.results
 
         else:
-            # need to compute X1, X2 in bootstrap sample
-
-            X1 = hstack([np.ones((X.shape[0], 1)), X[:, ~self.mask]])
+            X1 = hstack([np.ones((X.shape[0], 1)), X[:, self.x1_indices]])
             X2 = X[:, self.mask]
 
             results = self.compute_gelbach(
@@ -357,9 +379,8 @@ class GelbachDecomposition:
 
             return bootstrap_results
 
-    def bootstrap(self, rng: np.random.Generator, B: int = 1_000, alpha: float = 0.05):
-        "Bootstrap Confidence Intervals for Total, Mediated and Direct Effects."
-        self.alpha = alpha
+    def bootstrap(self, rng: np.random.Generator, B: int = 1_000):
+        """Draw bootstrap replications for Total, Mediated and Direct Effects."""
         self.B = B
 
         # convert to csr for easier vstacking
@@ -367,24 +388,14 @@ class GelbachDecomposition:
             self.X_dict = {g: self.X_dict[g].tocsr() for g in self.X_dict}
 
         _bootstrapped = Parallel(n_jobs=self.nthreads)(
-            delayed(self._bootstrap)(rng=rng) for _ in tqdm(range(B))
+            delayed(self._bootstrap)(rng=child_rng) for child_rng in tqdm(rng.spawn(B))
         )
 
-        # unpack
         (
             self._bootstrap_absolute_df,
             self._bootstrap_relative_explained_df,
             self._bootstrap_relative_direct_df,
         ) = self._unpack_bootstrap_results(_bootstrapped)
-
-        # compute ci
-        self._absolute_ci = self._compute_ci(self._bootstrap_absolute_df, alpha)
-        self._relative_explained_ci = self._compute_ci(
-            self._bootstrap_relative_explained_df, alpha
-        )
-        self._relative_direct_ci = self._compute_ci(
-            self._bootstrap_relative_direct_df, alpha
-        )
 
     def _compute_ci(self, bootstrap_df: pd.DataFrame, alpha: float) -> pd.DataFrame:
         """Compute confidence intervals from bootstrap DataFrame.
@@ -453,10 +464,10 @@ class GelbachDecomposition:
 
     def compute_gelbach(
         self,
-        X1: spmatrix,
-        X2: spmatrix,
+        X1: csc_matrix,
+        X2: csc_matrix,
         Y: np.ndarray,
-        X: spmatrix,
+        X: csc_matrix,
         agg_first: bool | None,
     ) -> tuple[
         np.ndarray,
@@ -467,18 +478,19 @@ class GelbachDecomposition:
         "Run the Gelbach decomposition."
         N = X1.shape[0]
 
-        # Compute direct effect
-        direct_effect = lsqr(X1, Y, atol=self.atol, btol=self.btol)[0]
+        direct_effect = solve_lsqr(
+            A=X1, b=Y, atol=self.atol, btol=self.btol, task=_GELBACH_TASK
+        )
         direct_effect_array = np.array([direct_effect[self.decomp_var_in_X1_idx]])
 
-        # Compute beta_full and beta2
-        beta_full = lsqr(X, Y, atol=self.atol, btol=self.btol)[0]
+        beta_full = solve_lsqr(
+            A=X, b=Y, atol=self.atol, btol=self.btol, task=_GELBACH_TASK
+        )
         beta2 = beta_full[self.mask]
 
         mediator_effects = {}
 
         if agg_first:
-            # Compute H and Hg
             H = X2.multiply(beta2).tocsc()  # csc better for slicing columns than csr
             Hg = np.zeros((N, len(self.combine_covariates_dict)))
 
@@ -486,10 +498,11 @@ class GelbachDecomposition:
                 variable_idx = [self.mediator_names.index(cov) for cov in covariates]
                 Hg[:, i] = np.sum(H[:, variable_idx], axis=1).flatten()
 
-            # Compute delta
             delta = np.array(
                 [
-                    lsqr(X1, Hg[:, j])[0][self.decomp_var_in_X1_idx]
+                    solve_lsqr(A=X1, b=Hg[:, j], task=_GELBACH_TASK)[
+                        self.decomp_var_in_X1_idx
+                    ]
                     for j in range(Hg.shape[1])
                 ]
             )
@@ -499,7 +512,9 @@ class GelbachDecomposition:
         else:
             gamma = np.array(
                 [
-                    lsqr(X1, X2[:, j].toarray().flatten())[0][self.decomp_var_in_X1_idx]
+                    solve_lsqr(
+                        A=X1, b=X2[:, j].toarray().flatten(), task=_GELBACH_TASK
+                    )[self.decomp_var_in_X1_idx]
                     for j in range(X2.shape[1])
                 ]
             )
@@ -552,7 +567,9 @@ class GelbachDecomposition:
         ----------
         alpha : float, optional
             The significance level for the confidence intervals, by default 0.05.
-            Computes a 95% confidence interval when alpha = 0.05.
+            Computes a 95% percentile bootstrap confidence interval when
+            alpha = 0.05. Ignored when the decomposition was fit with
+            `only_coef=True`.
         panels : str, optional
             Which panels to include. One of 'all', 'levels', 'share_explained',
             'share_full', by default "all". Also accepts full names for backward compatibility.
@@ -567,13 +584,25 @@ class GelbachDecomposition:
         relative_direct_df = self._dict_to_df(self.results.relative_to_direct)
 
         if not self.only_coef:
-            absolute_df = pd.concat([absolute_df, self._absolute_ci], axis=1)
+            if not 0 < alpha < 1:
+                raise ValueError(f"alpha must be in (0, 1). Got {alpha}.")
+            absolute_df = pd.concat(
+                [absolute_df, self._compute_ci(self._bootstrap_absolute_df, alpha)],
+                axis=1,
+            )
             relative_explained_df = pd.concat(
-                [relative_explained_df, self._relative_explained_ci],
+                [
+                    relative_explained_df,
+                    self._compute_ci(self._bootstrap_relative_explained_df, alpha),
+                ],
                 axis=1,
             )
             relative_direct_df = pd.concat(
-                [relative_direct_df, self._relative_direct_ci], axis=1
+                [
+                    relative_direct_df,
+                    self._compute_ci(self._bootstrap_relative_direct_df, alpha),
+                ],
+                axis=1,
             )
 
         absolute_df["panels"] = np.repeat("Levels (units)", len(absolute_df))
@@ -703,7 +732,6 @@ class GelbachDecomposition:
         elif panel_name == "Share of Explained Effect":
             summary_data[self.decomp_var]["direct_effect"] = "-"
             summary_data[self.decomp_var]["full_effect"] = "-"
-            # Remove CIs entirely
             if not self.only_coef:
                 summary_data.pop(f"{self.decomp_var}_ci", None)
 
@@ -714,7 +742,6 @@ class GelbachDecomposition:
         df = pd.DataFrame(summary_data).T
         df.columns = ["direct_effect", "full_effect", "explained_effect"]
 
-        # Clean up CI row names
         df.index = pd.Index(["" if name.endswith("_ci") else name for name in df.index])
 
         return df
@@ -806,8 +833,7 @@ class GelbachDecomposition:
                 f"The 'panel_heads' parameter must have length {len(panel_list)} to match the number of panels panels. Got {len(panel_heads)}."
             )
 
-        # Build formatted DataFrame directly
-        digits = kwargs.get("digits", 3)  # Default to 3 if not specified
+        digits = kwargs.get("digits", 3)
         df = self.tidy(panels="all").round(digits)
         panels_to_include = df["panels"].unique()
 
@@ -915,7 +941,6 @@ class GelbachDecomposition:
             **kwargs,
         )
 
-        # Return based on type parameter
         if output_type == "gt":
             return table.make(type="gt")
         elif output_type == "tex":
@@ -1002,10 +1027,8 @@ class GelbachDecomposition:
         """
         from pyfixest.report.visualize_decomposition import create_decomposition_plot
 
-        # Get the decomposition data
         df = self.tidy()
 
-        # Call the standalone plotting function
         create_decomposition_plot(
             decomposition_data=df,
             depvarname=self.depvarname,
@@ -1039,11 +1062,14 @@ def _decompose_arg_check(
 
     if has_weights and weights_type != "fweights":
         raise NotImplementedError(
-            "Decomposition is currently only supported for models with frequency weights."
+            "Decomposition is currently only supported for models with frequency weights "
+            "when weights are supplied. Choose weights_type='fweights' only if your "
+            "weights represent observation counts."
         )
     if has_weights and not only_coef:
         raise NotImplementedError(
-            "Decomposition is currently only supported for models with frequency weights when only_coef is False."
+            "Decomposition inference is unavailable with frequency weights. "
+            "Use only_coef=True to compute the decomposition without inference."
         )
 
     if is_iv:

@@ -1,109 +1,252 @@
+from __future__ import annotations
+
+import copy
 import warnings
+from collections import Counter
 from collections.abc import Mapping
-from dataclasses import dataclass
-from typing import Any, Final
+from dataclasses import dataclass, replace
+from types import MappingProxyType
+from typing import Any, Final, Literal, TypeAlias, cast
 
 import formulaic
 import numpy as np
 import pandas as pd
+from formulaic.model_matrix import ModelMatrices
 from formulaic.parser import DefaultFormulaParser
+from formulaic.parser.types import Factor, Term
 from numpy.typing import NDArray
+from within import Effect
 
 from pyfixest.core.detect_singletons import detect_singletons
+from pyfixest.errors import FormulaSyntaxError
 from pyfixest.estimation.formula import FORMULAIC_FEATURE_FLAG, FORMULAIC_TRANSFORMS
-from pyfixest.estimation.formula.formulaic_compat import flatten_model_matrix
-from pyfixest.estimation.formula.parse import Formula
+from pyfixest.estimation.formula.formulaic_compat import (
+    flatten_model_matrix,
+    get_fixed_effect_encoding,
+)
+from pyfixest.estimation.formula.parse import (
+    FixedEffectSpecification,
+    Formula,
+    render_term,
+)
 from pyfixest.estimation.formula.utils import _get_weights
+from pyfixest.estimation.internals.literals import DropStageOptions
+from pyfixest.estimation.internals.model_state import DroppedRowCounts
 from pyfixest.utils.utils import capture_context
+
+_ModelSpecMapping: TypeAlias = Mapping[str, formulaic.ModelSpec]
+_ModelMatrixRole: TypeAlias = Literal[
+    "dependent",
+    "independent",
+    "fixed_effects",
+    "fixed_effect_slopes",
+    "endogenous",
+    "instruments",
+    "weights",
+    "offset",
+]
+ColumnKey: TypeAlias = tuple[str, str]
 
 
 @dataclass(frozen=True, kw_only=True)
 class _ModelMatrixKey:
     main: str = "second_stage"
     fixed_effects: str = "fe"
+    fixed_effect_slopes: str = "fe_slopes"
     instrumental_variable: str = "first_stage"
     weights: str = "weights"
     offset: str = "offset"
 
 
+_ROLE_PATHS: Final[Mapping[_ModelMatrixRole, tuple[str, ...]]] = MappingProxyType(
+    {
+        "dependent": (_ModelMatrixKey.main, "lhs"),
+        "independent": (_ModelMatrixKey.main, "rhs"),
+        "fixed_effects": (_ModelMatrixKey.fixed_effects,),
+        "fixed_effect_slopes": (_ModelMatrixKey.fixed_effect_slopes,),
+        "endogenous": (_ModelMatrixKey.instrumental_variable, "lhs"),
+        "instruments": (_ModelMatrixKey.instrumental_variable, "rhs"),
+        "weights": (_ModelMatrixKey.weights,),
+        "offset": (_ModelMatrixKey.offset,),
+    }
+)
+
+
 class ModelMatrix:
     """
-    A wrapper around formulaic.ModelMatrix for the specification of PyFixest models.
+    Filter and organize the model matrix produced by Formulaic by input role.
 
-    This class organizes and processes model matrices for econometric estimation,
-    extracting dependent and independent variables, fixed effects, instrumental
-    variables, and weights. It handles missing data, singleton observations,
-    and ensures proper formatting for estimation procedures.
+    The model matrix contains the dependent variable, regressors, fixed-effect
+    levels and varying-slope variables, instruments, observation weights, and
+    offsets as specified by the formula and estimation options.
 
-    An internal API. Instances are built by the `prepare_model_matrix` step of
-    the fit pipeline from a materialized `formulaic.ModelMatrix` and are not
-    constructed directly. There is therefore no standalone example. Formulas are
-    written as strings and passed to
-    [feols()](/reference/estimation.api.feols.feols.qmd). See the
-    [formula syntax tutorial](/tutorials/formula-syntax.qmd) for the syntax.
+    Construction filters rows; later filtering goes through `without_rows()`,
+    so row identity, dropped-row tracking, and cache keys stay aligned with
+    the estimation sample. The retained tables are read-only: within and
+    solver transforms produce separate arrays, and prediction and refits reuse
+    the fitted encoding when they need the original design.
+
+    Obtain this component from ``fit.model_matrix``. Its properties expose
+    each role as a pandas DataFrame for inspection and internal
+    calculations. See the
+    [formula syntax tutorial](/tutorials/formula-syntax.qmd).
+
+    Parameters
+    ----------
+    model_matrix : formulaic.model_matrix.ModelMatrices
+        Formulaic matrices containing the dependent variable, regressors,
+        and any fixed effects, instruments, weights, or offsets.
+    drop_rows : frozenset[int]
+        Row positions already removed when constructing the model matrix.
+    drop_singletons : bool, default True
+        Whether to drop rows in singleton levels.
+    drop_intercept : bool, default False
+        Whether to remove the intercept.
+    fixed_effect_specifications : tuple[FixedEffectSpecification, ...], default ()
+        Parsed fixed effects, which say whether each effect has an intercept
+        and which varying slopes it has.
+
+    Examples
+    --------
+    ```{python}
+    import pyfixest as pf
+
+    fit = pf.feols("Y ~ X1 | f1", pf.get_data())
+    fit.model_matrix.dependent.head()
+    ```
+
+    This instance retains the model matrix after construction.
+    Estimator-level row filters such as GLM
+    separation call `without_rows`, which returns a filtered copy instead of
+    mutating the instance.
 
     Attributes
     ----------
     dependent : pd.DataFrame
-        The dependent variable(s) (left-hand side of the main equation).
+        The dependent variable (left-hand side of the main equation).
     independent : pd.DataFrame
-        The independent variable(s) (right-hand side of the main equation).
+        The regressors of the main equation.
     fixed_effects : pd.DataFrame or None
-        Fixed effects variables, encoded as integers.
+        Fixed-effect levels, encoded as integers.
+    effects : list[within.Effect] or None
+        Complete fixed effects with level codes, intercept flags, and varying-slope
+        variables, or None when no fixed effects are specified.
     endogenous : pd.DataFrame or None
-        Endogenous variables in instrumental variable specifications.
+        The endogenous regressor in an IV model.
     instruments : pd.DataFrame or None
-        Instrumental variables for IV estimation.
+        Instruments for the IV model.
     weights : pd.DataFrame or None
         Observation weights for weighted estimation.
-    model_spec : formulaic.ModelSpec
-        The underlying formulaic model specification.
-    na_index : frozenset[int]
-        Indices of rows that were dropped.
+    model_spec : Mapping[str, formulaic.ModelSpec]
+        The underlying formulaic model specifications keyed by role.
+    n_rows : int
+        Number of rows that survived every filtering stage.
+    dropped_row_index : frozenset[int]
+        Positions of the dropped rows in the frame the matrix was built from.
+    dropped_by_stage : DroppedRowCounts
+        Dropped rows counted by the filtering stage that removed them.
     """
+
+    _data: pd.DataFrame
 
     def __init__(
         self,
-        model_matrix: formulaic.ModelMatrix,
+        model_matrix: ModelMatrices,
         drop_rows: frozenset[int],
         drop_singletons: bool = True,
         drop_intercept: bool = False,
+        fixed_effect_specifications: tuple[FixedEffectSpecification, ...] = (),
     ) -> None:
         self._drop_intercept = drop_intercept
-        self._model_spec = model_matrix.model_spec
-        self._na_index = drop_rows
+        self._fixed_effect_specifications = fixed_effect_specifications
+        self._model_spec = cast(_ModelSpecMapping, model_matrix.model_spec)
         self._collect_columns(model_matrix)
         self._collect_data(model_matrix)
+        # formulaic's `na_action="drop"` removed `drop_rows` for missing values;
+        # the later stages add the rows they drop.
+        self._dropped_row_index = drop_rows
+        self._dropped_by_stage = DroppedRowCounts(missing=len(drop_rows))
         self._process(drop_singletons=drop_singletons)
 
     @staticmethod
-    def _get_columns(mm: formulaic.ModelMatrix, *keys: str) -> list[str] | None:
-        """Extract column names by traversing nested keys, or None if missing."""
+    def _get_columns(mm: ModelMatrices, *, role: _ModelMatrixRole) -> list[str] | None:
+        """Extract a role's column names, or None if its matrix is missing."""
+        path = _ROLE_PATHS[role]
         try:
             result = mm
-            for k in keys:
+            for k in path:
                 result = result[k]
             return result.columns.tolist()
         except KeyError:
             return None
 
-    def _collect_columns(self, model_matrix: formulaic.ModelMatrix) -> None:
-        self._dependent = self._get_columns(model_matrix, _ModelMatrixKey.main, "lhs")
-        self._independent = self._get_columns(model_matrix, _ModelMatrixKey.main, "rhs")
-        self._fixed_effects = self._get_columns(
-            model_matrix, _ModelMatrixKey.fixed_effects
+    def _collect_columns(self, model_matrix: ModelMatrices) -> None:
+        self._dependent_column_names = self._get_columns(model_matrix, role="dependent")
+        self._independent_column_names = self._get_columns(
+            model_matrix, role="independent"
         )
-        self._endogenous = self._get_columns(
-            model_matrix, _ModelMatrixKey.instrumental_variable, "lhs"
+        self._fixed_effects_column_names = self._get_columns(
+            model_matrix, role="fixed_effects"
         )
-        self._instruments = self._get_columns(
-            model_matrix, _ModelMatrixKey.instrumental_variable, "rhs"
+        specification_by_levels = {
+            specification.levels: specification
+            for specification in self._fixed_effect_specifications
+        }
+        self._fixed_effect_specification_by_column = {
+            column: specification_by_levels[
+                get_fixed_effect_encoding(
+                    transform_state=self._model_spec[
+                        _ModelMatrixKey.fixed_effects
+                    ].transform_state,
+                    column=column,
+                ).term
+            ]
+            for column in self._fixed_effects_column_names or []
+        }
+        self._slope_column_by_term = self._collect_slope_columns(model_matrix)
+        self._endogenous_column_names = self._get_columns(
+            model_matrix, role="endogenous"
         )
-        self._weights = self._get_columns(model_matrix, _ModelMatrixKey.weights)
-        self._offset = self._get_columns(model_matrix, _ModelMatrixKey.offset)
+        self._instruments_column_names = self._get_columns(
+            model_matrix, role="instruments"
+        )
+        self._weights_column_names = self._get_columns(model_matrix, role="weights")
+        self._offset_column_names = self._get_columns(model_matrix, role="offset")
 
-    def _collect_data(self, model_matrix: formulaic.ModelMatrix) -> None:
+    @staticmethod
+    def _collect_slope_columns(model_matrix: ModelMatrices) -> dict[Term, str]:
+        """Map each varying-slope term to its single numeric column."""
+        try:
+            slopes = model_matrix[_ModelMatrixKey.fixed_effect_slopes]
+        except KeyError:
+            return {}
+        slope_spec = slopes.model_spec
+        column_by_term: dict[Term, str] = {}
+        for term, _, columns in slope_spec.structure:
+            is_categorical = any(
+                str(factor) in slope_spec.factor_contrasts for factor in term.factors
+            )
+            if is_categorical or len(columns) != 1:
+                raise FormulaSyntaxError(
+                    f"Varying slope `{term}` must evaluate to one numeric column. "
+                    "Convert categorical slopes to a numeric column before "
+                    "estimation."
+                )
+            column_by_term[term] = columns[0]
+        return column_by_term
+
+    def _collect_data(self, model_matrix: ModelMatrices) -> None:
         datas = flatten_model_matrix(model_matrix)
+        for data in datas:
+            # formulaic keeps only the last of several equally named columns.
+            counts = Counter(data.model_spec.column_names)
+            duplicated = sorted(name for name, count in counts.items() if count > 1)
+            if duplicated:
+                raise FormulaSyntaxError(
+                    f"The formula produces duplicate column names {duplicated}, so "
+                    "some columns would be silently dropped. Remove or rename the "
+                    "repeated terms."
+                )
         if not all(datas[0].index.identical(other.index) for other in datas[1:]):
             raise ValueError("All design matrix data must have the same index.")
         data = pd.concat(datas, ignore_index=False, axis=1)
@@ -111,133 +254,262 @@ class ModelMatrix:
 
     def _process(self, drop_singletons: bool = False) -> None:
         if self.model_spec[_ModelMatrixKey.main].lhs.factor_contrasts:
-            raise TypeError("The dependent variable must be numeric.")
-        elif self._dependent is None or len(self._dependent) != 1:
-            raise TypeError("The model must contain exactly one dependent variable.")
+            terms = list(self.model_spec[_ModelMatrixKey.main].lhs.factor_contrasts)
+            raise TypeError(
+                f"The dependent variable must be numeric; got categorical terms {terms!r}. "
+                "Use one numeric column or a transform that produces one."
+            )
+        elif (
+            self._dependent_column_names is None
+            or len(self._dependent_column_names) != 1
+        ):
+            raise TypeError(
+                "The model must contain exactly one dependent variable. "
+                f"The formula produced columns {self._dependent_column_names!r}. "
+                "Use one numeric dependent expression per model."
+            )
 
-        if self._endogenous is not None:
+        if self._endogenous_column_names is not None:
             if self.model_spec[
                 _ModelMatrixKey.instrumental_variable
             ].lhs.factor_contrasts:
-                raise TypeError("The endogenous variable must be numeric.")
-            elif len(self._endogenous) != 1:
+                terms = list(
+                    self.model_spec[
+                        _ModelMatrixKey.instrumental_variable
+                    ].lhs.factor_contrasts
+                )
                 raise TypeError(
-                    "The model must contain exactly one endogenous variable."
+                    f"The endogenous regressor must be numeric; got categorical terms {terms!r}. "
+                    "Use one numeric regressor in the instrument block."
+                )
+            elif len(self._endogenous_column_names) != 1:
+                raise TypeError(
+                    "The model must contain exactly one endogenous regressor. "
+                    f"The instrument block produced columns {self._endogenous_column_names!r}. "
+                    "Use one numeric endogenous expression."
                 )
 
         # integer and boolean columns are finite by construction
         maybe_infinite = self._data.select_dtypes(exclude=["integer", "bool"])
-        self._drop(
-            ~np.isfinite(maybe_infinite.to_numpy()).all(axis=1),
-            "rows with infinite values",
+        is_finite_row = cast(
+            "NDArray[np.bool_]", np.isfinite(maybe_infinite.to_numpy()).all(axis=1)
         )
-        if self._fixed_effects is not None:
-            # Ensure fixed effects are `int32`
-            self._data[self._fixed_effects] = self._data[self._fixed_effects].astype(
-                "int32"
+        self._drop(
+            ~is_finite_row,
+            "rows with infinite values",
+            stage="infinite",
+        )
+        if self._weights_column_names is not None:
+            # Zero-weight rows go first, so they cannot keep a singleton level.
+            is_zero_weight = (
+                self._data[self._weights_column_names].to_numpy() == 0
+            ).any(axis=1)
+            self._drop(
+                is_zero_weight,
+                "rows with zero weight",
+                stage="zero_weight",
             )
+        if self._fixed_effects_column_names is not None:
+            self._data[self._fixed_effects_column_names] = self._data[
+                self._fixed_effects_column_names
+            ].astype("int32")
 
-        if self._offset is not None:
+        if self._offset_column_names is not None:
             if self.model_spec[_ModelMatrixKey.offset].factor_contrasts:
-                raise TypeError("The offset must be numeric.")
-            elif len(self._offset) != 1:
-                raise ValueError("The offset must evaluate to exactly one column.")
+                terms = list(self.model_spec[_ModelMatrixKey.offset].factor_contrasts)
+                raise TypeError(
+                    f"The offset must be numeric; got categorical terms {terms!r}. "
+                    "Pass a numeric column or expression such as offset='log(exposure)'."
+                )
+            elif len(self._offset_column_names) != 1:
+                raise ValueError(
+                    "The offset must evaluate to exactly one column. "
+                    f"It produced {self._offset_column_names!r}. "
+                    "Pass a column name or a single numeric expression to offset."
+                )
 
-        if self._fixed_effects is not None or self._drop_intercept:
-            if self._independent is not None:
-                self._independent = [
-                    col for col in self._independent if col != "Intercept"
+        absorbs_intercept = any(
+            specification.intercept
+            for specification in self._fixed_effect_specification_by_column.values()
+        )
+        if absorbs_intercept or self._drop_intercept:
+            if self._independent_column_names is not None:
+                self._independent_column_names = [
+                    col for col in self._independent_column_names if col != "Intercept"
                 ]
-            if self._instruments is not None:
-                self._instruments = [
-                    col for col in self._instruments if col != "Intercept"
+            if self._instruments_column_names is not None:
+                self._instruments_column_names = [
+                    col for col in self._instruments_column_names if col != "Intercept"
                 ]
-        # Drop singletons if specified
-        if drop_singletons and self._fixed_effects is not None:
-            fixed_effects = self._data.loc[:, self._fixed_effects]
+        # Singleton detection only for fixed effects without slopes.
+        intercept_columns = [
+            column
+            for column, specification in self._fixed_effect_specification_by_column.items()
+            if specification.intercept
+        ]
+        if drop_singletons and intercept_columns:
+            fixed_effects = self._data.loc[:, intercept_columns]
             self._drop(
                 detect_singletons(fixed_effects.to_numpy()),
                 "singleton fixed effect(s)",
+                stage="singleton",
             )
 
-    def _drop(self, is_dropped: NDArray[np.bool_], reason: str) -> None:
-        """Drop the masked rows from `self._data` and add their labels to `na_index`.
+    def _drop(
+        self, is_dropped: NDArray[np.bool_], reason: str, *, stage: DropStageOptions
+    ) -> None:
+        """Drop the masked rows from `self._data` and count them under `stage`.
 
         `reason` completes the warning "{n} {reason} dropped from the model."
         """
         n_dropped = int(is_dropped.sum())
         if not n_dropped:
             return
-        self._na_index = self._na_index.union(self._data.index[is_dropped].tolist())
+        self._dropped_row_index = self._dropped_row_index.union(
+            self._data.index[is_dropped].tolist()
+        )
+        counts = self._dropped_by_stage
+        self._dropped_by_stage = replace(
+            counts, **{stage: getattr(counts, stage) + n_dropped}
+        )
         self._data = self._data.loc[~is_dropped]
         warnings.warn(f"{n_dropped} {reason} dropped from the model.")
+
+    def without_rows(self, rows: list[int], *, stage: DropStageOptions) -> ModelMatrix:
+        """Return a shallow copy without ``rows``, counted under ``stage``.
+
+        The copied object receives a new filtered data frame and dropped-row
+        bookkeeping that counts ``rows`` under ``stage``; its unchanged formula
+        metadata remains shared with the original object. An empty ``rows``
+        sequence returns this instance unchanged.
+        """
+        if not rows:
+            return self
+        filtered = copy.copy(self)
+        filtered._data = self._data.drop(index=rows)
+        filtered._dropped_row_index = self._dropped_row_index.union(rows)
+        n_dropped = len(self._data) - len(filtered._data)
+        counts = self._dropped_by_stage
+        filtered._dropped_by_stage = replace(
+            counts, **{stage: getattr(counts, stage) + n_dropped}
+        )
+        return filtered
 
     @property
     def dependent(self) -> pd.DataFrame:
         """
-        Get the dependent variable(s) from the model.
+        Get the dependent variable from the model.
 
         Returns
         -------
         pd.DataFrame
-            DataFrame containing the dependent variable(s) (left-hand side
+            DataFrame containing the dependent variable (left-hand side
             of the main equation).
         """
-        cols = self._dependent or []
-        return self._data[cols]
+        return self._data.loc[:, self._dependent_column_names or []]
 
     @property
     def independent(self) -> pd.DataFrame:
         """
-        Get the independent variable(s) from the model.
+        Get the regressors of the main equation.
 
         Returns
         -------
         pd.DataFrame
-            DataFrame containing the independent variable(s) (right-hand side
-            of the main equation). Intercept columns are excluded when fixed
-            effects are present.
+            DataFrame containing the regressors of the main equation.
+            Intercept columns are excluded when a fixed effect has level
+            intercepts or `drop_intercept=True`.
         """
-        cols = self._independent or []
-        return self._data[cols]
+        return self._data.loc[:, self._independent_column_names or []]
 
     @property
     def fixed_effects(self) -> pd.DataFrame | None:
         """
-        Get the fixed effects variables from the model.
+        Get the fixed-effect levels.
 
         Returns
         -------
         pd.DataFrame or None
-            DataFrame containing the fixed effects variables encoded as integers,
+            DataFrame containing the fixed-effect levels encoded as integers,
             or None if no fixed effects are specified in the model.
         """
-        if self._fixed_effects is None:
+        if self._fixed_effects_column_names is None:
             return None
-        else:
-            return self._data.loc[:, self._fixed_effects]
+        return self._data.loc[:, self._fixed_effects_column_names].rename(
+            columns={
+                column: specification.name
+                for column, specification in self._fixed_effect_specification_by_column.items()
+            }
+        )
+
+    @property
+    def fixed_effect_specifications(self) -> tuple[FixedEffectSpecification, ...]:
+        """
+        Get the specification of each materialized fixed effect.
+
+        Returns
+        -------
+        tuple[FixedEffectSpecification, ...]
+            Specifications in the column order of `fixed_effects`, which say
+            whether each effect has an intercept and which slopes it has.
+            Empty without fixed effects.
+        """
+        return tuple(
+            self._fixed_effect_specification_by_column[column]
+            for column in self._fixed_effects_column_names or []
+        )
+
+    @property
+    def effects(self) -> list[Effect] | None:
+        """
+        Build complete fixed effects for the ``within`` solver.
+
+        Returns
+        -------
+        list[within.Effect] or None
+            Each effect contains its own integer level codes, intercept flag,
+            and numeric varying-slope variables for the retained rows. Effects
+            follow the column order of `fixed_effects`. Returns None without
+            fixed effects.
+        """
+        if self._fixed_effects_column_names is None:
+            return None
+        effects = []
+        for column in self._fixed_effects_column_names:
+            specification = self._fixed_effect_specification_by_column[column]
+            effects.append(
+                Effect(
+                    levels=np.ascontiguousarray(self._data[column], dtype=np.uint32),
+                    intercept=specification.intercept,
+                    slopes=[
+                        np.ascontiguousarray(
+                            self._data[self._slope_column_by_term[slope]],
+                            dtype=np.float64,
+                        )
+                        for slope in specification.slopes
+                    ],
+                )
+            )
+        return effects
 
     @property
     def endogenous(self) -> pd.DataFrame | None:
         """
-        Get the endogenous variable(s) for instrumental variable estimation.
+        Get the endogenous regressor in an IV model.
 
         Returns
         -------
         pd.DataFrame or None
-            DataFrame containing the endogenous variable(s) (left-hand side
-            of the first-stage equation in IV estimation), or None if not
-            using instrumental variables.
+            The endogenous regressor in an IV model, or None for other models.
         """
-        if self._endogenous is None:
+        if self._endogenous_column_names is None:
             return None
-        else:
-            return self._data.loc[:, self._endogenous]
+        return self._data.loc[:, self._endogenous_column_names]
 
     @property
     def instruments(self) -> pd.DataFrame | None:
         """
-        Get the instrumental variable(s) for IV estimation.
+        Get the instruments in an IV model.
 
         Returns
         -------
@@ -247,10 +519,33 @@ class ModelMatrix:
             using instrumental variables. Intercept columns are excluded when
             fixed effects are present.
         """
-        if self._instruments is None:
+        if self._instruments_column_names is None:
             return None
-        else:
-            return self._data.loc[:, self._instruments]
+        return self._data.loc[:, self._instruments_column_names]
+
+    def column_keys(
+        self, role: Literal["dependent", "independent", "endogenous", "instruments"]
+    ) -> tuple[ColumnKey, ...]:
+        """Key the columns of one frame by their rendered term and name.
+
+        Distinct terms can encode columns with equal names, e.g. ``i(f3, X2)``
+        and ``i(f3, np.exp(X2 / 5))``, so names alone cannot share cached
+        demeaned columns across models.
+        """
+        columns = {
+            "dependent": self._dependent_column_names,
+            "independent": self._independent_column_names,
+            "endogenous": self._endogenous_column_names,
+            "instruments": self._instruments_column_names,
+        }[role]
+        if columns is None:
+            return ()
+        stage, side = _ROLE_PATHS[role]
+        term_by_column: dict[str, str] = {}
+        for term, _, encoded_columns in self._model_spec[stage][side].structure:
+            for column in encoded_columns:
+                term_by_column[column] = render_term(term)
+        return tuple((term_by_column[column], column) for column in columns)
 
     @property
     def weights(self) -> pd.DataFrame | None:
@@ -263,10 +558,9 @@ class ModelMatrix:
             DataFrame containing the observation weights (must be non-negative
             numeric values), or None if no weights are specified.
         """
-        if self._weights is None:
+        if self._weights_column_names is None:
             return None
-        else:
-            return self._data.loc[:, self._weights]
+        return self._data.loc[:, self._weights_column_names]
 
     @property
     def offset(self) -> pd.DataFrame | None:
@@ -280,28 +574,40 @@ class ModelMatrix:
             added to the linear predictor with a fixed coefficient of 1, or
             None if no offset is specified.
         """
-        if self._offset is None:
+        if self._offset_column_names is None:
             return None
-        else:
-            return self._data.loc[:, self._offset]
+        return self._data.loc[:, self._offset_column_names]
 
     @property
-    def model_spec(self) -> formulaic.ModelSpec:
+    def model_spec(self) -> _ModelSpecMapping:
         """
         Get the underlying formulaic model specification.
 
         Returns
         -------
-        formulaic.ModelSpec
-            The formulaic ModelSpec object containing metadata about the
-            model structure and transformations.
+        Mapping[str, formulaic.ModelSpec]
+            Formulaic specifications keyed by model-matrix role.
         """
         return self._model_spec
 
     @property
-    def na_index(self) -> frozenset[int]:
-        """Integer positions of rows dropped in model matrix creation."""
-        return self._na_index
+    def n_rows(self) -> int:
+        """Number of rows kept after every filtering stage, including ``without_rows``."""
+        return len(self._data)
+
+    @property
+    def dropped_row_index(self) -> frozenset[int]:
+        """Positions of dropped rows, including ``without_rows`` drops.
+
+        Positions count from zero in the frame this matrix was built from,
+        which ``create_model_matrix`` reindexes before materializing.
+        """
+        return self._dropped_row_index
+
+    @property
+    def dropped_by_stage(self) -> DroppedRowCounts:
+        """Dropped rows by filtering stage, including ``without_rows`` drops."""
+        return self._dropped_by_stage
 
 
 def create_model_matrix(
@@ -318,14 +624,14 @@ def create_model_matrix(
     Create a ModelMatrix from a formula and data.
 
     This function constructs model matrices for econometric estimation by parsing
-    formulas and extracting the necessary components (dependent/independent variables,
-    fixed effects, instruments, weights) from the provided data.
+    the formula and extracting the dependent variable, regressors, fixed effects,
+    instruments, and observation weights from the provided data.
 
     Parameters
     ----------
     formula : Formula
-        A Formula object specifying the model structure, including dependent and
-        independent variables, fixed effects, and instrumental variables.
+        The model formula, including the dependent variable, regressors, any
+        fixed effects, and any instruments.
     data : pd.DataFrame
         The input data containing all variables referenced in the formula.
         The index will be reset during processing.
@@ -338,12 +644,12 @@ def create_model_matrix(
         Rows with missing offset values are dropped together with missing rows
         in the rest of the formula.
     drop_singletons : bool, default=False
-        If True, observations that are singletons in any fixed effect category
-        are dropped from the model.
+        If True, drop rows in singleton levels of any fixed effect.
     drop_intercept : bool, default=False
-        If True, the intercept column is removed from the independent variables
-        and instruments matrices. The intercept is always removed when fixed
-        effects are present, regardless of this parameter.
+        If True, remove the intercept column from the design and instrument
+        matrices. The intercept is always removed when a fixed effect has
+        level intercepts, regardless of this option;
+        slope-only effects such as `f1[[z]]` keep it.
     ensure_full_rank : bool, default=True
         If True, formulaic will ensure the design matrix is full rank by
         dropping collinear columns.
@@ -371,18 +677,18 @@ def create_model_matrix(
     model_matrix = create_model_matrix(formula=formula, data=data)
     ```
     """
-    # Process input data
-    data.reset_index(drop=True, inplace=True)  # Sanitise index
+    data = data.reset_index(drop=True)
     n_observations: Final[int] = data.shape[0]
     formula_formulaic = _get_formulaic_formula(
         formula=formula, data=data, weights=weights, offset=offset
     )
+    evaluation_context = FORMULAIC_TRANSFORMS | {**capture_context(context)}
     model_matrix = formula_formulaic.get_model_matrix(
         data=data,
         ensure_full_rank=ensure_full_rank,
         na_action="drop",
         output="pandas",
-        context=FORMULAIC_TRANSFORMS | {**capture_context(context)},
+        context=evaluation_context,
     )
     drop_rows = _dropped_rows(
         kept=model_matrix[_ModelMatrixKey.main]["lhs"].index,
@@ -393,6 +699,7 @@ def create_model_matrix(
         drop_rows=drop_rows,
         drop_singletons=drop_singletons,
         drop_intercept=drop_intercept,
+        fixed_effect_specifications=formula.fixed_effect_specifications,
     )
 
 
@@ -413,33 +720,35 @@ def _get_formulaic_formula(
     weights: str | None = None,
     offset: str | None = None,
 ) -> formulaic.Formula:
-    # Collate kwargs to be passed to formulaic.Formula
-    formula_kwargs: dict[str, str] = {_ModelMatrixKey.main: formula.second_stage}
+    formula_kwargs: dict[str, formulaic.Formula] = {
+        _ModelMatrixKey.main: formula.second_stage
+    }
     if formula.is_fixed_effects:
         formula_kwargs.update(
-            {_ModelMatrixKey.fixed_effects: f"{formula.fixed_effects_wrapped} - 1"}
+            {_ModelMatrixKey.fixed_effects: formula.formulaic_fixed_effects}
+        )
+    if formula.has_varying_slopes:
+        formula_kwargs[_ModelMatrixKey.fixed_effect_slopes] = (
+            formula.fixed_effect_slopes
         )
     if formula.is_instrumental_variable:
         formula_kwargs.update(
-            {_ModelMatrixKey.instrumental_variable: formula.first_stage}
+            {
+                _ModelMatrixKey.instrumental_variable: formula.as_first_stage().second_stage
+            }
         )
     if weights is not None:
         data[weights] = _get_weights(data, weights)
-        formula_kwargs.update({_ModelMatrixKey.weights: f"{weights}-1"})
+        formula_kwargs[_ModelMatrixKey.weights] = formulaic.formula.SimpleFormula(
+            [Term([Factor(weights, eval_method=Factor.EvalMethod.LOOKUP)])]
+        )
     if offset is not None:
-        formula_kwargs[_ModelMatrixKey.offset] = f"{offset} - 1"
-    formula_formulaic = formulaic.Formula(
-        formula_kwargs,
-        _parser=DefaultFormulaParser(
-            feature_flags=FORMULAIC_FEATURE_FLAG,
-            # When FEs are present, include_intercept=True so that spans_intercept=True
-            # terms (like i()) receive reduced_rank=True from formulaic, causing them to
-            # drop the first level (matching R/fixest). The intercept column is removed
-            # afterwards in ModelMatrix._process(). Without this, i() would receive
-            # reduced_rank=False and generate all levels; the post-hoc collinearity check
-            # would then drop the last level instead of the first, mismatching R.
-            include_intercept=formula.is_fixed_effects,
-        ),
-    )
-
-    return formula_formulaic
+        # Offsets accept expressions as well as column names. Parse this user
+        # input once; the model's already-parsed stages stay intact.
+        formula_kwargs[_ModelMatrixKey.offset] = formulaic.Formula(
+            offset,
+            _parser=DefaultFormulaParser(
+                feature_flags=FORMULAIC_FEATURE_FLAG, include_intercept=False
+            ),
+        )
+    return formulaic.Formula(formula_kwargs)

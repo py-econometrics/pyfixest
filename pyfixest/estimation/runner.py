@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Mapping
+import warnings
 from typing import Any
 
 import pandas as pd
@@ -8,6 +8,7 @@ import pandas as pd
 from pyfixest.core.demean import Preconditioner
 from pyfixest.estimation.config import EstimationConfig
 from pyfixest.estimation.FixestMulti_ import FixestMulti
+from pyfixest.estimation.internals.demean_ import DemeanedData
 from pyfixest.estimation.models.feiv_ import Feiv
 from pyfixest.estimation.models.feols_ import Feols
 from pyfixest.estimation.models.fepois_ import Fepois
@@ -17,9 +18,7 @@ from pyfixest.estimation.plan_ import (
     expand_specs,
     fit_one,
 )
-from pyfixest.estimation.quantreg.QuantregMulti import QuantregMulti
-from pyfixest.utils.dev_utils import _narwhals_to_pandas
-from pyfixest.utils.utils import capture_context
+from pyfixest.utils.dev_utils import _find_stack_level, _narwhals_to_pandas
 
 
 def _prepare_data(config: EstimationConfig) -> pd.DataFrame:
@@ -29,9 +28,9 @@ def _prepare_data(config: EstimationConfig) -> pd.DataFrame:
     and downstream `dropna()` calls would otherwise produce mis-aligned indices.
     """
     data = _narwhals_to_pandas(config.data)
-    if config.copy_data:
+    if config.options.copy_data:
         data = data.copy()
-    data.reset_index(drop=True, inplace=True)
+    data = data.reset_index(drop=True)
     return data
 
 
@@ -48,20 +47,26 @@ def _split_plan(config: EstimationConfig) -> tuple[bool, bool, str | None]:
 def run_estimation(
     config: EstimationConfig,
     parsed: ParsedFormula,
+    *,
+    apply_retention: bool,
 ) -> Feols | Fepois | Feiv | FixestMulti:
     """Fit every spec the user's call expands into; unwrap when a single model was asked for.
 
-    Prepares the runtime inputs (data, context, split plan), builds a
+    Prepares the runtime inputs (data, split plan), builds a
     `FixestMulti` results container, fits models based on the planner's
     specs block-by-block (sharing the demean / preconditioner cache within
     each `cache_key` block), and returns either the multi-object or the
     single fitted model.
+
+    With `apply_retention`, each model drops the state its `store_data` and
+    `lean` options omit as soon as it is fitted, so a multiple estimation
+    never holds every model's full state at once. The estimation functions
+    set it; refits leave it off and get complete models.
     """
     data = _prepare_data(config)
-    context: Mapping[str, Any] = capture_context(config.context)
     run_full, run_split, splitvar = _split_plan(config)
 
-    fixest = FixestMulti(config=config, parsed=parsed, data=data, context=context)
+    fixest = FixestMulti(formula_dict=parsed.formula_dict)
 
     all_splits = build_all_splits(
         run_full=run_full,
@@ -76,14 +81,13 @@ def run_estimation(
         data=data,
         splits=all_splits,
         is_iv=parsed.is_iv,
-        splitvar=splitvar,
-        captured_context=context,
     )
 
     _NO_CACHE_KEY: Any = object()
     prev_cache_key: Any = _NO_CACHE_KEY
-    lookup_demeaned_data: dict[frozenset[int], pd.DataFrame] = {}
+    lookup_demeaned_data: dict[frozenset[int], DemeanedData] = {}
     lookup_preconditioner: dict[frozenset[int], Preconditioner] = {}
+    duplicate_model_names: list[str] = []
 
     for spec in specs:
         if spec.cache_key != prev_cache_key:
@@ -91,19 +95,42 @@ def run_estimation(
             lookup_preconditioner = {}
             prev_cache_key = spec.cache_key
 
-        FIT = fit_one(
-            spec,
-            lookup_demeaned_data=lookup_demeaned_data,
-            lookup_preconditioner=lookup_preconditioner,
-            vcov=config.vcov,
-            vcov_kwargs=config.vcov_kwargs,
-        )
+        try:
+            FIT = fit_one(
+                spec,
+                lookup_demeaned_data=lookup_demeaned_data,
+                lookup_preconditioner=lookup_preconditioner,
+                vcov=config.vcov,
+            )
+        except Exception as exc:
+            split = spec.sample_split
+            if split is not None:
+                sample = (
+                    "all nonmissing rows" if split.value is None else repr(split.value)
+                )
+                exc.add_note(
+                    f"While fitting {spec.formula.render()!r} for {split.var!r} = {sample}."
+                )
+            raise
 
-        if isinstance(FIT, QuantregMulti):
-            for q_model in FIT.all_quantregs.values():
-                fixest.all_fitted_models[q_model._model_name] = q_model
-        else:
-            fixest.all_fitted_models[FIT._model_name] = FIT
+        for fitted_result in FIT._iter_fitted_models():
+            if apply_retention:
+                fitted_result._clear_attributes()
+            model_name = fitted_result.model.model_name
+            if model_name in fixest.all_fitted_models:
+                duplicate_model_names.append(model_name)
+            fixest.all_fitted_models[model_name] = fitted_result
+
+    if duplicate_model_names:
+        # Formulaic drops repeated terms, so steps such as `csw(X1, X1)` or a
+        # step repeating the endogenous variable render to the same model.
+        warnings.warn(
+            "Several multiple estimation steps parse to the same model after "
+            "repeated terms are dropped; only one model is returned for each of: "
+            f"{sorted(set(duplicate_model_names))}.",
+            UserWarning,
+            stacklevel=_find_stack_level(),
+        )
 
     if parsed.is_multiple_estimation:
         return fixest

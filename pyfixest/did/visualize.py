@@ -1,5 +1,11 @@
-import matplotlib.pyplot as plt
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, cast
+
 import pandas as pd
+
+if TYPE_CHECKING:
+    import matplotlib.pyplot as plt
 
 
 def panelview(
@@ -14,14 +20,14 @@ def panelview(
     sort_by_timing: bool | None = False,
     xlab: str | None = None,
     ylab: str | None = None,
-    figsize: tuple | None = (11, 3),  # Default plot size
+    figsize: tuple | None = (11, 3),
     noticks: bool | None = False,
     title: str | None = None,
     legend: bool | None = False,
     ax: plt.Axes | None = None,
     xlim: tuple | None = None,
     ylim: tuple | None = None,
-) -> None:
+) -> plt.Axes:
     """
     Generate a panel view of the treatment variable over time for each unit.
 
@@ -102,12 +108,17 @@ def panelview(
     )
     ```
     """
-    # check if unit, time, treat and outcome are in the data
-    for col in [unit, time, treat]:
+    for option, col in (("unit", unit), ("time", time), ("treat", treat)):
         if col not in data.columns:
-            raise ValueError(f"Column '{col}' not found in data.")
+            raise ValueError(
+                f"panelview() {option}={col!r} is absent from data. "
+                f"Pass an existing column name to {option}."
+            )
     if outcome and outcome not in data.columns:
-        raise ValueError(f"Outcome column '{outcome}' not found in data.")
+        raise ValueError(
+            f"panelview() outcome={outcome!r} is absent from data. "
+            "Pass an existing column name to outcome."
+        )
 
     if collapse_to_cohort and (subsamp or units_to_plot):
         raise ValueError(
@@ -204,11 +215,10 @@ def _prepare_panelview_df_for_outcome_plot(
         def get_treatment_start(x: pd.DataFrame) -> pd.Timestamp:
             return x[x[treat]][time].min()
 
-        treatment_starts = (
-            data.groupby(unit)
-            .apply(get_treatment_start)
-            .reset_index(name="treatment_start")
+        treatment_starts_series = cast(
+            pd.Series, data.groupby(unit).apply(get_treatment_start)
         )
+        treatment_starts = treatment_starts_series.reset_index(name="treatment_start")
 
         data = data.merge(treatment_starts, on=unit, how="left")
         data_agg = (
@@ -251,6 +261,8 @@ def _plot_panelview_output_plot(
     ylim: tuple[float, float] | None = None,
     figsize: tuple | None = (11, 3),
 ) -> plt.Axes:
+    import matplotlib.pyplot as plt
+
     if not ax:
         _, ax = plt.subplots(figsize=figsize)
     for unit_id in data_pivot.index:
@@ -260,7 +272,6 @@ def _plot_panelview_output_plot(
         else:
             treatment_times = data[(data[unit] == unit_id) & (data[treat])][time]
 
-        # If the unit never receives treatment, plot the line in grey
         if treatment_times.empty:
             ax.plot(
                 unit_data.index,
@@ -272,7 +283,6 @@ def _plot_panelview_output_plot(
         else:
             treatment_start = treatment_times.min()
 
-            # Plot the entire line with the initial color (orange), then change to red after treatment
             ax.plot(
                 unit_data.index,
                 unit_data.values,
@@ -350,6 +360,8 @@ def _plot_panelview(
     noticks: bool | None = False,
     title: str | None = None,
 ) -> plt.Axes:
+    import matplotlib.pyplot as plt
+
     if not ax:
         _, ax = plt.subplots(figsize=figsize)
     cax = ax.matshow(treatment_quilt, cmap="viridis", aspect="auto")

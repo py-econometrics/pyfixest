@@ -1,3 +1,6 @@
+import re
+import warnings
+
 import numpy as np
 import pandas as pd
 import pytest
@@ -41,8 +44,8 @@ def test_F_test_single_equation_no_clustering_with_auto_computed_wald_test():
     fit = feols(fml, data, vcov=None, ssc=ssc(k_adj=False))
 
     # Wald test (is called with R = Identity_2 and distribution = "F" by default)
-    f_stat = fit._f_statistic
-    p_stat = fit._p_value
+    f_stat = fit.wald.f_statistic
+    p_stat = fit.wald.pvalue
 
     # Compare with R
 
@@ -75,9 +78,9 @@ def test_F_test_single_equation(R):
     fit = feols(fml, data, vcov={"CRV1": "year"}, ssc=ssc(k_adj=False))
 
     # Wald test
-    fit.wald_test(R=R)
-    f_stat = fit._f_statistic
-    p_value = fit._p_value
+    wald = fit.wald_test(R=R)
+    f_stat = wald.f_statistic
+    p_value = wald.pvalue
 
     # Compare with R
     r_fit = fixest.feols(
@@ -129,9 +132,9 @@ def test_F_test_multiple_equation(seedn):
     fit = feols(fml, data, vcov={"CRV1": "year"}, ssc=ssc(k_adj=False))
 
     # Wald test
-    fit.wald_test(R=R)
-    f_stat = fit._f_statistic
-    p_value = fit._p_value
+    wald = fit.wald_test(R=R)
+    f_stat = wald.f_statistic
+    p_value = wald.pvalue
 
     r_fit = fixest.feols(
         ro.Formula(fml),
@@ -195,8 +198,7 @@ def test_F_test_multiple_equations_pvalue(R, fml):
     fit = feols(fml, data, vcov={"CRV1": "year"}, ssc=ssc(k_adj=False))
 
     # Wald test
-    fit.wald_test(R=R)
-    f_stat = fit._f_statistic
+    f_stat = fit.wald_test(R=R).f_statistic
 
     r_fit = fixest.feols(
         ro.Formula(fml),
@@ -244,16 +246,65 @@ def test_wald_test_multiple_equations(R, q, fml):
     # Define the hypothesis values q (both zero)
 
     # Perform the Wald test
-    fit2.wald_test(R=Rpf, q=q, distribution="chi2")
+    wald = fit2.wald_test(R=Rpf, q=q, distribution="chi2")
 
     r_result = car.linearHypothesis(fit_r, R_r, rhs=ro.FloatVector(q), test="Chisq")
 
     # Extracting p-value from the result
-    wald_stat = fit2._wald_statistic
-    p_value = fit2._p_value
+    wald_stat = wald.wald_statistic
+    p_value = wald.pvalue
 
     r_wald_stat = r_result[4][1]
     r_p_value = r_result[5][1]
 
     np.testing.assert_allclose(wald_stat, r_wald_stat, rtol=1e-03, atol=1e-05)
     np.testing.assert_allclose(p_value, r_p_value, rtol=1e-03, atol=1e-05)
+
+
+@pytest.mark.parametrize(
+    "R, q, expected_message",
+    [
+        pytest.param(
+            [[0, 1, -1]],
+            [0],
+            "Distribution changed to chi2, as R is not an identity matrix.",
+            id="non-identity-R",
+        ),
+        pytest.param(
+            np.eye(3),
+            [1.0, 0.0, 0.0],
+            "Distribution changed to chi2, as q is not a zero vector.",
+            id="nonzero-q",
+        ),
+        pytest.param(
+            [[0, 1, -1], [1, 0, 0]],
+            [0, 1.0],
+            "Distribution changed to chi2, as R is not an identity matrix and q is not a zero vector.",
+            id="non-identity-R-nonzero-q",
+        ),
+    ],
+)
+def test_wald_test_chi2_warning_names_the_triggered_reason(R, q, expected_message):
+    # The F fallback warning must only claim the restrictions that actually
+    # forced the switch to chi2.
+    data = pf.get_data()
+    fit = pf.feols("Y ~ X1 + X2", data)
+
+    with pytest.warns(UserWarning, match=re.escape(expected_message)) as record:
+        wald = fit.wald_test(R=R, q=q)
+
+    assert len(record) == 1
+    assert str(record[0].message) == expected_message
+    assert wald.distribution == "chi2"
+
+
+def test_wald_test_joint_null_keeps_F_without_warning():
+    data = pf.get_data()
+    fit = pf.feols("Y ~ X1 + X2", data)
+
+    with warnings.catch_warnings(record=True) as record:
+        warnings.simplefilter("always")
+        wald = fit.wald_test(R=np.eye(3), q=[0, 0, 0])
+
+    assert not [w for w in record if "Distribution changed to chi2" in str(w.message)]
+    assert wald.distribution == "F"

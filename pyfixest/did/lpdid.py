@@ -49,7 +49,7 @@ class LPDID(DID):
         idname: str,
         tname: str,
         gname: str,
-        xfml: str,
+        xfml: str | None,
         att: bool,
         cluster: str,
         vcov: VcovTypeOptions | dict[str, str] | None = None,
@@ -57,8 +57,6 @@ class LPDID(DID):
         post_window: int | None = None,
         never_treated: int | None = 0,
     ):
-        # if att:
-        #    raise NotImplementedError("ATT is not yet supported.")
 
         super().__init__(
             data=data,
@@ -70,16 +68,15 @@ class LPDID(DID):
             att=att,
             cluster=cluster,
         )
-        assert isinstance(xfml, str) or xfml is None, "xfml must be a string or None"
+        if not (isinstance(xfml, str) or xfml is None):
+            raise TypeError("xfml must be a string or None.")
 
-        data = data.copy()
-        data.sort_values([idname, tname], inplace=True)
+        data = data.sort_values([idname, tname])
         data[f"{yname}_lag"] = data.groupby(idname)[yname].shift(1)
 
         data["treat"] = np.where(data[gname] <= data[tname], 1, 0)
         data["rel_year"] = data[tname] - data[gname]
 
-        # handle never treated units
         data["treat"] = np.where(data[gname] == never_treated, 0, data["treat"])
         data["rel_year"] = np.where(
             data[gname] == never_treated, np.inf, data["rel_year"]
@@ -92,16 +89,25 @@ class LPDID(DID):
 
         rel_years = np.unique(data["rel_year"])
         rel_years = rel_years[np.isfinite(rel_years)]
+        if not rel_years.size:
+            raise ValueError(
+                f"lpdid() found no finite event times for gname={gname!r} "
+                f"and never_treated={never_treated!r}. Check that the data contain "
+                f"treated cohorts and that {tname!r} uses the same period scale. "
+                "See https://pyfixest.org/tutorials/difference-in-differences.html"
+            )
 
         pre_window_int = int(np.min(rel_years)) if pre_window is None else pre_window
         post_window_int = int(np.max(rel_years)) if post_window is None else post_window
 
-        # check that pre_window is in rel_years
         if pre_window_int not in rel_years:
-            raise ValueError(f"pre_window must be in {rel_years}")
-        # check that post_window is in rel_years
+            raise ValueError(
+                f"pre_window={pre_window_int!r} must match an observed event time."
+            )
         if post_window_int not in rel_years:
-            raise ValueError(f"post_window must be in {rel_years}")
+            raise ValueError(
+                f"post_window={post_window_int!r} must match an observed event time."
+            )
 
         pre_window_int = np.abs(pre_window_int)
 
@@ -241,7 +247,7 @@ def _lpdid_estimate(
         or a canonical event study design with all leads and lags.
         Default is True.
     xfml: str
-        Optional formula for the covariates. Not yet supported.
+        Optional formula for the regressors. Not yet supported.
         E.g. "X1 + X2 + X3".
 
     Returns
@@ -261,8 +267,6 @@ def _lpdid_estimate(
         fml = f"Dy ~ treat_diff + {xfml} | {tname}"
 
     if att:
-        # post window
-
         data[f"{yname}_post"] = _pooled_adjustment(data, yname, post_window, idname)
         data["Dy"] = data[f"{yname}_post"] - data[f"{yname}_lag"]
         sample_idx_post = (data["treat_diff"] == 1) | (
@@ -270,7 +274,7 @@ def _lpdid_estimate(
         )
         fit_post = cast(Feols, feols(fml=fml, data=data[sample_idx_post], vcov=vcov))
         fit_tidy_post = fit_post.tidy().xs("treat_diff")
-        fit_tidy_post["N"] = int(fit_post._N)
+        fit_tidy_post["N"] = int(fit_post.sample_info.n_obs)
 
         res = pd.DataFrame(fit_tidy_post).T
 
@@ -285,13 +289,12 @@ def _lpdid_estimate(
             fit = cast(Feols, feols(fml=fml, data=data[sample_idx], vcov=vcov))
 
             fit_tidy = cast(pd.Series, fit.tidy().xs("treat_diff"))
-            fit_tidy["N"] = int(fit._N)
+            fit_tidy["N"] = int(fit.sample_info.n_obs)
             fit_tidy.name = h  # type: ignore[union-attr]
             fit_all.append(fit_tidy)
 
         for h in range(pre_window + 1):
             if h <= 1:
-                # skip the reference period
                 continue
 
             data["Dy"] = data.groupby(idname)[yname].shift(h) - data[f"{yname}_lag"]
@@ -300,7 +303,7 @@ def _lpdid_estimate(
             fit = cast(Feols, feols(fml=fml, data=data[sample_idx], vcov=vcov))
 
             fit_tidy = cast(pd.Series, fit.tidy().xs("treat_diff"))
-            fit_tidy["N"] = int(fit._N)
+            fit_tidy["N"] = int(fit.sample_info.n_obs)
             fit_tidy.name = -h  # type: ignore[union-attr]
             fit_all.append(fit_tidy)
 
@@ -334,14 +337,11 @@ def _pooled_adjustment(
     np.ndarray
         The average of all future values in the analysis.
     """
-    # Initialize lead variable
     x = np.zeros(df.shape[0])
 
-    # Calculate lead sum
     for k in range(0, pool_lead + 1, 1):
         x += df.groupby(idname)[y].shift(-k).to_numpy().astype(float)
 
-    # Average the lead sum
     x /= pool_lead + 1
 
     return x

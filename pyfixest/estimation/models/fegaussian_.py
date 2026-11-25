@@ -1,77 +1,51 @@
-from collections.abc import Mapping
-from typing import Any, Literal
+from __future__ import annotations
 
-import pandas as pd
+from typing import ClassVar
 
-from pyfixest.core.demean import Preconditioner
-from pyfixest.demeaners import AnyDemeaner
-from pyfixest.estimation.formula.parse import Formula as FixestFormula
-from pyfixest.estimation.internals.families import GAUSSIAN
+from pyfixest.estimation.internals.families import GAUSSIAN, GlmFamily
+from pyfixest.estimation.internals.fit_statistics import (
+    FitStatistics,
+    linear_fit_statistics,
+)
 from pyfixest.estimation.internals.vcov_ import vcov_iid_ols
+from pyfixest.estimation.internals.vcov_utils import VcovTerm
 from pyfixest.estimation.models.feglm_ import Feglm
 
 
 class Fegaussian(Feglm):
     "Class for the estimation of a fixed-effects GLM with normal errors."
 
-    def __init__(
-        self,
-        FixestFormula: FixestFormula,
-        data: pd.DataFrame,
-        ssc_dict: dict[str, str | bool],
-        drop_singletons: bool,
-        drop_intercept: bool,
-        weights: str | None,
-        weights_type: str | None,
-        collin_tol: float,
-        lookup_demeaned_data: dict[frozenset[int], pd.DataFrame],
-        tol: float,
-        maxiter: int,
-        solver: Literal[
-            "np.linalg.lstsq",
-            "np.linalg.solve",
-            "scipy.linalg.solve",
-            "scipy.sparse.linalg.lsqr",
-        ],
-        store_data: bool = True,
-        copy_data: bool = True,
-        lean: bool = False,
-        sample_split_var: str | None = None,
-        sample_split_value: str | int | None = None,
-        separation_check: list[str] | None = None,
-        context: int | Mapping[str, Any] = 0,
-        demeaner: AnyDemeaner | None = None,
-        lookup_preconditioner: dict[frozenset[int], Preconditioner] | None = None,
-        accelerate: bool = True,
-    ):
-        super().__init__(
-            FixestFormula=FixestFormula,
-            data=data,
-            ssc_dict=ssc_dict,
-            drop_singletons=drop_singletons,
-            drop_intercept=drop_intercept,
-            weights=weights,
-            weights_type=weights_type,
-            collin_tol=collin_tol,
-            lookup_demeaned_data=lookup_demeaned_data,
-            tol=tol,
-            maxiter=maxiter,
-            solver=solver,
-            store_data=store_data,
-            copy_data=copy_data,
-            lean=lean,
-            sample_split_var=sample_split_var,
-            sample_split_value=sample_split_value,
-            separation_check=separation_check,
-            context=context,
-            demeaner=demeaner,
-            lookup_preconditioner=lookup_preconditioner,
-            accelerate=accelerate,
-            family=GAUSSIAN,
-        )
+    _family: ClassVar[GlmFamily] = GAUSSIAN
 
-        self._method = "feglm-gaussian"
-
-    def _vcov_iid(self):
+    def _vcov_iid(self) -> VcovTerm:
         # we set gaussian glms to match pf.feols exactly
-        return vcov_iid_ols(residuals=self._u_hat, bread=self._bread, N=self._N)
+        vcov = vcov_iid_ols(
+            residuals=self.working_state.working_residuals,
+            bread=self.sandwich.bread,
+            N=self.sample_info.n_obs,
+            weights=self.observation_weights.values,
+        )
+        return VcovTerm(vcov=vcov, meat=None)
+
+    def _fit_statistics(self) -> FitStatistics:
+        """Add the linear fit statistics to the deviance.
+
+        Gaussian fits retain their demeaned response and residuals in
+        working_state rather than the linear model's within_data and _u_hat.
+        The identity link puts those arrays in the units of Y, so they can
+        be passed to the same kernel used for OLS. The original response
+        comes from model_matrix for the overall R².
+        """
+        working_state = self.working_state
+        return linear_fit_statistics(
+            Y=self.model_matrix.dependent.to_numpy(),
+            Y_within=working_state.working_response_within.reshape((-1, 1)),
+            residuals=working_state.response_residuals,
+            weights=self.observation_weights.values,
+            N=self.sample_info.n_obs,
+            k=self._k,
+            k_fe=self.fixef_counts.fixef_dof,
+            has_intercept=not self.options.drop_intercept,
+            has_fixef=self.model.has_fixef,
+            deviance=super()._fit_statistics().deviance,
+        )

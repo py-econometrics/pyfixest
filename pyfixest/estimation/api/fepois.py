@@ -15,17 +15,18 @@ from pyfixest.estimation.internals.literals import (
 from pyfixest.estimation.models.feols_ import Feols
 from pyfixest.estimation.models.fepois_ import Fepois
 from pyfixest.utils.dev_utils import DataFrameType
+from pyfixest.utils.utils import Ssc, capture_context
 
 
 def fepois(
     fml: str,
-    data: DataFrameType,  # type: ignore
+    data: DataFrameType,
     vcov: VcovTypeOptions | dict[str, str] | None = None,
     vcov_kwargs: dict[str, str | int] | None = None,
     weights: str | None = None,
     weights_type: WeightsTypeOptions = "aweights",
     offset: str | None = None,
-    ssc: dict[str, str | bool] | None = None,
+    ssc: Ssc | Mapping[str, Any] | None = None,
     fixef_rm: FixedRmOptions = "singleton",
     iwls_tol: float = 1e-08,
     iwls_maxiter: int = 25,
@@ -40,6 +41,7 @@ def fepois(
     context: int | Mapping[str, Any] | None = None,
     split: str | None = None,
     fsplit: str | None = None,
+    accelerate: bool = True,
 ) -> Feols | Fepois | FixestMulti:
     """
     Estimate Poisson regression model with fixed effects using the `ppmlhdfe` algorithm.
@@ -47,22 +49,23 @@ def fepois(
     Parameters
     ----------
     fml : str
-        A two-sided formula string using fixest formula syntax.
+        A two-sided formula using fixest formula syntax.
         Syntax: "Y ~ X1 + X2 | FE1 + FE2". "|" separates left-hand side and fixed
         effects.
         Special syntax includes:
-        - Stepwise regressions (sw, sw0)
-        - Cumulative stepwise regression (csw, csw0)
+        - Stepwise operators (sw, sw0)
+        - Cumulative stepwise operators (csw, csw0)
         - Multiple dependent variables (Y1 + Y2 ~ X)
         - Interaction of variables (i(X1,X2))
         - Interacted fixed effects (fe1:fe2)
+        - Varying slopes (fe1[x], fe1[[x]])
         Compatible with formula parsing via the formulaic module.
 
     data : DataFrameType
         A pandas or polars dataframe containing the variables in the formula.
 
     vcov : Union[VcovTypeOptions, dict[str, str]]
-        Type of variance-covariance matrix for inference. Options include "iid",
+        Variance estimator. Options include "iid",
           "hetero", "HC1", "HC2", "HC3", "NW" for Newey-West HAC standard errors,
         "DK" for Driscoll-Kraay HAC standard errors, or a dictionary for CRV1/CRV3 inference.
         Note that NW and DK require to pass additional keyword arguments via the `vcov_kwargs` argument.
@@ -94,13 +97,11 @@ def fepois(
         differs across observations, e.g. `offset="log(population)"`.
 
     ssc : str
-        A ssc object specifying the small sample correction for inference.
+        The small-sample correction for inference, created with `ssc()`.
 
     fixef_rm : FixedRmOptions
-        Specifies whether to drop singleton fixed effects.
-        Can be equal to "singletons" (default) or "none".
-        "singletons" will drop singleton fixed effects. This will not impact point
-        estimates but it will impact standard errors.
+        Use "singleton" (default) to drop rows in singleton levels or "none"
+        to retain them. This can affect standard errors.
 
     iwls_tol : Optional[float], optional
         Tolerance for IWLS convergence, by default 1e-08.
@@ -124,19 +125,11 @@ def fepois(
         Typed demeaner configuration. Controls the fixed-effects demeaning
         backend, tolerance, and iteration limits. Accepts a `MapDemeaner`
         or `LsmrDemeaner` instance. Defaults to
-        `MapDemeaner()` (Rust MAP algorithm, tol=1e-6, maxiter=10_000).
+        `LsmrDemeaner()` (within LSMR, auto preconditioning, tol=1e-8,
+        maxiter=1_000).
         For other options - including the optional Numba backend and the
         torch-based LSMR backends - see the
         [Demeaner Backends vignette](../../how-to/demeaner-backends.qmd).
-
-        .. deprecated::
-            The ``cupy`` / ``scipy`` LSMR backends are deprecated and will
-            be removed in a future release. Replacements:
-
-            - cupy LSMR on GPU →
-              ``LsmrDemeaner(backend="torch", device="cuda")``.
-            - Scipy / cupy LSMR on CPU → ``LsmrDemeaner()``
-              (the default within backend).
 
     drop_intercept : bool, optional
         Whether to drop the intercept from the model, by default False.
@@ -151,17 +144,16 @@ def fepois(
         a column with interacted fixed effects in the data set.
 
     store_data : bool, optional
-        Whether to store the data in the model object, by default True.
-        If set to False, the data is not stored in the model object, which can
-        improve performance and save memory. However, it will no longer be possible
-        to access the data via the `data` attribute of the model object. This has
-        impact on post-estimation capabilities that rely on the data, e.g. `predict()`
-        or `vcov()`.
+        Whether the fitted model retains the data, by default True. Set to
+        False to save memory. Accessing `fit.data` or calling a post-estimation
+        operation that needs the data, such as `predict()` or `vcov()`, then
+        raises `MissingModelDataError`.
 
     lean: bool, optional
         False by default. If True, then all large objects are removed from the
         returned result: this will save memory but will block the possibility
-        to use many methods. It is recommended to use the argument vcov
+        to use many methods, which raise `MissingModelDataError` when required
+        attributes were removed. It is recommended to use the argument vcov
         to obtain the appropriate standard-errors at estimation time,
         since obtaining different SEs won't be possible afterwards.
 
@@ -178,6 +170,10 @@ def fepois(
 
     fsplit: Optional[str]
         This argument is the same as split but also includes the full sample as the first estimation.
+
+    accelerate: Optional[bool]
+        Whether to use acceleration tricks developed in the ppmlhdfe paper (warm start and adaptive fixed effects
+        tolerance). Produces numerically identical results faster, so we recommend to always set it to True.
 
     Returns
     -------
@@ -196,6 +192,11 @@ def fepois(
     the function reference for the full list.
 
     `predict()` does not support `se_fit=True` for Poisson models.
+
+    Varying slopes such as `f1[X2]` and `f1[[X2]]` are supported with the default
+    `within` demeaner, with the same restrictions as in
+    [feols()](/reference/estimation.api.feols.feols.qmd). A slope-only effect
+    like `f1[[X2]]` keeps the model's intercept.
 
     Examples
     --------
@@ -244,9 +245,11 @@ def fepois(
 
     Shared arguments such as `vcov`, `ssc`, `split`, `fsplit`, `context`, and typed demeaners
     are documented in the [feols() reference](/reference/estimation.api.feols.feols.html).
-    For applied examples, see the [Poisson & GLMs tutorial](/tutorials/poisson-glm.html).
     """
-    # Thin wrapper: fepois is exactly feglm(family="poisson").
+    # Thin wrapper: fepois is exactly feglm(family="poisson"). Capture the
+    # context here, as an integer frame offset passed on to feglm would resolve
+    # relative to this frame rather than the user's.
+    context = {} if context is None else capture_context(context)
     return feglm(
         fml=fml,
         data=data,
@@ -271,4 +274,5 @@ def fepois(
         context=context,
         split=split,
         fsplit=fsplit,
+        accelerate=accelerate,
     )

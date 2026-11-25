@@ -1,0 +1,135 @@
+from __future__ import annotations
+
+import numpy as np
+import pytest
+
+from pyfixest.estimation.internals.fit_ import fit_iv, fit_ols, project_onto_design
+
+# The numerical contract of `fit_ols` / `fit_iv` is pinned externally, by the
+# weighted and IV cases of `test_single_fit_feols` against `fixest`. What those
+# comparisons cannot see is whether the primitives write through to the arrays
+# the model object handed them, so that is what is tested here.
+
+
+@pytest.fixture
+def ols_arrays() -> tuple[np.ndarray, np.ndarray]:
+    X = np.array(
+        [
+            [1.0, -1.0],
+            [1.0, 0.0],
+            [1.0, 0.5],
+            [1.0, 2.0],
+            [1.0, 3.0],
+        ]
+    )
+    Y = np.array([[0.5], [1.0], [1.25], [2.5], [4.0]])
+    return X, Y
+
+
+@pytest.fixture
+def iv_arrays() -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    X = np.array(
+        [
+            [1.0, -1.0],
+            [1.0, 0.5],
+            [1.0, 2.0],
+            [1.0, 3.0],
+            [1.0, 1.5],
+        ]
+    )
+    Z = np.array(
+        [
+            [1.0, -0.5, 1.0],
+            [1.0, 0.0, -1.0],
+            [1.0, 1.5, 0.5],
+            [1.0, 2.5, 2.0],
+            [1.0, 1.0, -0.5],
+        ]
+    )
+    Y = np.array([[0.5], [1.0], [2.5], [4.0], [2.0]])
+    return X, Z, Y
+
+
+@pytest.mark.parametrize(
+    "weights",
+    [None, np.array([0.5, 1.0, 1.5, 2.0, 3.0])],
+    ids=("unweighted", "weighted"),
+)
+def test_fit_ols_does_not_mutate_inputs(
+    ols_arrays: tuple[np.ndarray, np.ndarray],
+    weights: np.ndarray | None,
+) -> None:
+    X, Y = ols_arrays
+    X_before = X.copy()
+    Y_before = Y.copy()
+    weights_before = None if weights is None else weights.copy()
+    X.setflags(write=False)
+    Y.setflags(write=False)
+    if weights is not None:
+        weights.setflags(write=False)
+
+    fit = fit_ols(X=X, Y=Y, weights=weights)
+
+    assert np.all(np.isfinite(fit.beta))
+    np.testing.assert_array_equal(X, X_before, err_msg="fit_ols mutated X")
+    np.testing.assert_array_equal(Y, Y_before, err_msg="fit_ols mutated Y")
+    if weights is not None:
+        np.testing.assert_array_equal(
+            weights,
+            weights_before,
+            err_msg="fit_ols mutated weights",
+        )
+
+
+@pytest.mark.parametrize(
+    "weights",
+    [None, np.array([[0.5], [1.0], [1.5], [2.0], [3.0]])],
+    ids=("unweighted", "weighted"),
+)
+def test_fit_iv_does_not_mutate_inputs(
+    iv_arrays: tuple[np.ndarray, np.ndarray, np.ndarray],
+    weights: np.ndarray | None,
+) -> None:
+    X, Z, Y = iv_arrays
+    X_before = X.copy()
+    Z_before = Z.copy()
+    Y_before = Y.copy()
+    weights_before = None if weights is None else weights.copy()
+    X.setflags(write=False)
+    Z.setflags(write=False)
+    Y.setflags(write=False)
+    if weights is not None:
+        weights.setflags(write=False)
+
+    sqrt_weights = None if weights is None else np.sqrt(weights.reshape(-1))[:, None]
+    sqrt_weights_before = None if sqrt_weights is None else sqrt_weights.copy()
+    if sqrt_weights is not None:
+        sqrt_weights.setflags(write=False)
+
+    X_hat = project_onto_design(
+        response=X,
+        design=Z,
+        sqrt_weights=sqrt_weights,
+        solver="np.linalg.solve",
+    )
+    X_hat_before = X_hat.copy()
+    X_hat.setflags(write=False)
+    fit = fit_iv(X=X, X_hat=X_hat, Y=Y, weights=weights)
+
+    assert np.all(np.isfinite(fit.beta))
+    np.testing.assert_array_equal(X, X_before, err_msg="fit_iv mutated X")
+    np.testing.assert_array_equal(Z, Z_before, err_msg="fit_iv mutated Z")
+    np.testing.assert_array_equal(X_hat, X_hat_before, err_msg="fit_iv mutated X_hat")
+    np.testing.assert_array_equal(Y, Y_before, err_msg="fit_iv mutated Y")
+    if weights is not None:
+        np.testing.assert_array_equal(
+            weights,
+            weights_before,
+            err_msg="fit_iv mutated weights",
+        )
+    if sqrt_weights is not None:
+        np.testing.assert_array_equal(
+            sqrt_weights,
+            sqrt_weights_before,
+            err_msg="IV projection mutated sqrt_weights",
+        )

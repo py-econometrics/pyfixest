@@ -73,7 +73,10 @@ def _make_demeaner(backend: str):
         return pf.MapDemeaner(backend=backend)
     if backend == "within":
         return pf.LsmrDemeaner()
-    raise ValueError(f"Unknown backend {backend!r}")
+    raise ValueError(
+        f"benchmarks.py has no demeaner for backend {backend!r}; "
+        "only 'numba', 'rust', and 'within' are mapped."
+    )
 
 
 def run_pyfixest_feols(data: pd.DataFrame, formula: str, backend: str) -> float:
@@ -177,7 +180,9 @@ def _run_in_subprocess(
     except MemoryError:
         result_queue.put(("oom", None))
     except Exception as e:
-        result_queue.put(("error", str(e)))
+        result_queue.put(
+            ("error", f"{func_name} on {data_path}: {type(e).__name__}: {e}")
+        )
 
 
 def run_with_timeout(
@@ -186,8 +191,8 @@ def run_with_timeout(
     formula: str,
     timeout: int,
     backend: str | None = None,
-) -> tuple[str, float | None]:
-    """Run a function in subprocess with timeout. Returns (status, elapsed_time)."""
+) -> tuple[str, float | str | None]:
+    """Run a subprocess, returning its status and elapsed time or error message."""
     result_queue = mp.Queue()
     proc = mp.Process(
         target=_run_in_subprocess,
@@ -205,7 +210,11 @@ def run_with_timeout(
         return ("timeout", None)
 
     if result_queue.empty():
-        return ("error", None)
+        return (
+            "error",
+            f"{func_name} on {data_path} exited with code {proc.exitcode} without a result. "
+            "Check the worker logs and data path.",
+        )
 
     return result_queue.get()
 
@@ -420,7 +429,11 @@ def run_benchmark(
     # Get all parquet files
     parquet_files = sorted(data_dir.glob("*.parquet"))
     if not parquet_files:
-        print(f"No parquet files found in {data_dir}", file=sys.stderr)
+        print(
+            f"No parquet files matched {data_dir / '*.parquet'}. "
+            "Pass --data-dir with the directory that holds the benchmark data.",
+            file=sys.stderr,
+        )
         sys.exit(1)
 
     # Group files by dataset (excluding iteration suffix)
@@ -490,7 +503,10 @@ def run_benchmark(
                                 print("OOM")
                                 elapsed = None
                             elif status == "error":
-                                print(f"ERROR: {elapsed}")
+                                print(
+                                    f"{est_name} failed for {filepath}: {elapsed}",
+                                    file=sys.stderr,
+                                )
                                 elapsed = None
                             else:
                                 print(f"{elapsed:.3f}s")

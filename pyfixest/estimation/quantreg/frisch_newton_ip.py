@@ -1,5 +1,57 @@
+from __future__ import annotations
+
+from dataclasses import dataclass
+
 import numpy as np
+from numpy.typing import NDArray
 from scipy.linalg import lapack, solve_triangular
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class QuantregSolution:
+    """Solution of the Frisch-Newton interior point solver.
+
+    Fields follow the notation of Portnoy and Koenker (1997), [Statistical
+    Science](https://doi.org/10.1214/ss/1030037960).
+
+    Parameters
+    ----------
+    beta : NDArray[np.float64]
+        Coefficient estimates, shape (n_coefficients,); the negated ``y``.
+    has_converged : bool
+        Whether the duality gap fell below the tolerance within the iteration
+        budget.
+    iterations : int
+        Index of the final interior point iteration, counted from zero.
+    x : NDArray[np.float64]
+        Primal variable, shape (n_solver_rows,).
+    s : NDArray[np.float64]
+        Primal slack of the upper bound, ``u - x``, shape (n_solver_rows,).
+    z : NDArray[np.float64]
+        Dual variable of ``x >= 0``, shape (n_solver_rows,).
+    w : NDArray[np.float64]
+        Dual variable of ``x <= u``, shape (n_solver_rows,).
+    y : NDArray[np.float64]
+        Dual variable of ``A x = b``, shape (n_coefficients,).
+
+    Examples
+    --------
+    ```{python}
+    import pyfixest as pf
+
+    fit = pf.quantreg("Y ~ X1", pf.get_data(), quantile=0.5)
+    fit.solution.has_converged, fit.solution.iterations
+    ```
+    """
+
+    beta: NDArray[np.float64]
+    has_converged: bool
+    iterations: int
+    x: NDArray[np.float64]
+    s: NDArray[np.float64]
+    z: NDArray[np.float64]
+    w: NDArray[np.float64]
+    y: NDArray[np.float64]
 
 
 def _duality_gap(x, z, s, w):
@@ -30,13 +82,11 @@ def _solve_ADAt(
     K = W @ W.T
 
     u_buf = u.copy()
-    lapack.dposv(K, u_buf, lower=1, overwrite_a=True, overwrite_b=True)
+    lapack.dposv(  # ty: ignore[unresolved-attribute]
+        K, u_buf, lower=1, overwrite_a=True, overwrite_b=True
+    )
     y = solve_triangular(chol.T, u_buf, lower=False, check_finite=False)
 
-    # S = np.linalg.cholesky(K)
-    # z = solve_triangular(S, u, lower=True)
-    # z = solve_triangular(S.T, z, lower=False)
-    # y = solve_triangular(chol.T, z, lower=False)
     return y
 
 
@@ -47,7 +97,6 @@ def cold_start(
     n = A.shape[1]
     x = np.full(n, 1.0 - q)
 
-    # iniate all other variables
     s = np.full_like(x, q)
     d_plus = np.maximum(c, 0.0)
     d_minus = np.maximum(-c, 0.0)
@@ -61,7 +110,6 @@ def cold_start(
 
     rhs = A @ (c - z + w)
     y = _solve_ADAt(rhs, D=np.ones(n), chol=chol, P=P)
-    # y = np.linalg.solve(A @ A.T, rhs)
     return x, s, z, w, y
 
 
@@ -77,9 +125,7 @@ def frisch_newton_solver(
     P: np.ndarray,
     backoff: float = 0.9995,
     beta_init: np.ndarray | None = None,
-) -> tuple[
-    np.ndarray, bool, int, np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray
-]:
+) -> QuantregSolution:
     """
     Solve
         min_x  c^T x
@@ -101,13 +147,10 @@ def frisch_newton_solver(
     r1_hat = np.empty_like(c)
 
     Qinv = np.empty_like(x)
-    # rhs = np.empty_like(b)
-    # work_n = np.empty_like(x)
     work_m = np.empty_like(b)
 
     M = np.empty((m, m))
 
-    # predictor-/corrector direction vectors (allocated once, reused)
     dx_aff = np.empty_like(x)
     ds_aff = np.empty_like(s)
     dz_aff = np.empty_like(z)
@@ -132,13 +175,13 @@ def frisch_newton_solver(
     w_pred = np.empty_like(w)
     y_pred = np.empty_like(y)
 
-    # quick sanity checks on starting values
-    if True:
-        for val in [x, z, s, w]:
-            if np.any(val < 0):
-                raise ValueError(
-                    f"Initial value {val} has negative entries, which is not allowed."
-                )
+    for name, initial in (("x", x), ("z", z), ("s", s), ("w", w)):
+        if np.any(initial < 0):
+            raise ValueError(
+                f"internal error: Frisch-Newton starting value {name} has negative "
+                f"entries (minimum {float(np.min(initial)):g}); please report this "
+                "pyfixest bug."
+            )
 
     mu_curr = _duality_gap(x=x, z=z, s=s, w=w)
 
@@ -154,11 +197,10 @@ def frisch_newton_solver(
         r2_tilde[:] = b - A @ x
 
         # Affine-Scaling Predictor Direction (eq. (8))
-        Qinv[:] = 1.0 / (z / x + w / s)  # diag
+        Qinv[:] = 1.0 / (z / x + w / s)
         M[:] = A @ (Qinv[:, None] * A.T)
         work_m[:] = r2_tilde + A @ (Qinv * r1_tilde)
         dy_aff[:] = np.linalg.solve(M, work_m)
-        # dy_aff[:] = _solve_ADAt(rhs=work_m, D=Qinv, chol=chol, P=P)
 
         dx_aff[:] = Qinv * (A.T @ dy_aff - r1_tilde)
         ds_aff[:] = -dx_aff
@@ -182,13 +224,11 @@ def frisch_newton_solver(
         sigma = ratio**2
         mu_targ = sigma * mu_curr / n
 
-        # corrector direction
         r1_hat = (
             mu_targ * (1 / s - 1 / x) + (dx_aff * dz_aff) / x - (ds_aff * dw_aff) / s
         )
 
         work_m[:] = A @ (Qinv * r1_hat)
-        # dy_cor[:] = _solve_ADAt(rhs = work_m, D = Qinv, chol=chol, P = P)
         dy_cor[:] = np.linalg.solve(M, work_m)
         dx_cor[:] = Qinv * (A.T @ dy_cor - r1_hat)
         ds_cor[:] = -dx_cor
@@ -203,14 +243,21 @@ def frisch_newton_solver(
             a=(z_pred, dz_cor), b=(w_pred, dw_cor), backoff=backoff
         )
 
-        # Update all variables / corrector step
         x[:] = x_pred + alpha_p_cor * dx_cor
         s[:] = s_pred + alpha_p_cor * ds_cor
         y[:] = y_pred + alpha_d_cor * dy_cor
         z[:] = z_pred + alpha_d_cor * dz_cor
         w[:] = w_pred + alpha_d_cor * dw_cor
 
-        # update
         mu_curr = _duality_gap(x=x, z=z, s=s, w=w)
 
-    return -y, has_converged, _it, x, s, z, w, y
+    return QuantregSolution(
+        beta=-y,
+        has_converged=has_converged,
+        iterations=_it,
+        x=x,
+        s=s,
+        z=z,
+        w=w,
+        y=y,
+    )

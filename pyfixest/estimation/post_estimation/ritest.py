@@ -1,30 +1,16 @@
-from importlib import import_module
+from __future__ import annotations
 
-import matplotlib.pyplot as plt
+import warnings
+from collections.abc import Callable
+from typing import Any
+
 import numpy as np
 import pandas as pd
-import seaborn as sns
-
-# Make lets-plot an optional dependency
-try:
-    from lets_plot import (
-        LetsPlot,
-        aes,
-        geom_density,
-        geom_vline,
-        ggplot,
-        ggtitle,
-        theme_bw,
-        xlab,
-        ylab,
-    )
-
-    _HAS_LETS_PLOT = True
-except ImportError:
-    _HAS_LETS_PLOT = False
-
+from numpy.typing import NDArray
 from scipy.stats import norm
 from tqdm import tqdm
+
+from pyfixest.utils.dev_utils import _find_stack_level
 
 # Numba is an optional dependency. The fast randomization-inference path uses it;
 # the slow path does not. We import lazily so the module loads cleanly even when
@@ -47,20 +33,14 @@ _NUMBA_RITEST_ERROR = (
     "`choose_algorithm='slow'`."
 )
 
-# Only setup lets-plot if it's available
-if _HAS_LETS_PLOT:
-    LetsPlot.setup_html()
-
 
 def _get_ritest_stats_slow(
     data: pd.DataFrame,
     resampvar: str,
-    fml: str,
     type: str,
     reps: int,
-    model: str,
+    fit_fn: Callable[..., Any],
     rng: np.random.Generator,
-    vcov: str | dict[str, str],
     clustervar_arr: np.ndarray | None = None,
 ) -> np.ndarray:
     """
@@ -72,8 +52,6 @@ def _get_ritest_stats_slow(
         The input data set.
     resampvar : str
         The name of the treatment variable.
-    fml : str
-        The formula of the regression model.
     type : str
         The type of the test statistic. Must be one of 'randomization-c'
         or 'randomization-t'. If 'randomization-c', the statistic
@@ -81,12 +59,13 @@ def _get_ritest_stats_slow(
         If 'randomization-t', the statistic is the t-statistic.
     reps : int
         The number of repetitions.
-    model : str
-        The model to estimate. Must be one of 'feols' or 'fepois'.
+    fit_fn : Callable[..., Any]
+        Refits the model on each resampled data set with the fitted model's
+        estimation options and the variance estimator of the test statistic,
+        such as `refit` with the model and `vcov` bound. It is called with
+        the keyword argument `data` only, reusing the fitted parsed formula.
     rng : np.random.Generator
         The random number generator.
-    vcov : str or dict[str, str]
-        The type of covarianc estimator. See `feols` or `fepois` for details.
     clustervar_arr : np.ndarray, optional
         Array containing the cluster variable. Defaults to None.
 
@@ -97,31 +76,25 @@ def _get_ritest_stats_slow(
         `type` is 'randomization-c', otherwise t-statistics are returned.
 
     """
-    data_resampled = data.copy()
-    fml_update = fml.replace(resampvar, f"{resampvar}_resampled")
+    # the resampled column goes into a shallow copy, so `data` keeps its
+    # columns; `fit_fn` must not modify its input
+    data_resampled = data.copy(deep=False)
 
-    fixest_module = import_module("pyfixest.estimation")
-    fit_ = getattr(fixest_module, model)
-
-    resampvar_arr = data_resampled[resampvar].to_numpy()
+    assignment, unit_codes = _assignment_units(
+        resampvar_arr=data_resampled[resampvar].to_numpy(),
+        clustervar_arr=clustervar_arr,
+    )
 
     ri_stats = np.zeros(reps)
 
     for i in tqdm(range(reps)):
-        D_treat = _resample(
-            resampvar_arr=resampvar_arr,
-            clustervar_arr=clustervar_arr,
-            rng=rng,
-            iterations=1,
-        ).flatten()
+        data_resampled[resampvar] = rng.permutation(assignment)[unit_codes]
 
-        data_resampled[f"{resampvar}_resampled"] = D_treat
-
-        fixest_fit = fit_(fml_update, data=data_resampled, vcov=vcov)
+        fixest_fit = fit_fn(data=data_resampled)
         if type == "randomization-c":
-            ri_stats[i] = fixest_fit.coef().xs(f"{resampvar}_resampled")
+            ri_stats[i] = fixest_fit.coef().xs(resampvar)
         else:
-            ri_stats[i] = fixest_fit.tstat().xs(f"{resampvar}_resampled")
+            ri_stats[i] = fixest_fit.tstat().xs(resampvar)
 
     return ri_stats
 
@@ -172,7 +145,7 @@ def _get_ritest_stats_fast(
         The test statistics. For this algorithm, regression coefficients are
         returned.
     """
-    if nb is None:
+    if nb is None or demean is None:
         raise ImportError(_NUMBA_RITEST_ERROR)
 
     X_demean = X
@@ -196,32 +169,35 @@ def _get_ritest_stats_fast(
 
     X_demean2 = X_demean[:, bool_idx]
 
-    D = D.reshape(-1, 1) if D.ndim == 1 else D
     X_demean2 = X_demean2.reshape(-1, 1) if X_demean2.ndim == 1 else X_demean2
 
-    resampvar_arr = D
+    assignment, unit_codes = _assignment_units(
+        resampvar_arr=D, clustervar_arr=clustervar_arr
+    )
 
     return _run_ri(
         reps=reps,
-        resampvar_arr=resampvar_arr,
-        clustervar_arr=clustervar_arr,
+        assignment=assignment,
+        unit_codes=unit_codes,
         Y_demean=Y_demean,
         X_demean2=X_demean2,
         fval=fval,
         weights=weights,
         rng=rng,
+        demean_fn=demean,
     )
 
 
 def _run_ri(
     reps: int,
-    resampvar_arr: np.ndarray,
+    assignment: np.ndarray,
+    unit_codes: np.ndarray,
     rng: np.random.Generator,
     fval: np.ndarray | None,
     weights: np.ndarray,
     Y_demean: np.ndarray,
     X_demean2: np.ndarray,
-    clustervar_arr: np.ndarray | None = None,
+    demean_fn: Callable[..., Any],
 ) -> np.ndarray:
     """
     Run the randomization inference.
@@ -230,8 +206,10 @@ def _run_ri(
     ----------
     reps : int
         The number of repetitions.
-    resampvar_arr : np.ndarray
-        Array containing the treatment variable.
+    assignment : np.ndarray
+        The treatment of each unit of random assignment.
+    unit_codes : np.ndarray
+        The index into `assignment` of each observation.
     rng : np.random.Generator
         The random number generator.
     fval : np.ndarray
@@ -241,8 +219,8 @@ def _run_ri(
     X_demean2 : np.ndarray
         The demeaned design matrix.
     Y_demean : np.ndarray
-    clustervar_arr : np.ndarray, optional
-        Array containing the cluster variable. Defaults to None.
+    demean_fn : Callable
+        The numba-backed `demean` function, validated as importable by the caller.
 
     Returns
     -------
@@ -256,14 +234,9 @@ def _run_ri(
     X_demean2 = np.ascontiguousarray(X_demean2)
 
     for i in range(reps):
-        D2 = _resample(
-            resampvar_arr=resampvar_arr,
-            clustervar_arr=clustervar_arr,
-            rng=rng,
-            iterations=1,
-        )
+        D2 = rng.permutation(assignment)[unit_codes].reshape((-1, 1))
 
-        D2_demean = demean(D2, fval, weights)[0] if fval is not None else D2
+        D2_demean = demean_fn(D2, fval, weights)[0] if fval is not None else D2
 
         ri_coefs[i] = lstsq_numba(
             np.concatenate((D2_demean, X_demean2), axis=1), Y_demean
@@ -272,78 +245,38 @@ def _run_ri(
     return ri_coefs
 
 
-def _resample(
-    resampvar_arr: np.ndarray,
-    rng: np.random.Generator,
-    iterations: int = 1,
-    clustervar_arr: np.ndarray | None = None,
-) -> np.ndarray:
+def _assignment_units(
+    resampvar_arr: np.ndarray, clustervar_arr: np.ndarray | None = None
+) -> tuple[np.ndarray, np.ndarray]:
     """
-    Random resampling of the treatment variable.
+    Collapse the treatment to its units of random assignment.
+
+    Without clusters, every observation is a unit. With clusters, every
+    cluster is a unit, and the caller must ensure that the treatment is
+    constant within each cluster.
 
     Parameters
     ----------
     resampvar_arr : np.ndarray
         Array containing the treatment variable.
-    rng : np.random.Generator
-        The random number generator.
-    iterations : int, optional
-        The number of iterations. Defaults to 1. If bigger than 1,
-        return `iterations` resampled treatment variables. Basically,
-        this argument allows to vectorize the resampling process.
     clustervar_arr : np.ndarray, optional
         Array containing the cluster variable. Defaults to None.
 
     Returns
     -------
-    np.ndarray
-        The resampled treatment variable(s). If `iterations` is bigger
-        than 1, the array has shape (N, iterations), where N is the
-        number of observations. Otherwise, the array has shape (N,1).
+    tuple[np.ndarray, np.ndarray]
+        The treatment of each unit, and the index of each observation's unit.
     """
-    N = resampvar_arr.shape[0]
-    resampvar_values = np.unique(resampvar_arr)
+    D = np.ascontiguousarray(resampvar_arr, dtype=np.float64).ravel()
 
-    if clustervar_arr is not None:
-        clustervar_values = np.unique(clustervar_arr)
-        D_treat = np.zeros((N, iterations))
+    if clustervar_arr is None:
+        return D, np.arange(D.shape[0])
 
-        for i, _ in enumerate(clustervar_values):
-            idx = (clustervar_arr == clustervar_values[i]).flatten()
-            D_treat[idx, :] = random_choice(resampvar_values, 1 * iterations, rng)
+    unit_codes, units = pd.factorize(np.asarray(clustervar_arr).ravel())
+    assignment = np.empty(len(units))
+    assignment[unit_codes] = D
 
-    else:
-        D_treat = random_choice(resampvar_values, N * iterations, rng).reshape(
-            (N, iterations)
-        )
-
-    return D_treat
-
-
-def random_choice(arr: np.ndarray, size: int, rng: np.random.Generator) -> np.ndarray:
-    """
-    Randomly sample from an array.
-
-    Parameters
-    ----------
-    arr : np.ndarray
-        The array from which to sample.
-    size : int
-        The number of samples.
-    rng : np.random.Generator
-        The random number generator.
-
-    Returns
-    -------
-    np.ndarray
-        The sampled array (with replacement) of size `size`.
-    """
-    n = len(arr)
-    result = np.empty(size, dtype=arr.dtype)
-    for i in range(size):
-        idx = rng.integers(0, n)
-        result[i] = arr[idx]
-    return result
+    return assignment, unit_codes
 
 
 def lstsq_numba(A, B):
@@ -356,8 +289,6 @@ def lstsq_numba(A, B):
 
 
 if nb is not None:
-    random_choice = nb.njit(random_choice)
-    _resample = nb.njit(_resample)
     lstsq_numba = nb.njit()(lstsq_numba)
     _run_ri = nb.njit()(_run_ri)
 
@@ -367,21 +298,23 @@ def _get_ritest_pvalue(
     ri_stats: np.ndarray,
     method: str,
     level: float,
-    h0_value: float,
 ) -> tuple[np.float64, np.float64, np.ndarray]:
     """
     Compute the p-value of the test statistic and
     standard error and CI of the p-value.
+
+    `sample_stat` must already be centered on the null and, for a t-test,
+    studentized.
     """
     reps = len(ri_stats)
     ci_sides = [0, 1]
 
     if method == "two-sided":
-        probs = np.abs(ri_stats) >= np.abs(sample_stat - h0_value)
+        probs = np.abs(ri_stats) >= np.abs(sample_stat)
     elif method == "greater":
-        probs = ri_stats <= sample_stat - h0_value
+        probs = ri_stats <= sample_stat
     elif method == "lower":
-        probs = ri_stats >= sample_stat - h0_value
+        probs = ri_stats >= sample_stat
     else:
         raise ValueError(
             "The `method` argument must be one of 'two-sided', 'right', 'left'."
@@ -396,7 +329,7 @@ def _get_ritest_pvalue(
 
 
 def _plot_ritest_pvalue(
-    sample_stat: np.ndarray, ri_stats: np.ndarray, plot_backend: str
+    sample_stat: float, ri_stats: NDArray[np.float64], plot_backend: str
 ):
     """Plot the permutation distribution of the test statistic."""
     df = pd.DataFrame({"ri_stats": ri_stats})
@@ -406,10 +339,27 @@ def _plot_ritest_pvalue(
     y_lab = "Density"
 
     if plot_backend == "lets_plot":
-        if not _HAS_LETS_PLOT:
-            print("lets-plot is not installed. Falling back to matplotlib.")
+        try:
+            from lets_plot import (
+                LetsPlot,
+                aes,
+                geom_density,
+                geom_vline,
+                ggplot,
+                ggtitle,
+                theme_bw,
+                xlab,
+                ylab,
+            )
+        except ImportError:
+            warnings.warn(
+                "lets-plot is not installed. Falling back to matplotlib.",
+                UserWarning,
+                stacklevel=_find_stack_level(),
+            )
             plot_backend = "matplotlib"
         else:
+            LetsPlot.setup_html()
             plot = (
                 ggplot(df, aes(x="ri_stats"))
                 + geom_density(fill="blue", alpha=0.5)
@@ -419,10 +369,12 @@ def _plot_ritest_pvalue(
                 + xlab(x_lab)
                 + ylab(y_lab)
             )
+            return plot.show()
 
-        return plot.show()
+    if plot_backend == "matplotlib":
+        import matplotlib.pyplot as plt
+        import seaborn as sns
 
-    elif plot_backend == "matplotlib":
         plt.figure(figsize=(10, 6))
         sns.kdeplot(data=df, x="ri_stats", fill=True, color="blue", alpha=0.5)
         plt.axvline(x=sample_stat, color="red", linestyle="--")
@@ -431,8 +383,11 @@ def _plot_ritest_pvalue(
         plt.ylabel(y_lab)
         plt.show()
 
-    else:
-        raise ValueError(f"Unsupported plot backend: {plot_backend}")
+        return None
+
+    raise ValueError(
+        f"plot_backend must be 'lets_plot' or 'matplotlib'; got {plot_backend!r}."
+    )
 
 
 def _decode_resampvar(resampvar: str) -> tuple[str, float, str, str]:
@@ -453,15 +408,15 @@ def _decode_resampvar(resampvar: str) -> tuple[str, float, str, str]:
         and test_type (two-sided, greater, lower).
     """
     if "=" in resampvar:
-        resampvar_, h0_value_str = resampvar.split("=")
+        resampvar_, h0_value_str = resampvar.split("=", 1)
         test_type = "two-sided"
         hypothesis = f"{resampvar_}={h0_value_str}"
     elif ">" in resampvar:
-        resampvar_, h0_value_str = resampvar.split(">")
+        resampvar_, h0_value_str = resampvar.split(">", 1)
         test_type = "greater"
         hypothesis = f"{resampvar_}>{h0_value_str}"
     elif "<" in resampvar:
-        resampvar_, h0_value_str = resampvar.split("<")
+        resampvar_, h0_value_str = resampvar.split("<", 1)
         test_type = "lower"
         hypothesis = f"{resampvar_}<{h0_value_str}"
     else:
@@ -470,6 +425,17 @@ def _decode_resampvar(resampvar: str) -> tuple[str, float, str, str]:
         hypothesis = f"{resampvar_}=0"
         h0_value_str = "0"
 
-    h0_value_float = float(h0_value_str)
+    try:
+        h0_value_float = float(h0_value_str)
+    except ValueError as exc:
+        raise ValueError(
+            f"ritest() could not read the null value in resampvar={resampvar!r}. "
+            "Pass a coefficient name or a hypothesis such as 'x=0', 'x>0', or 'x<0'."
+        ) from exc
+    if not resampvar_:
+        raise ValueError(
+            f"ritest() needs a coefficient name; got resampvar={resampvar!r}. "
+            "Use a hypothesis such as 'x=0'."
+        )
 
     return resampvar_, h0_value_float, hypothesis, test_type

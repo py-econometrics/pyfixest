@@ -197,6 +197,23 @@ def test_against_stata(stata_results, combine_covariates, se, agg_first):
     )
 
 
+def test_collinear_covariate_is_dropped():
+    "Covariates the fit dropped as collinear are not decomposed."
+    data = pf.get_data().dropna().reset_index(drop=True)
+    data["Xc"] = data.groupby("f1")["X2"].transform("mean")
+    fit = pf.feols("Y ~ X1 + X2 + Xc | f1", data=data)
+    ref = pf.feols("Y ~ X1 + X2 | f1", data=data)
+
+    fit.decompose(param="X1", only_coef=True)
+    ref.decompose(param="X1", only_coef=True)
+
+    absolute = fit.GelbachDecompositionResults.results.absolute
+    absolute_ref = ref.GelbachDecompositionResults.results.absolute
+    assert absolute.keys() == absolute_ref.keys()
+    for key, value in absolute_ref.items():
+        np.testing.assert_allclose(absolute[key], value)
+
+
 def test_regex():
     "Test the regex functionality for combine_covariates."
     data = gelbach_data(nobs=100)
@@ -283,6 +300,63 @@ def test_cluster():
     for key, value in fit1.GelbachDecompositionResults.results.absolute.items():
         np.testing.assert_allclose(
             value, fit2.GelbachDecompositionResults.results.absolute.get(key)
+        )
+
+
+@pytest.mark.parametrize("cluster", [None, "cluster"])
+def test_bootstrap_draws_independent_of_nthreads(cluster):
+    "Each replication draws fresh indices, and a seed fixes results for any nthreads."
+    df = pd.read_stata("tests/data/gelbach.dta")
+    fit = pf.feols("y ~ x1 + x21 + x22 + x23", data=df)
+    reps = 20
+
+    gb = {
+        nthreads: fit.decompose(
+            decomp_var="x1", cluster=cluster, reps=reps, seed=42, nthreads=nthreads
+        )
+        for nthreads in [1, 2]
+    }
+
+    for nthreads, decomposition in gb.items():
+        n_unique = len(decomposition._bootstrap_absolute_df.drop_duplicates())
+        assert n_unique == reps, (
+            f"nthreads={nthreads}: only {n_unique} of {reps} bootstrap draws are unique"
+        )
+
+    pd.testing.assert_frame_equal(
+        gb[1]._bootstrap_absolute_df,
+        gb[2]._bootstrap_absolute_df,
+        check_exact=True,
+        obj="bootstrap draws for nthreads=1 vs nthreads=2",
+    )
+
+    # tidy() computes the percentile CIs for the alpha it is given.
+    levels = {alpha: gb[1].tidy(alpha=alpha, panels="levels") for alpha in [0.05, 0.5]}
+    assert (levels[0.5].ci_lower > levels[0.05].ci_lower).all()
+    assert (levels[0.5].ci_upper < levels[0.05].ci_upper).all()
+
+    with pytest.raises(ValueError, match=r"alpha must be in \(0, 1\)"):
+        gb[1].tidy(alpha=1.5)
+
+
+def test_multiway_cluster_raises():
+    "A two-way clustered fit must not silently bootstrap on its first cluster only."
+    df = pd.read_stata("tests/data/gelbach.dta")
+    df["cluster2"] = np.arange(len(df)) % 7
+
+    fit = pf.feols(
+        "y ~ x1 + x21 + x22 + x23", data=df, vcov={"CRV1": "cluster + cluster2"}
+    )
+    with pytest.raises(ValueError, match="Multiway clustering"):
+        fit.decompose(param="x1", reps=2)
+
+    # an explicit one-way cluster overrides the fit's two-way clustering
+    fit.decompose(param="x1", reps=2, cluster="cluster")
+    fit_oneway = pf.feols("y ~ x1 + x21 + x22 + x23", data=df, vcov={"CRV1": "cluster"})
+    fit_oneway.decompose(param="x1", reps=2)
+    for key, value in fit.GelbachDecompositionResults.results.absolute.items():
+        np.testing.assert_allclose(
+            value, fit_oneway.GelbachDecompositionResults.results.absolute.get(key)
         )
 
 
@@ -404,6 +478,35 @@ def test_x1_vars(agg_first):
     np.testing.assert_allclose(
         fit.GelbachDecompositionResults.results.absolute["ALL"], 0.3149754
     )
+
+
+@pytest.mark.parametrize("agg_first", [True, False])
+def test_x1_vars_order_invariant(agg_first):
+    "x1_vars that precede the decomposition variable give the same decomposition."
+    data = pd.read_csv("tests/data/gelbach.csv")
+
+    def decompose(fml):
+        fit = pf.feols(fml, data=data)
+        fit.decompose(
+            decomp_var="x1",
+            x1_vars=["x21"],
+            agg_first=agg_first,
+            only_coef=True,
+        )
+        return fit.GelbachDecompositionResults.results
+
+    results = decompose("y ~ x1 + x21 + x22 + x23")
+    results_reordered = decompose("y ~ x21 + x1 + x22 + x23")
+
+    beta_short = pf.feols("y ~ x1 + x21", data=data).coef()["x1"]
+    np.testing.assert_allclose(results.direct_effect, beta_short)
+    np.testing.assert_allclose(results_reordered.direct_effect, beta_short)
+    for name in ["full_effect", "explained_effect", "unexplained_effect"]:
+        np.testing.assert_allclose(
+            getattr(results_reordered, name), getattr(results, name)
+        )
+    for mediator, value in results.absolute.items():
+        np.testing.assert_allclose(results_reordered.absolute[mediator], value)
 
 
 def test_tidy_snapshot(gelbach_decomposition):

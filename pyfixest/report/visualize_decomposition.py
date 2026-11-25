@@ -16,10 +16,8 @@ import pandas as pd
 class PlotConfig:
     """Configuration for coefplot styling and behavior."""
 
-    # Plot dimensions
     figsize: tuple[int, int] = (12, 8)
 
-    # Bar styling
     bar_width: float = 0.6
     bar_alpha: float = 0.8
 
@@ -31,11 +29,9 @@ class PlotConfig:
     color_spanner: str = "#2E4A87"  # Navy blue
     color_explained_text: str = "#2E4A87"  # Navy blue
 
-    # Text styling
     fontsize: int = 10
     fontweight: str = "bold"
 
-    # Layout constants
     spanner_linewidth: float = 2.0
     axis_padding_factor: float = 1.15
     min_axis_range: float = 0.1
@@ -55,9 +51,9 @@ class BarData:
     height: float
     bottom: float
     value: float
-    bar_type: str  # "initial", "mediator_green", "mediator_red", "final"
+    bar_type: str
     color: str
-    name: str | None = None  # For mediator bars
+    name: str | None = None
 
 
 class MediatorInfo(NamedTuple):
@@ -114,26 +110,21 @@ def create_decomposition_plot(
     """
     try:
         import matplotlib.pyplot as plt
-    except ImportError:
+    except ImportError as exc:
         raise ImportError(
-            "matplotlib is required for coefplot. Install with: pip install matplotlib"
-        )
+            "Decomposition plots require matplotlib. Install it with pip install matplotlib."
+        ) from exc
 
-    # Create configuration
     config = PlotConfig(figsize=figsize or (12, 8))
 
-    # Prepare data for plotting
     plot_data = _prepare_plot_data(decomposition_data, keep, drop, exact_match, labels)
 
-    # Create and configure the plot
     _, ax = plt.subplots(figsize=config.figsize)
 
-    # Draw the chart components
     _draw_bars(ax, plot_data, config)
     _draw_spanner(ax, plot_data, config, annotate_shares)
     _add_bar_labels(ax, plot_data, config, annotate_shares)
 
-    # Finalize the plot
     _finalize_plot(
         ax, plot_data, config, depvarname, decomp_var, title, annotate_shares, notes
     )
@@ -162,27 +153,21 @@ def _prepare_plot_data(
             "Expected 'direct_effect' and 'full_effect' in 'Levels (units)'."
         )
 
-    # Extract key values
     direct_effect = pd.to_numeric(levels.loc["direct_effect", "coefficients"])
     full_effect = pd.to_numeric(levels.loc["full_effect", "coefficients"])
 
-    # Filter and order mediators
     mediators = _filter_and_order_mediators(
         levels, keep, drop, exact_match, _select_order_coefs
     )
 
-    # Apply labels
     display_labels = _apply_labels(mediators, labels)
 
-    # Get mediator values and reorder by effect type
     mediator_info = _categorize_mediators(levels, mediators, direct_effect)
 
-    # Create bar data
     bar_data = _create_bar_data(
         direct_effect, full_effect, mediator_info, display_labels
     )
 
-    # Calculate axis limits
     y_min, y_max = _calculate_axis_limits(bar_data)
 
     return {
@@ -204,7 +189,6 @@ def _filter_and_order_mediators(
     select_order_coefs_func,
 ) -> list[str]:
     """Filter mediator variables."""
-    # Get mediator components (exclude the key summary effects)
     exclude = {
         "direct_effect",
         "full_effect",
@@ -213,7 +197,6 @@ def _filter_and_order_mediators(
     }
     mediators = [e for e in levels.index if e not in exclude]
 
-    # Apply keep/drop filtering
     if keep is not None or drop is not None:
         keep_list = keep if isinstance(keep, list) else ([keep] if keep else [])
         drop_list = drop if isinstance(drop, list) else ([drop] if drop else [])
@@ -236,7 +219,6 @@ def _categorize_mediators(
     levels: pd.DataFrame, mediators: list[str], direct_effect: float
 ) -> list[MediatorInfo]:
     """Categorize and sort mediators by their effect direction."""
-    # Get mediator values
     mediator_data = [
         (med, pd.to_numeric(levels.loc[med, "coefficients"])) for med in mediators
     ]
@@ -253,7 +235,6 @@ def _categorize_mediators(
         else:
             red_effects.append(mediator_info)
 
-    # Sort by decreasing absolute value
     red_effects.sort(key=lambda x: abs(x.value), reverse=True)
     green_effects.sort(key=lambda x: abs(x.value), reverse=True)
 
@@ -268,10 +249,9 @@ def _create_bar_data(
     display_labels: dict[str, str],
 ) -> list[BarData]:
     """Create bar data for waterfall chart."""
-    config = PlotConfig()  # Use default config for colors
+    config = PlotConfig()
     bar_data = []
 
-    # Initial bar
     bar_data.append(
         BarData(
             position=0,
@@ -284,7 +264,6 @@ def _create_bar_data(
         )
     )
 
-    # Mediator bars
     cumulative_position = direct_effect
     for i, info in enumerate(mediator_info):
         old_pos = cumulative_position
@@ -309,7 +288,6 @@ def _create_bar_data(
             )
         )
 
-    # Final bar
     bar_data.append(
         BarData(
             position=len(mediator_info) + 1,
@@ -335,7 +313,6 @@ def _calculate_axis_limits(bar_data: list[BarData]) -> tuple[float, float]:
     y_min = min(min(all_bar_bottoms), 0) * config.axis_padding_factor
     y_max = max(max(all_bar_tops), 0) * config.axis_padding_factor
 
-    # Ensure minimum range
     if abs(y_max - y_min) < config.min_axis_range:
         if y_max >= 0:
             y_max += config.min_axis_range
@@ -363,7 +340,6 @@ def _draw_bars(ax, plot_data: dict, config: PlotConfig) -> None:
         alpha=config.bar_alpha,
     )
 
-    # Set axis limits
     ax.set_ylim(plot_data["y_min"], plot_data["y_max"])
 
 
@@ -381,11 +357,9 @@ def _draw_spanner(
     explained_effect = plot_data["explained_effect"]
     y_min, y_max = plot_data["y_min"], plot_data["y_max"]
 
-    # Calculate spanner position
     mediator_start = mediator_bars[0].position
     mediator_end = mediator_bars[-1].position
 
-    # Position spanner based on chart orientation
     if direct_effect >= 0:
         highest_bar_top = max(bar.bottom + bar.height for bar in bar_data)
         spanner_y = (
@@ -398,7 +372,6 @@ def _draw_spanner(
             + (y_min - lowest_bar_bottom) * config.spanner_position_factor
         )
 
-    # Draw horizontal line
     ax.plot(
         [mediator_start - config.spanner_offset, mediator_end + config.spanner_offset],
         [spanner_y, spanner_y],
@@ -406,7 +379,6 @@ def _draw_spanner(
         linewidth=config.spanner_linewidth,
     )
 
-    # Draw vertical ticks
     tick_height = (y_max - y_min) * config.tick_height_factor
     for x_pos in [
         mediator_start - config.spanner_offset,
@@ -419,7 +391,6 @@ def _draw_spanner(
             linewidth=config.spanner_linewidth,
         )
 
-    # Add label
     spanner_center = (mediator_start + mediator_end) / 2
     if annotate_shares:
         share_of_direct = (explained_effect / direct_effect) * 100
@@ -459,7 +430,7 @@ def _add_bar_labels(
 
         if bar.bar_type in ["initial", "final"]:
             _add_simple_label(ax, bar, label_y, config, annotate_shares, direct_effect)
-        else:  # mediator bars
+        else:
             _add_mediator_label(
                 ax,
                 bar,
@@ -523,7 +494,6 @@ def _add_mediator_label(
         )
         return
 
-    # Create multi-line labels
     lines = [f"{bar.value:.3f}"]
 
     if abs(direct_effect) > 1e-10:
@@ -534,7 +504,6 @@ def _add_mediator_label(
         explained_share = (bar.value / explained_effect) * 100.0
         lines.append(f"({explained_share:.1f}%)")
 
-    # Decide placement
     min_needed_height = spacing_unit * (2 if len(lines) == 2 else 3)
     fits_inside = bar.height >= min_needed_height
 
@@ -624,7 +593,6 @@ def _position_labels_to_avoid_overlap(
     ax, bar: BarData, lines: list[str], spacing_unit: float, config: PlotConfig
 ) -> None:
     """Position labels outside the bar to avoid overlap, with smart ordering for readability."""
-    # Determine direction and starting position
     if bar.value >= 0:
         direction = -1  # Place below positive bars
         start_y = bar.bottom - (spacing_unit * config.outside_label_offset)
@@ -638,7 +606,6 @@ def _position_labels_to_avoid_overlap(
         # For negative bars going up, reverse the order so absolute is closest to bar
         label_order = lines[::-1]
 
-    # Place labels in order
     for j, text in enumerate(label_order):
         y = start_y + direction * (j * spacing_unit)
         # Adjust color index based on original position in lines array
@@ -679,14 +646,12 @@ def _finalize_plot(
 
     bar_data = plot_data["bar_data"]
 
-    # Set x-axis labels
     plot_labels = [bar.name.replace("_", " ") for bar in bar_data]
     positions = [bar.position for bar in bar_data]
 
     ax.set_xticks(positions)
     ax.set_xticklabels(plot_labels, rotation=45, ha="right")
 
-    # Set title
     if title is None:
         title = f"Decomposition of {depvarname} on {decomp_var} by Covariates"
 
@@ -698,7 +663,6 @@ def _finalize_plot(
     ax.grid(axis="y", alpha=0.3)
     ax.axhline(y=0, color="black", linewidth=0.8)
 
-    # Add notes
     if notes is not None:
         plt.figtext(
             0.02,

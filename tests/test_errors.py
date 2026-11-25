@@ -1,3 +1,11 @@
+from __future__ import annotations
+
+import re
+import sys
+import warnings
+from contextlib import nullcontext
+from functools import partial
+
 import numpy as np
 import pandas as pd
 import pytest
@@ -5,45 +13,27 @@ from formulaic.errors import FactorEvaluationError
 
 import pyfixest as pf
 from pyfixest.errors import (
-    DuplicateKeyError,
-    EndogVarsAsCovarsError,
+    EmptyEstimationSampleError,
+    FixedEffectEvaluationError,
     FormulaSyntaxError,
-    InstrumentsAsCovarsError,
+    IVIdentificationError,
+    MissingModelDataError,
     NanInClusterVarError,
     UnderDeterminedIVError,
     VcovTypeNotSupportedError,
 )
 from pyfixest.estimation import feols, fepois
-from pyfixest.estimation.deprecated.FormulaParser import FixestFormulaParser
 from pyfixest.estimation.post_estimation.dfm_test import _dfm_heterogeneity_test
 from pyfixest.estimation.post_estimation.multcomp import rwolf
 from pyfixest.report.summarize import etable, summary
 from pyfixest.utils.dgps import gelbach_data
 from pyfixest.utils.utils import get_data, ssc
+from tests._capability_fits import capability_fit
 
 
 @pytest.fixture
 def data():
     return pf.get_data()
-
-
-def test_formula_parser2():
-    with pytest.raises(DuplicateKeyError):
-        FixestFormulaParser("y ~ sw(a, b) +  sw(c, d)| sw(X3, X4))")
-
-
-def test_formula_parser3():
-    with pytest.raises(DuplicateKeyError):
-        FixestFormulaParser("y ~ sw(a, b) +  csw(c, d)| sw(X3, X4))")
-
-
-# def test_formula_parser2():
-#    with pytest.raises(FixedEffectInteractionError):
-#        FixestFormulaParser('y ~ X1 + X2 | X3:X4')
-
-# def test_formula_parser3():
-#    with pytest.raises(CovariateInteractionError):
-#        FixestFormulaParser('y ~ X1 + X2^X3')
 
 
 def test_cluster_na():
@@ -57,12 +47,180 @@ def test_cluster_na():
         feols(fml="Y ~ X1", data=data, vcov={"CRV1": "f3"})
 
 
-def test_cluster_but_no_data():
-    """Test if AttributeError if self._data is not stored."""
-    data = get_data()
-    fit = feols("Y ~ X1", data=data, store_data=False)
-    with pytest.raises(AttributeError):
-        fit.vcov({"CRV1": "f2"})
+@pytest.mark.parametrize(
+    "estimator,fml,estimator_kwargs,storage,operation,match",
+    [
+        (feols, "Y ~ X1", {}, {"lean": True}, lambda fit, data: fit.resid(), "resid"),
+        (
+            fepois,
+            "Y ~ X1",
+            {},
+            {"lean": True},
+            lambda fit, data: fit.resid(),
+            "resid",
+        ),
+        (
+            feols,
+            "Y ~ X1",
+            {},
+            {"lean": True},
+            lambda fit, data: fit.predict(),
+            "predict",
+        ),
+        (
+            fepois,
+            "Y ~ X1",
+            {},
+            {"lean": True},
+            lambda fit, data: fit.predict(),
+            "predict",
+        ),
+        (
+            feols,
+            "Y ~ X1 | f1",
+            {},
+            {"store_data": False},
+            lambda fit, data: fit.predict(newdata=data.head()),
+            "predict",
+        ),
+        (
+            feols,
+            "Y ~ X1",
+            {},
+            {"lean": True},
+            lambda fit, data: fit.predict(newdata=data.head(), interval="prediction"),
+            "resid",
+        ),
+        (
+            feols,
+            "Y ~ X1",
+            {},
+            {"store_data": False},
+            lambda fit, data: fit.vcov({"CRV1": "f1"}),
+            "vcov",
+        ),
+        (
+            feols,
+            "Y ~ X1 | f1",
+            {},
+            {"store_data": False},
+            lambda fit, data: fit.fixef(),
+            "fixef",
+        ),
+        (
+            feols,
+            "Y ~ X1",
+            {},
+            {"store_data": False},
+            lambda fit, data: fit.wildboottest(param="X1", cluster="f1", reps=2),
+            "wildboottest",
+        ),
+        (
+            feols,
+            "Y ~ X1",
+            {},
+            {"lean": True},
+            lambda fit, data: fit.wildboottest(param="X1", reps=2),
+            "wildboottest",
+        ),
+        (
+            feols,
+            "Y ~ X1",
+            {},
+            {"store_data": False},
+            lambda fit, data: fit.ritest("X1", reps=2),
+            "ritest",
+        ),
+        (
+            feols,
+            "Y ~ X1",
+            {},
+            {"store_data": False},
+            lambda fit, data: fit.ccv(treatment="X1", cluster="f1"),
+            "ccv",
+        ),
+        (
+            feols,
+            "Y ~ X1 + X2",
+            {},
+            {"lean": True},
+            lambda fit, data: fit.decompose(decomp_var="X1", only_coef=True),
+            "decompose",
+        ),
+        (
+            feols,
+            "Y ~ X1 + X2 | f1",
+            {},
+            {"store_data": False},
+            lambda fit, data: fit.decompose(decomp_var="X1", only_coef=True),
+            "decompose",
+        ),
+        (
+            feols,
+            "Y ~ X1 + X2",
+            {},
+            {"lean": True},
+            lambda fit, data: fit.update(np.ones((1, 3)), np.ones(1)),
+            "update",
+        ),
+        (
+            feols,
+            "Y ~ X1 + [X2 ~ Z1]",
+            {},
+            {"store_data": False},
+            lambda fit, data: fit._fit_first_stage(),
+            "_fit_first_stage",
+        ),
+        (
+            feols,
+            "Y ~ X1 + [X2 ~ Z1]",
+            {"vcov": "hetero"},
+            {"lean": True},
+            lambda fit, data: fit.eff_F(),
+            "eff_F",
+        ),
+        (
+            pf.quantreg,
+            "Y ~ X1",
+            {},
+            {"lean": True},
+            lambda fit, data: fit.objective_value,
+            "objective_value",
+        ),
+    ],
+)
+def test_missing_model_data_errors(
+    estimator, fml, estimator_kwargs, storage, operation, match
+):
+    """Public operations identify state deliberately omitted after estimation."""
+    data = get_data(model="Fepois") if estimator is fepois else get_data()
+    fit = estimator(fml, data=data, **estimator_kwargs, **storage)
+    remedy = (
+        "Refit with lean=False"
+        if storage.get("lean") and storage.get("store_data", True)
+        else "Refit with store_data=True and lean=False"
+    )
+    with pytest.raises(
+        MissingModelDataError,
+        match=rf"{match} requires retained model state.*{remedy}",
+    ):
+        operation(fit, data)
+
+
+def test_missing_unrelated_to_retention_remains_attribute_error():
+    """The retention guard does not relabel independently corrupted model state."""
+    fit = feols("Y ~ X1", data=get_data())
+    del fit._data
+    with pytest.raises(AttributeError, match="_data"):
+        fit.vcov("iid")
+
+
+def test_vcov_rejects_data():
+    """`vcov(data=...)` raises instead of pairing rows by position (#1825)."""
+    data = get_data().dropna()
+    fit = feols("Y ~ X1 + X2", data=data)
+    with pytest.raises(ValueError, match=r"`data` argument of `vcov\(\)`"):
+        fit.vcov({"CRV1": "f1"}, data=data)
 
 
 def test_error_hc23_fe():
@@ -75,10 +233,16 @@ def test_error_hc23_fe():
     """
     data = get_data().dropna()
 
-    with pytest.raises(VcovTypeNotSupportedError):
+    with pytest.raises(
+        VcovTypeNotSupportedError,
+        match=r"HC2 and HC3 variance estimators.*variance estimator such as HC1",
+    ):
         feols(fml="Y ~ X1 | f2", data=data, vcov="HC2")
 
-    with pytest.raises(VcovTypeNotSupportedError):
+    with pytest.raises(
+        VcovTypeNotSupportedError,
+        match=r"HC2 and HC3 variance estimators.*variance estimator such as HC1",
+    ):
         feols(fml="Y ~ X1 | f2", data=data, vcov="HC3")
 
 
@@ -103,12 +267,17 @@ def test_depvar_numeric():
         (
             "Y ~ X1 + [X2 ~ Z1]",
             True,
-            "endogenous variable must be numeric",
+            "endogenous regressor must be numeric",
         ),
         (
             "Y ~ X1 + [two_columns(X2) ~ Z1]",
             False,
-            "exactly one endogenous variable",
+            "exactly one endogenous regressor",
+        ),
+        (
+            "Y ~ X1 + [poly(X1, 2) ~ Z1]",
+            False,
+            "exactly one endogenous regressor",
         ),
     ],
 )
@@ -126,6 +295,82 @@ def test_dependent_and_endogenous_model_matrix_errors(
         feols(fml=fml, data=data, context={"two_columns": two_columns})
 
 
+@pytest.mark.parametrize(
+    "fml, message",
+    [
+        ("Y ~ center(X1) + [X1 ~ Z1]", "fully explained"),
+        ("Y ~ poly(X1, 2) + [X1 ~ Z1]", "fully explained"),
+        ("Y ~ X1.fillna(0) + [X1 ~ Z1]", "fully explained"),
+        ("Y ~ X1 + [center(X1) ~ Z1]", "fully explained"),
+        ("Y ~ X1 + [center(X1) ~ Z1] | f1", "fully explained"),
+        (
+            "Y ~ center(X1) + [X2 ~ X1]",
+            "no explanatory power for the endogenous regressor",
+        ),
+    ],
+)
+def test_iv_rejects_invalid_transformed_specifications(fml, message):
+    """Distinct transformed terms are parsed but invalid numerical models fail."""
+    with pytest.raises(IVIdentificationError, match=message):
+        feols(fml=fml, data=get_data().dropna())
+
+
+@pytest.mark.parametrize(
+    "fml",
+    [
+        "Y ~ X1 + [X2 ~ X1]",
+        "Y ~ center(X1) + [X2 ~ center(X1)]",
+        "Y ~ I(X1**2) + [X2 ~ I(X1**2)]",
+        "Y ~ X1:Z1 + [X2 ~ X1:Z1]",
+        "Y ~ center(X1) + [X2 ~ center(X1)] | f1",
+    ],
+)
+def test_iv_requires_instrument_before_materialization(fml):
+    """Missing formula columns must not mask the instrument specification error."""
+    with pytest.raises(
+        IVIdentificationError, match="contains only exogenous regressors"
+    ):
+        feols(fml=fml, data=pd.DataFrame({"unused": [1.0, 2.0]}))
+
+
+@pytest.mark.parametrize(
+    "rhs",
+    [
+        "X1 * [X2 ~ Z1]",
+        "[X2 ~ Z1] * X1",
+        "X1 * (X3 + [X2 ~ Z1])",
+        "X1 : [X2 ~ Z1]",
+        "(X1 + [X2 ~ Z1]) : X3 + X2",
+        "[X2 ~ Z1] / X1",
+        "X1 %in% [X2 ~ Z1]",
+        "(X1 + [X2 ~ Z1])^2",
+        "(X1 + [X2 ~ Z1])**2",
+    ],
+)
+def test_iv_rejects_implicit_endogenous_interactions(rhs):
+    """IV-block algebra must not silently make an endogenous interaction exogenous."""
+    with pytest.raises(
+        FormulaSyntaxError, match="Interactions around an instrumental-variable block"
+    ):
+        feols(fml=f"Y ~ {rhs}", data=pd.DataFrame({"unused": [1.0, 2.0]}))
+
+
+@pytest.mark.parametrize("block", ["0", "1", "-1", "0 + 1", "1 - 1"])
+@pytest.mark.parametrize("main", ["X2", "0 + X2", "X2 - 1"])
+def test_iv_block_of_intercepts_has_no_instrument(main, block):
+    with pytest.raises(
+        UnderDeterminedIVError,
+        match="Supply at least one instrument per endogenous regressor",
+    ):
+        feols(f"Y ~ {main} + [X1 ~ {block}]", data=get_data())
+
+
+@pytest.mark.parametrize("endogenous", ["1 + X1", "X1 + 1"])
+def test_iv_endogenous_side_rejects_intercept(endogenous):
+    with pytest.raises(FormulaSyntaxError, match="Multiple endogenous regressors"):
+        feols(f"Y ~ X2 + [{endogenous} ~ Z1]", data=get_data())
+
+
 def test_iv_errors():
     data = get_data()
 
@@ -134,12 +379,6 @@ def test_iv_errors():
         feols(fml="Y ~ X1 | Z1 + Z2 ~ X2", data=data)
     with pytest.raises(UnderDeterminedIVError):
         feols(fml="Y ~ X1 | Z1 ~ 1", data=data)
-    # instrument specified as covariate
-    with pytest.raises(InstrumentsAsCovarsError):
-        feols(fml="Y ~ X1 | Z1  ~ X1 + X2", data=data)
-    # endogenous variable specified as covariate
-    with pytest.raises(EndogVarsAsCovarsError):
-        feols(fml="Y ~ Z1 | Z1  ~ X1", data=data)
 
     # instrument specified as covariate
     # with pytest.raises(InstrumentsAsCovarsError):
@@ -156,10 +395,154 @@ def test_iv_errors():
     with pytest.raises(NotImplementedError):
         feols(fml="Y ~ 1 | Z1 ~ X1 ", data=data).wildboottest(param="Z1", reps=999)
     # unsupported HC vcov
-    with pytest.raises(VcovTypeNotSupportedError):
+    with pytest.raises(
+        VcovTypeNotSupportedError,
+        match=r"HC2 and HC3 variance estimators.*variance estimator such as HC1",
+    ):
         feols(fml="Y  ~ 1 | Z1 ~ X1", vcov="HC2", data=data)
-    with pytest.raises(VcovTypeNotSupportedError):
+    with pytest.raises(
+        VcovTypeNotSupportedError,
+        match=r"HC2 and HC3 variance estimators.*variance estimator such as HC1",
+    ):
         feols(fml="Y  ~ 1 | Z1 ~ X1", vcov="HC3", data=data)
+
+
+@pytest.fixture
+def iv_identification_data():
+    data = pf.get_data().dropna()
+    return data.assign(D=data.X1, C=data.X2, Z=data.Z1)
+
+
+@pytest.mark.parametrize(
+    "weights, fixed_effects",
+    [
+        pytest.param(None, "", id="unweighted"),
+        pytest.param("weights", "", id="weighted"),
+        pytest.param("weights", "f1", id="weighted-fe"),
+    ],
+)
+@pytest.mark.parametrize(
+    "case, covariates",
+    [
+        pytest.param("perfect-control", "C", id="perfect-control"),
+        pytest.param("perfect-instrument", "C", id="perfect-instrument"),
+        pytest.param("perfect-instrument", "0", id="perfect-instrument-no-controls"),
+        pytest.param("irrelevant-instrument", "C", id="irrelevant-instrument"),
+        pytest.param(
+            "irrelevant-instrument", "0", id="irrelevant-instrument-no-controls"
+        ),
+        pytest.param("dropped-instrument", "C", id="dropped-instrument"),
+        pytest.param("dropped-control", "C + C_small", id="dropped-control"),
+    ],
+)
+def test_iv_identification_errors(
+    iv_identification_data, weights, fixed_effects, case, covariates
+):
+    """IV estimation rejects perfect first stages and irrelevant instruments."""
+    data = iv_identification_data
+    fe_suffix = f" | {fixed_effects}" if fixed_effects else ""
+    if case == "perfect-control":
+        data["C"] = data.D - data.D.mean()
+    elif case == "perfect-instrument":
+        data["Z"] = data.D
+    elif case == "dropped-instrument":
+        data["Z"] *= 1e-9  # Too small to survive collinearity removal.
+    else:
+        # Construct D with no remaining projection onto the controls or instruments.
+        data["D"] = pf.feols(
+            f"D ~ C + Z{fe_suffix}", data=data, weights=weights
+        ).resid()
+        if case == "dropped-control":
+            data["C_small"] = 1e-9 * data.D
+
+    if case in ("perfect-control", "perfect-instrument"):
+        message = "regressor 'D' is fully explained"
+    else:
+        message = "no explanatory power for the endogenous regressor 'D'"
+
+    with pytest.raises(IVIdentificationError, match=message):
+        pf.feols(f"Y ~ {covariates} + [D ~ Z]{fe_suffix}", data=data, weights=weights)
+
+
+@pytest.mark.parametrize("weights", [None, "weights"])
+@pytest.mark.parametrize(
+    "control_scale, covariates, fixed_effects, expected_names",
+    [
+        pytest.param(1.0, "C", "", {"Intercept", "C", "D"}, id="original"),
+        pytest.param(1e14, "C", "", {"Intercept", "C", "D"}, id="rescaled"),
+        pytest.param(1.0, "C", "f1", {"D"}, id="all-controls-absorbed"),
+        pytest.param(1.0, "C + X2", "f1", {"X2", "D"}, id="one-control-retained"),
+    ],
+)
+def test_iv_identification_valid_designs(
+    iv_identification_data,
+    weights,
+    control_scale,
+    covariates,
+    fixed_effects,
+    expected_names,
+):
+    """Valid IV models still estimate when controls are rescaled or absorbed."""
+    data = iv_identification_data
+    if fixed_effects:
+        data["C"] = data.f1  # The fixed effects absorb C completely.
+    else:
+        data["C"] *= control_scale
+    fe_suffix = f" | {fixed_effects}" if fixed_effects else ""
+    expected_warning = (
+        pytest.warns(UserWarning, match="dropped due to multicollinearity")
+        if fixed_effects
+        else nullcontext()
+    )
+    with expected_warning:
+        fit = pf.feols(
+            f"Y ~ {covariates} + [D ~ Z]{fe_suffix}", data=data, weights=weights
+        )
+
+    assert set(fit.coef().index) == expected_names
+    assert np.isfinite(fit.coef()).all()
+    assert np.isfinite(fit.se()).all()
+
+
+def test_iv_constant_instrument_without_intercept(iv_identification_data):
+    """A constant instrument is accepted when the IV formula has no intercept."""
+    data = iv_identification_data.assign(K=1.0)
+    fit = pf.feols("Y ~ 0 + [D ~ K]", data=data)
+
+    assert list(fit.coef().index) == ["D"]
+    # The just-identified IV estimator sum(K * Y) / sum(K * D) with K = 1.
+    np.testing.assert_allclose(
+        fit.coef()["D"], data.Y.sum() / data.D.sum(), rtol=1e-10, atol=0
+    )
+    assert np.isfinite(fit.se()).all()
+
+
+@pytest.mark.parametrize("estimator", [feols, fepois])
+@pytest.mark.parametrize(
+    "fml, reason",
+    [
+        ("Y ~ X1 | f1 + [X2 ~ Z1]", "Bracketed IV syntax belongs before"),
+        ("Y ~ X1 | sw(f1, [X2 ~ Z1])", "Bracketed IV syntax belongs before"),
+        ("Y ~ X1 | f1 | [X2 ~ Z1]", "Bracketed IV syntax belongs before"),
+        ("Y ~ X1 | X2 ~ Z1 | f1", "The legacy IV part must come last"),
+        ("Y ~ X1 | X2 ~ Z1 | X3 ~ Z2", "The legacy IV part must come last"),
+        ("Y ~ X1 | f1 | X2 ~ Z1 + [X3 ~ Z2]", "exactly one formula-level"),
+        ("Y ~ X1 | f1 | X2 ~ Z1 ~ Z2", "exactly one formula-level"),
+        ("Y ~ X1 | f1 | f2 | X2 ~ Z1", "Legacy IV syntax allows only"),
+        ("Y ~ X1 | f1 | ~ Z1", "Specify endogenous regressors"),
+        ("Y ~ X1 | f1 | X2 ~", "Specify endogenous regressors"),
+    ],
+)
+def test_misplaced_iv_syntax_errors(estimator, fml, reason):
+    # Missing formula columns ensure validation precedes materialization.
+    data = pd.DataFrame({"unused": [1.0, 2.0]})
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", DeprecationWarning)
+        with pytest.raises(FormulaSyntaxError, match=reason) as caught:
+            estimator(fml=fml, data=data)
+    assert "Use `Y ~ X1 + [X2 ~ Z1] | f1` or `Y ~ X1 | f1 | X2 ~ Z1`." in str(
+        caught.value
+    )
 
 
 @pytest.mark.skip("Not yet implemented.")
@@ -245,14 +628,61 @@ def test_poisson_offset_errors():
 
 def test_all_variables_multicollinear():
     data = get_data()
-    with pytest.raises(ValueError):
-        fit = feols("Y ~ f1 | f1", data=data)  # noqa: F841
+    with pytest.raises(
+        ValueError, match=r"All regressors are collinear at collin_tol=.*f1"
+    ):
+        feols("Y ~ f1 | f1", data=data)
+
+
+@pytest.mark.parametrize(
+    ("stage", "message"),
+    [
+        ("empty", "0 input rows"),
+        ("missing", "missing values=4"),
+        ("zero_weight", "zero weights=4"),
+        ("singleton", "singleton fixed-effect levels=4"),
+        ("separation", "separation=4"),
+    ],
+)
+def test_empty_estimation_sample_reports_filtering(stage, message):
+    data = pd.DataFrame(
+        {
+            "y": [2.0, 1.0, 3.0, 2.0],
+            "x": [1.0, 2.0, 3.0, 1.0],
+            "g": [1, 2, 3, 4],
+            "w": 1.0,
+        }
+    )
+    estimator, formula, kwargs = pf.feols, "y ~ x", {}
+    if stage == "empty":
+        data = data.iloc[:0]
+    elif stage == "missing":
+        data["y"] = np.nan
+    elif stage == "zero_weight":
+        data["w"] = 0.0
+        kwargs["weights"] = "w"
+    elif stage == "singleton":
+        formula = "y ~ x | g"
+    else:
+        data["y"] = 0.0
+        data["g"] = [1, 1, 2, 2]
+        formula, estimator = "y ~ x | g", pf.fepois
+
+    with pytest.raises(ValueError, match=f"No observations.*{message}"):
+        estimator(formula, data=data, **kwargs)
+
+
+def test_fetch_model_reports_index_bounds():
+    fit = pf.feols("Y ~ sw(X1, X2)", data=pf.get_data(N=100))
+    for invalid in [-3, 2]:
+        with pytest.raises(IndexError, match=r"outside the bounds.*from -2 to 1"):
+            fit.fetch_model(invalid)
 
 
 def test_wls_errors():
     data = get_data()
 
-    with pytest.raises(AssertionError):
+    with pytest.raises(ValueError, match="weights must be a column in data"):
         feols(fml="Y ~ X1", data=data, weights="weights2")
 
     with pytest.raises(ValueError):
@@ -310,25 +740,25 @@ def test_rwolf_error():
 
 
 def test_predict_fe_dtype_mismatch():
-    """FE dtype handling in predict(newdata=...).
-
-    Numeric-vs-non-numeric mismatches raise a clear pyfixest error (instead of
-    a cryptic FactorEvaluationError from the merge inside encode_fixed_effects);
-    numeric-numeric differences predict fine; fully unmatched FE levels warn.
-    """
+    """Prediction requires the fitted FE dtype; unseen labels still warn."""
     data = get_data()
     fit = feols("Y ~ X1 | f1", data=data)
 
-    # numeric-numeric dtype difference (float fit vs int newdata): no complaint
+    # Equal numeric labels still require the fitted dtype.
     newdata = data.dropna(subset=["f1"]).iloc[0:100].copy()
     newdata["f1"] = newdata["f1"].astype(int)
-    pred = fit.predict(newdata=newdata)
-    assert np.isfinite(pred).any()
+    with pytest.raises(
+        FixedEffectEvaluationError, match=r"`f1` has dtype .* fitted on dtype"
+    ):
+        fit.predict(newdata=newdata)
 
-    # numeric fit data vs string newdata: clear pyfixest error
+    # Explicit string dtype is also a mismatch.
     newdata_str = data.dropna(subset=["f1"]).iloc[0:100].copy()
-    newdata_str["f1"] = newdata_str["f1"].astype(str)
-    with pytest.raises(ValueError, match="Fixed effect column 'f1'"):
+    newdata_str["f1"] = newdata_str["f1"].astype("string")
+    with pytest.raises(
+        FixedEffectEvaluationError,
+        match=r"`f1` has dtype .* fitted on dtype",
+    ):
         fit.predict(newdata=newdata_str)
 
     # no matching FE level at all: warning + all-NaN predictions
@@ -347,6 +777,11 @@ def test_wildboottest_errors():
     fit = feols("Y ~ X1", data=data)
     with pytest.raises(ValueError):
         fit.wildboottest(param="X2", reps=999, seed=213)
+    with pytest.raises(
+        ValueError,
+        match="cluster='absent' is absent from the model's estimation sample",
+    ):
+        fit.wildboottest(param="X1", cluster="absent", reps=2)
 
 
 def test_summary_errors():
@@ -366,36 +801,37 @@ def test_errors_etable():
     fit1 = feols("Y ~ X1", data=data)
     fit2 = feols("Y ~ X1 + X2 | f1", data=data)
 
-    with pytest.raises(AssertionError):
+    with pytest.raises(ValueError):
         etable([fit1, fit2], signif_code=[0.01, 0.05])
 
-    with pytest.raises(AssertionError):
+    with pytest.raises(ValueError):
         etable([fit1, fit2], signif_code=[0.2, 0.05, 0.1])
 
-    with pytest.raises(AssertionError):
+    with pytest.raises(ValueError):
         etable([fit1, fit2], signif_code=[0.1, 0.5, 1.5])
 
-    with pytest.raises(AssertionError):
+    # maketables raises AssertionError before 0.2.0 and ValueError from 0.2.0.
+    with pytest.raises((AssertionError, ValueError)):
         etable(
             models=[fit1, fit2],
             custom_stats={
                 "conf_int_lb": [
-                    fit2._conf_int[0]
+                    fit2.coeftable.conf_int[0]
                 ],  # length of customized statistics not equal to the number of models
-                "conf_int_ub": [fit2._conf_int[1]],
+                "conf_int_ub": [fit2.coeftable.conf_int[1]],
             },
             coef_fmt="b se\n[conf_int_lb, conf_int_ub]",
         )
 
-    with pytest.raises(AssertionError):
+    with pytest.raises((AssertionError, ValueError)):
         etable(
             models=[fit1, fit2],
             custom_stats={
                 "conf_int_lb": [
                     [0.1, 0.1, 0.1],
-                    fit2._conf_int[0],
+                    fit2.coeftable.conf_int[0],
                 ],  # length of customized statistics not equal to length of model
-                "conf_int_ub": [fit1._conf_int[1], fit2._conf_int[1]],
+                "conf_int_ub": [fit1.coeftable.conf_int[1], fit2.coeftable.conf_int[1]],
             },
             coef_fmt="b [conf_int_lb, conf_int_ub]",
         )
@@ -405,8 +841,8 @@ def test_errors_etable():
             models=[fit1, fit2],
             custom_stats={
                 "b": [
-                    fit2._conf_int[0],
-                    fit2._conf_int[0],
+                    fit2.coeftable.conf_int[0],
+                    fit2.coeftable.conf_int[0],
                 ],  # preserved keyword cannot be used as a custom statistic
             },
             coef_fmt="b [se]",
@@ -419,12 +855,18 @@ def test_errors_ccv():
 
     # error when D is not binary
     fit = feols("Y ~ X1", data=data, vcov={"CRV1": "f1"})
-    with pytest.raises(AssertionError):
+    with pytest.raises(ValueError, match="must be binary with values 0 and 1"):
         fit.ccv(treatment="X1", pk=0.05, qk=0.5, n_splits=10, seed=929)
 
     # error when fixed effects in estimation
     fit = feols("Y ~ D | f1", data=data)
-    with pytest.raises(NotImplementedError):
+    with pytest.raises(NotImplementedError, match=r"not supported.*fixed effects"):
+        fit.ccv(treatment="D", pk=0.05, qk=0.5, n_splits=10, seed=929)
+
+    # weighted CCV needs a separately defined estimating equation
+    data["observation_weight"] = np.linspace(0.5, 2.0, len(data))
+    fit = feols("Y ~ D", data=data, weights="observation_weight")
+    with pytest.raises(NotImplementedError, match=r"not supported.*weights"):
         fit.ccv(treatment="D", pk=0.05, qk=0.5, n_splits=10, seed=929)
 
     # error when treatment not found
@@ -438,7 +880,9 @@ def test_errors_ccv():
         fit.ccv(treatment="D", pk=0.05, qk=0.5, n_splits=10, seed=929)
 
     # error when cluster variable not in data.frame
-    with pytest.raises(ValueError):
+    with pytest.raises(
+        ValueError, match="cluster='e8' is absent from the model's estimation sample"
+    ):
         fit.ccv(treatment="D", pk=0.05, qk=0.5, n_splits=10, seed=929, cluster="e8")
 
     # error when two-way clustering
@@ -450,13 +894,156 @@ def test_errors_ccv():
     pois_data = get_data(model="Fepois").dropna()
     pois_data["D"] = np.random.choice([0, 1], size=len(pois_data))
     fit = fepois("Y ~ D", data=pois_data)
-    with pytest.raises(AssertionError):
+    with pytest.raises(NotImplementedError, match=r"not supported for 'fepois' fits"):
         fit.ccv(treatment="D", pk=0.05, qk=0.5, n_splits=10, seed=929)
 
     # same for IV
     fit = feols("Y ~ 1 | D ~ Z1", data=data)
-    with pytest.raises(AssertionError):
+    with pytest.raises(
+        NotImplementedError, match=r"not supported for 'feols' fits with instruments"
+    ):
         fit.ccv(treatment="D", pk=0.05, qk=0.5, n_splits=10, seed=929)
+
+
+def _clustered_fit(data):
+    data = data.dropna().copy()
+    data["cluster"] = data["f1"] % 3
+    return feols("Y ~ X1", data=data, vcov={"CRV1": "cluster"})
+
+
+def _binary_treatment_fit(data):
+    data = data.dropna().copy()
+    data["D"] = np.random.default_rng(929).integers(0, 2, len(data)).astype(float)
+    return feols("Y ~ D", data=data)
+
+
+def _cluster_treatment_fit(data):
+    data = data.dropna().copy()
+    data["D"] = (data.f1 % 2 == 0).astype(float)
+    return feols("Y ~ D", data=data)
+
+
+@pytest.mark.parametrize(
+    "kwargs,error,match",
+    [
+        ({"treatment": 1}, TypeError, "treatment must be a string"),
+        ({"cluster": 1}, TypeError, "cluster must be a string or None"),
+        ({"seed": 1.5}, TypeError, "seed must be an integer or None"),
+        ({"n_splits": 2.0}, TypeError, "n_splits must be an integer"),
+        ({"n_splits": 0}, ValueError, "n_splits must be a positive integer"),
+        ({"pk": "a"}, TypeError, "pk must be a number"),
+        ({"pk": 1.5}, ValueError, "pk must be between 0 and 1"),
+        ({"qk": -0.1}, ValueError, "qk must be between 0 and 1"),
+    ],
+)
+def test_ccv_argument_validation(data, kwargs, error, match):
+    fit = _binary_treatment_fit(data)
+    with pytest.raises(error, match=match):
+        fit.ccv(**{"treatment": "D", "cluster": "f1", "seed": 1, **kwargs})
+
+
+def test_weighted_update_is_explicitly_unsupported():
+    data = get_data().dropna(subset=["Y", "X1", "weights"])
+    fit = feols("Y ~ X1", data=data, weights="weights")
+
+    with pytest.raises(NotImplementedError, match=r"update.*not supported.*weights"):
+        fit.update(X_new=np.ones((1, 2)), y_new=np.ones(1))
+
+
+def _call_predict(fit):
+    return fit.predict()
+
+
+def _call_fixef(fit):
+    return fit.fixef()
+
+
+def _call_ritest(fit):
+    resampvar = "X1" if "X1" in fit._coefnames else fit._coefnames[-1]
+    return fit.ritest(resampvar=resampvar, reps=2)
+
+
+def _call_update(fit):
+    return fit.update(X_new=np.ones((1, fit._k)), y_new=np.ones(1))
+
+
+def _call_decompose(fit):
+    return fit.decompose(decomp_var=fit._coefnames[-1], reps=2)
+
+
+_NO_FE = {"fixed_effects": False}
+
+
+@pytest.mark.parametrize(
+    "model,operation,capability,fit_kwargs",
+    [
+        ("feols-iv", _call_predict, "prediction", {}),
+        ("feols-iv", _call_predict, "prediction", {"lean": True}),
+        ("feols-iv", _call_fixef, "fixed_effect_recovery", {}),
+        ("feols-iv", _call_fixef, "fixed_effect_recovery", {"store_data": False}),
+        ("feols-iv", _call_ritest, "randomization_inference", {}),
+        ("feols-iv", _call_update, "sherman_morrison_update", _NO_FE),
+        ("feglm-gaussian", _call_ritest, "randomization_inference", {}),
+        ("feglm-logit", _call_ritest, "randomization_inference", {}),
+        ("feglm-probit", _call_ritest, "randomization_inference", {}),
+        ("quantreg", _call_ritest, "randomization_inference", {}),
+        ("did2s", _call_predict, "prediction", {}),
+        ("did2s", _call_ritest, "randomization_inference", {}),
+        ("twfe", _call_ritest, "randomization_inference", {}),
+        ("saturated", _call_ritest, "randomization_inference", {}),
+        ("fepois", _call_update, "sherman_morrison_update", _NO_FE),
+        ("feglm-logit", _call_update, "sherman_morrison_update", _NO_FE),
+        ("quantreg", _call_update, "sherman_morrison_update", {}),
+        ("did2s", _call_update, "sherman_morrison_update", {}),
+        ("did2s", _call_decompose, "decomposition", {}),
+    ],
+)
+def test_capability_rejections(model, operation, capability, fit_kwargs):
+    """Disabled capabilities reject the method before it reads estimation state."""
+    fit = capability_fit(model, **fit_kwargs)
+    assert getattr(fit.capabilities, capability) is False
+    with pytest.raises(
+        NotImplementedError, match=rf"fit\.capabilities\.{capability} is False"
+    ):
+        operation(fit)
+
+
+@pytest.mark.parametrize(
+    "model,estimator",
+    [
+        ("feols-iv", "'feols' fits with instruments"),
+        ("did2s", "'did2s' fits"),
+    ],
+)
+def test_capability_rejection_names_estimator(model, estimator):
+    fit = capability_fit(model)
+    with pytest.raises(
+        NotImplementedError, match=rf"^predict\(\) is not supported for {estimator}:"
+    ):
+        fit.predict()
+
+
+def test_coef_update_inplace_is_explicitly_unsupported():
+    rng = np.random.default_rng(1234)
+    data = get_data().dropna(subset=["Y", "X1", "X2"])
+    data_subsample = data.sample(frac=0.3, random_state=1234)
+    m = feols("Y ~ X1 + X2", data=data_subsample)
+    original_coef = m.coef().copy()
+    new_points_id = rng.choice(
+        data.index.difference(data_subsample.index), 5, replace=False
+    )
+    X_new, y_new = (
+        np.c_[
+            data.loc[new_points_id][
+                ["X1", "X2"]
+            ].values  # only pass columns; let `update` add the intercept
+        ],
+        data.loc[new_points_id]["Y"].values,
+    )
+    with pytest.raises(NotImplementedError, match=r"inplace=True.*not supported"):
+        m.update(X_new, y_new, inplace=True)
+
+    pd.testing.assert_series_equal(m.coef(), original_coef)
 
 
 def test_errors_confint():
@@ -479,6 +1066,46 @@ def test_i_error():
         feols("Y ~ i(f1, X1, ref='a')", data)
 
 
+@pytest.mark.parametrize(
+    "fml,match",
+    [
+        # Mistyped level, alone or next to a valid one.
+        ("Y ~ i(f_str, bin={'ax': 'a12'})", r"No match was found for \['a12'\]"),
+        (
+            "Y ~ i(f_str, bin={'ax': ['a1', 'a12', 'a99']})",
+            r"No match was found for \['a12', 'a99'\]",
+        ),
+        # String levels do not match a numeric variable.
+        ("Y ~ i(f1, bin={'pre': ['-5', '-4']})", r"No match was found for \['-5', "),
+        # The same level in two bins.
+        (
+            "Y ~ i(f_str, bin={'ax': ['a1', 'a2'], 'ay': 'a1'})",
+            r"assigns the values \['a1'\] of the variable `f_str` to more than one",
+        ),
+        # Empty mappings and empty bins.
+        ("Y ~ i(f_str, bin={})", r"for the variable `f_str` is empty"),
+        (
+            "Y ~ i(f_str, bin={'ax': []})",
+            r"assigns no values of the variable `f_str` to the bin 'ax'",
+        ),
+        # Mistyped level of the second variable.
+        (
+            "Y ~ i(f1, f_str, bin2={'ax': 'a12'})",
+            r"do not occur in the variable `f_str`. No match was found for \['a12'\]",
+        ),
+        # A numeric second variable gives slopes; factor options need C().
+        ("Y ~ i(f_str, f1, ref2=1)", r"`f1` is numeric.*`i\(f_str, C\(f1\), ref2"),
+        ("Y ~ i(f_str, X1, bin2={'lo': [1]})", r"`X1` is numeric.*C\(X1\)"),
+    ],
+)
+def test_i_bin_invalid_values(fml, match):
+    """Invalid i() bins and references raise instead of fitting another model."""
+    data = get_data()
+    data["f_str"] = np.random.default_rng(1).choice(["a1", "a2", "a3"], len(data))
+    with pytest.raises(ValueError, match=match):
+        feols(fml, data)
+
+
 def test_plot_error():
     df = get_data()
     fit = feols("Y ~ X1", data=df)
@@ -498,29 +1125,40 @@ def test_plot_error():
 def test_ritest_error(data):
     fit = pf.feols("Y ~ X1", data=data)
 
-    with pytest.raises(ValueError, match=r"X2 not found in the model's coefficients\."):
+    with pytest.raises(
+        ValueError, match=r"resampvar='X2' is absent from the fitted coefficients"
+    ):
         fit.ritest(resampvar="X2", reps=1000)
 
-    with pytest.raises(ValueError, match="CLUST is not found in the data"):
+    with pytest.raises(
+        ValueError, match="cluster='CLUST' is absent from the model's estimation sample"
+    ):
         fit.ritest(resampvar="X1", reps=1000, cluster="CLUST")
 
     with pytest.raises(
-        ValueError, match=r"type must be 'randomization-t' or 'randomization-c\."
+        ValueError, match=r"type must be 'randomization-t' or 'randomization-c'"
     ):
         fit.ritest(resampvar="X1", reps=1000, type="a")
 
-    with pytest.raises(AssertionError):
+    with pytest.raises(TypeError, match="reps must be an integer"):
         fit.ritest(resampvar="X1", reps=100.4)
+
+    with pytest.raises(ValueError, match="reps must be a positive integer"):
+        fit.ritest(resampvar="X1", reps=0)
 
     with pytest.raises(ValueError):
         fit.ritest(resampvar="X1", cluster="f1", reps=100)
 
-    with pytest.raises(NotImplementedError):
-        fit_iv = pf.feols("Y ~ 1 | X1 ~ Z1", data=data)
+    fit_clustered = pf.feols("Y ~ X1", data=data.dropna())
+    with pytest.raises(ValueError, match="`X1` varies within clusters of `f1`"):
+        fit_clustered.ritest(resampvar="X1", cluster="f1", reps=100)
+
+    fit_iv = pf.feols("Y ~ 1 | X1 ~ Z1", data=data)
+    with pytest.raises(NotImplementedError, match=r"randomization_inference is False"):
         fit_iv.ritest(resampvar="X1", reps=100)
 
-    with pytest.raises(NotImplementedError):
-        fit_wls = pf.feols("Y ~ X1", data=data, weights="weights")
+    fit_wls = pf.feols("Y ~ X1", data=data, weights="weights", store_data=False)
+    with pytest.raises(NotImplementedError, match="Weights are not supported"):
         fit_wls.ritest(resampvar="X1", reps=100)
 
     with pytest.raises(ValueError):
@@ -533,6 +1171,140 @@ def test_ritest_error(data):
         fit = pf.feols("Y ~ X1", data=data)
         fit.ritest(resampvar="X1", reps=100)
         fit.plot_ritest()
+
+
+def test_optional_dependency_fallbacks(data, monkeypatch):
+    """Missing optional plotting and bootstrap packages warn or raise, not print."""
+    monkeypatch.setattr("matplotlib.pyplot.show", lambda: None)
+    fit = pf.feols("Y ~ X1", data=data.dropna())
+
+    monkeypatch.setitem(sys.modules, "lets_plot", None)
+    fit.ritest(resampvar="X1", reps=20, store_ritest_statistics=True)
+    with pytest.warns(UserWarning, match="lets-plot is not installed") as record:
+        fit.plot_ritest()
+    assert record[0].filename == __file__
+
+    monkeypatch.setitem(sys.modules, "wildboottest.wildboottest", None)
+    with pytest.raises(ImportError, match="pip install wildboottest"):
+        fit.wildboottest(param="X1", reps=999, seed=1)
+
+
+@pytest.mark.parametrize(
+    "trigger,category,match",
+    [
+        (
+            lambda d: feols("Y ~ X1 + X2", data=d).wald_test(
+                R=np.array([[1, -1, 0]]), q=np.array([0.0])
+            ),
+            UserWarning,
+            "Distribution changed to chi2",
+        ),
+        (
+            lambda d: _clustered_fit(d).wildboottest(param="X1", reps=999, seed=1),
+            UserWarning,
+            "setting full_enumeration to True",
+        ),
+        (
+            lambda d: rwolf([_clustered_fit(d)], param="X1", reps=999, seed=1),
+            UserWarning,
+            "setting full_enumeration to True",
+        ),
+        (
+            lambda d: feols("Y ~ X1 + I(2 * X1)", data=d),
+            UserWarning,
+            "dropped due to multicollinearity",
+        ),
+        (
+            lambda d: fepois("Y ~ X1 + I(2 * X1)", data=get_data(model="Fepois")),
+            UserWarning,
+            "dropped due to multicollinearity",
+        ),
+        (
+            lambda d: fepois(
+                "Y ~ X | f",
+                data=pd.DataFrame(
+                    {
+                        "Y": [0, 0, 0, 1, 2, 3, 0, 4, 1, 2],
+                        "X": [1, 2, 3, 4, 5, 6, 7, 8, 3, 1],
+                        "f": [0, 0, 0, 1, 1, 1, 2, 2, 2, 1],
+                    }
+                ),
+            ),
+            UserWarning,
+            "observations removed because of separation",
+        ),
+        (
+            lambda d: feols("Y + Y2 ~ X1", data=d),
+            DeprecationWarning,
+            "Specifiying multiple dependent variables",
+        ),
+        (
+            lambda d: pf.quantreg("Y ~ X1", data=d.dropna(), quantile=0.5),
+            FutureWarning,
+            "Quantile Regression implementation is experimental",
+        ),
+        (
+            lambda d: feols("Y ~ X1 + X2", data=d.dropna()).decompose(
+                param="X1", only_coef=True
+            ),
+            FutureWarning,
+            "The 'param' argument is deprecated",
+        ),
+        (
+            lambda d: feols("Y ~ 1 | f1", data=d.dropna()).tidy(),
+            UserWarning,
+            "Empty variance-covariance matrix detected",
+        ),
+        (
+            lambda d: pf.coefplot(
+                [feols("Y ~ X1", data=d)],
+                labels={"not_a_coef": "label"},
+                plot_backend="matplotlib",
+            ),
+            UserWarning,
+            "The label key 'not_a_coef' is not in the covariate names",
+        ),
+        (
+            lambda d: pf.coefplot(
+                [feols("Y ~ X1", data=d)],
+                rename_models={"not_a_model": "label"},
+                plot_backend="matplotlib",
+            ),
+            UserWarning,
+            "model names specified in rename_models are not found",
+        ),
+    ],
+)
+def test_warnings_category_and_call_site(data, trigger, category, match):
+    """Warnings carry an explicit category and name the caller's line."""
+    with pytest.warns(category, match=match) as record:
+        trigger(data)
+    matched = [
+        w
+        for w in record
+        if issubclass(w.category, category) and re.search(match, str(w.message))
+    ]
+    assert matched
+    assert {w.filename for w in matched} == {__file__}
+
+
+@pytest.mark.parametrize("estimator", ["feglm", "quantreg"])
+def test_wildboottest_rejects_non_ols_working_domains(estimator):
+    """Wild bootstrap must reject estimator-specific non-OLS array domains."""
+    data = pd.DataFrame(
+        {
+            "y": [0, 1, 0, 1, 1, 0, 1, 0],
+            "x": np.linspace(-1.0, 1.0, 8),
+        }
+    )
+    if estimator == "feglm":
+        fit = pf.feglm("y ~ x", data=data, family="logit")
+    else:
+        with pytest.warns(FutureWarning, match="experimental"):
+            fit = pf.quantreg("y ~ x", data=data, maxiter=100)
+
+    with pytest.raises(NotImplementedError, match=r"only supported for unweighted OLS"):
+        fit.wildboottest(param="x", reps=1)
 
 
 def test_wald_test_invalid_distribution():
@@ -589,18 +1361,6 @@ def setup_feiv_instance():
     return pf.feols("Y ~ 1 | X1 ~ Z1", data=data)
 
 
-def test_IV_first_stage_invalid_model_type():
-    class NotFeols:
-        # Dummy class for testing invalid model type
-        pass
-
-    invalid_model = NotFeols()
-
-    with pytest.raises(TypeError):
-        feiv_instance = setup_feiv_instance()
-        feiv_instance.first_stage(invalid_model)  # This should raise TypeError
-
-
 def test_IV_Diag_unsupported_statistics():
     feiv_instance = setup_feiv_instance()
 
@@ -651,20 +1411,20 @@ def test_errors_panelview():
     )
 
     # 1. Test for missing 'unit' column
-    with pytest.raises(ValueError, match=r"Column 'unit' not found in data\."):
+    with pytest.raises(ValueError, match=r"unit='unit' is absent from data"):
         pf.panelview(sample_df.drop(columns=["unit"]), "unit", "year", "treat")
 
     # 2. Test for missing 'year' column (time)
-    with pytest.raises(ValueError, match=r"Column 'year' not found in data\."):
+    with pytest.raises(ValueError, match=r"time='year' is absent from data"):
         pf.panelview(sample_df.drop(columns=["year"]), "unit", "year", "treat")
 
     # 3. Test for missing 'treat' column
-    with pytest.raises(ValueError, match=r"Column 'treat' not found in data\."):
+    with pytest.raises(ValueError, match=r"treat='treat' is absent from data"):
         pf.panelview(sample_df.drop(columns=["treat"]), "unit", "year", "treat")
 
     # 4. Test for missing outcome column
     with pytest.raises(
-        ValueError, match=r"Outcome column 'nonexistent_col' not found in data\."
+        ValueError, match=r"outcome='nonexistent_col' is absent from data"
     ):
         pf.panelview(sample_df, "unit", "year", "treat", outcome="nonexistent_col")
 
@@ -727,6 +1487,28 @@ def test_split_fsplit_errors(data, split, fsplit, expected_exception, error_mess
         pf.feols("Y~X1", data=data, split=split, fsplit=fsplit)
 
 
+@pytest.mark.parametrize(
+    "split_arg, dropped, sample_label",
+    [("split", 2, "'east'"), ("fsplit", 3, "all nonmissing rows")],
+)
+def test_split_fit_error_note(split_arg, dropped, sample_label):
+    data = pd.DataFrame(
+        {
+            "y": [np.nan, np.nan, np.nan, 1.0],
+            "x": [1.0, 2.0, 3.0, 4.0],
+            "group": ["east", "east", "west", None],
+        }
+    )
+
+    with pytest.raises(
+        EmptyEstimationSampleError, match=rf"No observations.*missing values={dropped}"
+    ) as error:
+        pf.feols("y ~ x", data=data, **{split_arg: "group"})
+
+    note = f"While fitting 'y ~ 1 + x' for 'group' = {sample_label}."
+    assert note in getattr(error.value, "__notes__", ())
+
+
 def test_separation_check_validations():
     data = pd.DataFrame(
         {
@@ -754,6 +1536,27 @@ def test_separation_check_validations():
         pf.fepois("Y ~ X1", data=data, separation_check=["fe", "invalid"])
 
 
+@pytest.mark.parametrize("family", ["logit", "probit"])
+def test_feglm_binomial_ignores_ir_separation_check(family):
+    data = pf.get_data()
+    data["Y"] = (data["Y"] > 0).astype(int)
+    with pytest.warns(UserWarning, match="separation_check='ir' is not applied"):
+        pf.feglm("Y ~ X1 | f1", data=data, family=family, separation_check=["ir"])
+
+
+def test_fepois_rejects_negative_fe_group():
+    """A fixed-effect group with only negative outcomes is not separated away."""
+    data = pd.DataFrame(
+        {
+            "Y": [-1, -2, 0, 1, 2, 3, 0, 4, 1, 2],
+            "X": [1, 2, 3, 4, 5, 6, 7, 8, 3, 1],
+            "f": [0, 0, 0, 1, 1, 1, 2, 2, 2, 1],
+        }
+    )
+    with pytest.raises(ValueError, match="must be weakly positive"):
+        pf.fepois("Y ~ X | f", data=data)
+
+
 def test_gelbach_errors():
     rng = np.random.default_rng(123)
 
@@ -764,7 +1567,7 @@ def test_gelbach_errors():
     fit = pf.feols("y ~ x1 + x21 + x22 + x23", data=data)
 
     with pytest.raises(
-        ValueError, match=r"The variable 'x32' is not in the mediator names."
+        ValueError, match=r"The variable 'x32'.*is not in the mediator names"
     ):
         fit.decompose(param="x1", combine_covariates={"g1": ["x32"]})
 
@@ -773,17 +1576,17 @@ def test_gelbach_errors():
     ):
         fit.decompose(param="x1", combine_covariates={"g1": ["x21"], "g2": ["x21"]})
 
-    with pytest.raises(TypeError, match=r"combine_covariates_dict must be lists"):
+    with pytest.raises(TypeError, match=r"combine_covariates\['g1'\] must be a list"):
         fit.decompose(param="x1", combine_covariates={"g1": "x21"})
 
-    with pytest.raises(ValueError, match=r"not in list"):
+    with pytest.raises(ValueError, match=r"x99.*is not in the coefficient names"):
         fit.decompose(param="x99")
 
     with pytest.raises(ValueError, match=r"cannot be included in the x1_vars argument"):
         fit.decompose(decomp_var="x1", x1_vars=["x1"])
 
     with pytest.raises(
-        ValueError, match=r"cannot be in both x1_vars and combine_covariates keys"
+        ValueError, match=r"cannot be in both x1_vars and combine_covariates groups"
     ):
         fit.decompose(
             decomp_var="x1", x1_vars=["x21"], combine_covariates={"g1": ["x21"]}
@@ -821,7 +1624,7 @@ def test_gelbach_errors():
         fit.decompose(param="x1", decomp_var="x1")
 
     with pytest.warns(
-        UserWarning,
+        FutureWarning,
         match=r"The 'param' argument is deprecated. Please use 'decomp_var' instead.",
     ):
         fit.decompose(param="x1")
@@ -847,7 +1650,7 @@ def test_gelbach_errors():
     # error with fweights and only_coef=False
     with pytest.raises(
         NotImplementedError,
-        match=r"Decomposition is currently only supported for models with frequency weights when only_coef is False.",
+        match=r"Decomposition inference is unavailable with frequency weights.*Use only_coef=True",
     ):
         fit = pf.feols(
             "y ~ x1 + x21", data=data, weights="weights", weights_type="fweights"
@@ -855,6 +1658,23 @@ def test_gelbach_errors():
         fit.decompose(
             decomp_var="x1", combine_covariates={"g1": ["x21"]}, only_coef=False
         )
+
+
+@pytest.mark.parametrize("model_type", ["feglm", "quantreg"])
+def test_decomposition_rejects_unsupported_models(model_type):
+    data = gelbach_data(nobs=100)
+
+    if model_type == "feglm":
+        data["binary_y"] = (data["y"] > data["y"].median()).astype(int)
+        fit = pf.feglm("binary_y ~ x1 + x21", data=data, family="logit")
+    else:
+        fit = pf.quantreg("y ~ x1 + x21", data=data, quantile=0.5)
+
+    with pytest.raises(
+        NotImplementedError,
+        match=r"fit\.capabilities\.decomposition is False",
+    ):
+        fit.decompose(decomp_var="x1", only_coef=True)
 
 
 def test_glm_errors():
@@ -868,6 +1688,16 @@ def test_glm_errors():
         ValueError, match=r"The dependent variable must have two unique values\."
     ):
         pf.feglm("Y ~ X1", data=data, family="logit")
+
+    data_one_outcome = pf.get_data().assign(Y=1.0)
+    with pytest.raises(
+        ValueError,
+        match=(
+            r"found only \[1\.0\].*`subset`.*"
+            r"the dependent variable contains both 0 and 1 after filtering"
+        ),
+    ):
+        pf.feglm("Y ~ X1", data=data_one_outcome, family="logit")
 
     data["Y"] = np.where(data["Y"] > 0, 2, 0)
     with pytest.raises(
@@ -896,21 +1726,70 @@ def test_feglm_offset_requires_poisson():
     pf.feglm("Y_p ~ X1", data=data.dropna(), family="poisson", offset="off")
 
 
-def test_prediction_errors_glm():
-    "Test that the prediction errors not supported for GLM models."
-    data = pf.get_data()
-    data["Y"] = np.where(data["Y"] > 0, 1, 0)
+@pytest.mark.parametrize(
+    "model",
+    ["quantreg", "feglm-gaussian", "feglm-probit", "feglm-logit", "fepois"],
+)
+@pytest.mark.parametrize("storage", [{}, {"lean": True}, {"store_data": False}])
+def test_prediction_inference_unsupported(model, storage):
+    """Unsupported inference fails before accessing retained prediction state."""
+    fit = capability_fit(model, fixed_effects=False, **storage)
+    for newdata in [None, pf.get_data().head()]:
+        for inference in [
+            {"se_fit": True},
+            {"interval": "prediction"},
+            {"se_fit": True, "interval": "prediction"},
+        ]:
+            with pytest.raises(
+                NotImplementedError,
+                match=r"fit\.capabilities\.prediction_inference is False",
+            ):
+                fit.predict(newdata=newdata, **inference)
+        if not storage.get("lean") or newdata is not None:
+            assert isinstance(fit.predict(newdata=newdata), np.ndarray)
+    with pytest.raises(ValueError, match=r"interval must be one of"):
+        fit.predict(interval="invalid")
 
-    fit_gaussian = pf.feglm("Y ~ X1", data=data, family="gaussian")
-    fit_probit = pf.feglm("Y ~ X1", data=data, family="probit")
-    fit_logit = pf.feglm("Y ~ X1", data=data, family="logit")
-    fit_pois = pf.fepois("Y ~ X1", data=data)
 
-    for model in [fit_gaussian, fit_probit, fit_logit, fit_pois]:
-        with pytest.raises(
-            NotImplementedError, match="Prediction with standard errors"
-        ):
-            model.predict(se_fit=True)
+def test_glm_resid_rejects_invalid_type():
+    fit = fepois("Y ~ X1", data=get_data(model="Fepois"), lean=True)
+    with pytest.raises(ValueError, match="type must be one of"):
+        fit.resid(type="invalid")
+
+
+@pytest.mark.parametrize("family", ["gaussian", "logit", "probit"])
+def test_glm_crv3_is_explicitly_unsupported(family):
+    """Do not silently run Poisson jackknife refits for other GLM families."""
+    data = pf.get_data(model="Fepois").dropna().copy()
+    if family in ("logit", "probit"):
+        data["Y"] = (data["Y"] > data["Y"].median()).astype(int)
+
+    with pytest.raises(VcovTypeNotSupportedError, match="CRV3 inference"):
+        pf.feglm(
+            "Y ~ X1",
+            data=data,
+            family=family,
+            vcov={"CRV3": "f1"},
+        )
+
+
+def test_poisson_crv3_remains_supported():
+    """Keep the longstanding Poisson jackknife path across both public APIs."""
+    data = pf.get_data(model="Fepois").dropna().iloc[:120].copy()
+    data["cluster"] = np.arange(len(data)) % 6
+
+    direct_fit = pf.fepois("Y ~ X1", data=data, vcov={"CRV3": "cluster"})
+    glm_fit = pf.feglm(
+        "Y ~ X1",
+        data=data,
+        family="poisson",
+        vcov={"CRV3": "cluster"},
+    )
+
+    np.testing.assert_allclose(direct_fit.coef(), glm_fit.coef())
+    np.testing.assert_allclose(
+        direct_fit.variance_covariance.vcov, glm_fit.variance_covariance.vcov
+    )
 
 
 def test_empty_vcov_error():
@@ -928,22 +1807,26 @@ def test_errors_quantreg(data):
     with pytest.raises(VcovTypeNotSupportedError):
         pf.quantreg("Y ~ X1", data=data, vcov={"CRV3": "f1"})
 
-    # error for two-way clustering
-    with pytest.raises(NotImplementedError):
-        pf.quantreg("Y ~ X1", data=data, vcov={"CRV1": "f1+f2"})
+    # error for multiway clustering
+    for cluster in ("f1+f2", "f1+f2+group_id"):
+        with pytest.raises(NotImplementedError, match="Multiway clustering"):
+            pf.quantreg("Y ~ X1", data=data, vcov={"CRV1": cluster})
 
     # error for quantile outside [0, 1]
-    with pytest.raises(ValueError, match="quantile must be between 0 and 1"):
+    with pytest.raises(ValueError, match=r"quantile(?:\[0\])? must be between 0 and 1"):
         pf.quantreg("Y ~ X1", data=data, quantile=1.1)
-    with pytest.raises(ValueError, match="quantile must be between 0 and 1"):
+    with pytest.raises(ValueError, match=r"quantile(?:\[0\])? must be between 0 and 1"):
         pf.quantreg("Y ~ X1", data=data, quantile=-0.1)
 
     # error if list provided and quantile is 0, 1, or outside
-    with pytest.raises(ValueError, match="quantile must be a list of floats"):
+    with pytest.raises(ValueError, match=r"quantile\[0\] must be a float"):
         pf.quantreg("Y ~ X1", data=data, quantile=["0.1", "0.2"])
 
     # error when fixed effects in formula
-    with pytest.raises(NotImplementedError):
+    with pytest.raises(
+        NotImplementedError,
+        match="Fixed effects are not yet supported for Quantile Regression",
+    ):
         pf.quantreg("Y ~ X1 | f1", data=data)
 
     # error for invalid method
@@ -957,102 +1840,107 @@ def test_errors_quantreg(data):
             pf.quantreg("Y ~ X1", data=data, tol=tol)
 
 
-def test_errors_vcov_kwargs():
-    """Test all error conditions for vcov_kwargs in _estimation_input_checks."""
+@pytest.mark.parametrize(
+    ("vcov_kwargs", "match"),
+    [
+        ({"invalid_key": 5}, r"vcov_kwargs accepts the keys"),
+        ({"wrong1": 1, "wrong2": 2}, r"vcov_kwargs accepts the keys"),
+        ({"lag": 5, "invalid_key": "test"}, r"vcov_kwargs accepts the keys"),
+        ({"time_id": "time_id", "lag": "5"}, r"'lag' must be a non-negative integer"),
+        ({"time_id": "time_id", "lag": 5.5}, r"'lag' must be a non-negative integer"),
+        ({"time_id": "time_id", "lag": None}, r"'lag' must be a non-negative integer"),
+        ({"time_id": "time_id", "lag": True}, r"'lag' must be a non-negative integer"),
+        ({"time_id": 123}, r"'time_id' must be a column name"),
+        ({"time_id": None}, r"'time_id' must be a column name"),
+        (
+            {"time_id": "nonexistent_column"},
+            r"The variable 'nonexistent_column' is not in the data\.",
+        ),
+        ({"time_id": "time_id", "panel_id": 456}, r"'panel_id' must be a column name"),
+        (
+            {"time_id": "time_id", "panel_id": ["col1", "col2"]},
+            r"'panel_id' must be a column name",
+        ),
+        (
+            {"time_id": "time_id", "panel_id": "missing_panel_column"},
+            r"The variable 'missing_panel_column' is not in the data\.",
+        ),
+    ],
+)
+def test_errors_vcov_kwargs(vcov_kwargs, match):
+    """Malformed `vcov_kwargs` fail at the API boundary, before any fit."""
     data = pf.get_data()
     data["time_id"] = data["X2"]
     data["panel_id"] = data["f1"]
 
-    # Error 1: Invalid keys in vcov_kwargs
+    with pytest.raises(ValueError, match=match):
+        pf.feols("Y ~ X1", data=data, vcov="NW", vcov_kwargs=vcov_kwargs)
+
+
+@pytest.mark.parametrize("estimator", [pf.feols, pf.fepois])
+@pytest.mark.parametrize("vcov", ["iid", "hetero", "HC1", {"CRV1": "f1"}])
+def test_vcov_kwargs_rejected_without_hac(estimator, vcov):
+    """`vcov_kwargs` is rejected unless `vcov` is NW or DK (issue #1697)."""
+    data = pf.get_data()
+    data["Y"] = data["Y"].abs()
+
     with pytest.raises(
         ValueError,
-        match=r"must be a dictionary with keys 'lag', 'time_id', or 'panel_id'",
+        match=r"vcov_kwargs is only supported with vcov='NW' or vcov='DK'",
     ):
-        pf.feols("Y ~ X1", data=data, vcov="NW", vcov_kwargs={"invalid_key": 5})
+        estimator("Y ~ X1", data=data, vcov=vcov, vcov_kwargs={"lag": 2})
 
-    # Error 2: Multiple invalid keys
+
+@pytest.mark.parametrize("cluster", ["", "f1+", "+f1"])
+def test_vcov_rejects_empty_clustering_terms(cluster):
+    with pytest.raises(
+        ValueError, match=r"contains an empty clustering term.*column name"
+    ):
+        pf.feols("Y ~ X1", data=pf.get_data(), vcov={"CRV1": cluster})
+
+
+@pytest.mark.parametrize("cluster", ["f1+f1", "f1 + f2 + f1"])
+def test_vcov_rejects_repeated_clustering_columns(cluster):
+    with pytest.raises(ValueError, match=r"repeats the clustering columns \['f1'\]"):
+        pf.feols("Y ~ X1", data=pf.get_data(), vcov={"CRV1": cluster})
+
+
+def test_one_cluster_is_reported_on_estimation_sample():
+    data = pf.get_data(N=50).assign(cluster=0)
+    data.loc[0, ["cluster", "X1"]] = [1, np.nan]
     with pytest.raises(
         ValueError,
-        match="must be a dictionary with keys 'lag', 'time_id', or 'panel_id'",
+        match=r"CRV small-sample correction requires at least two clusters; got 1",
     ):
-        pf.feols("Y ~ X1", data=data, vcov="NW", vcov_kwargs={"wrong1": 1, "wrong2": 2})
+        pf.feols("Y ~ X1", data=data, vcov={"CRV1": "cluster"})
 
-    # Error 3: Mix of valid and invalid keys
+
+def test_vcov_names_missing_and_unretained_clusters():
+    data = pf.get_data(N=50)
+    fit = pf.feols("Y ~ X1", data)
     with pytest.raises(
         ValueError,
-        match=r"must be a dictionary with keys 'lag', 'time_id', or 'panel_id'",
+        match=r"\['absent'\] are absent from the model's estimation sample.*refit",
     ):
+        fit.vcov({"CRV1": "absent"})
+    data.loc[0, "f1"] = np.nan
+    with pytest.raises(NanInClusterVarError, match=r"missing values.*'f1' \(1\)"):
+        pf.feols("Y ~ X1", data, vcov={"CRV1": "f1"})
+
+
+def test_missing_cluster_shows_dictionary_syntax():
+    with pytest.raises(ValueError, match=r"vcov=\{'CRV1': '<column>'\}"):
+        pf.feols("Y ~ X1", data=pf.get_data(N=20), vcov={"CRV1": "absent"})
+
+
+def test_panel_hac_rejects_one_time_period():
+    data = pf.get_data(N=20).assign(year=1, unit=np.arange(20))
+    with pytest.raises(ValueError, match=r"at least two time periods; got 1"):
         pf.feols(
             "Y ~ X1",
-            data=data,
+            data,
             vcov="NW",
-            vcov_kwargs={"lag": 5, "invalid_key": "test"},
-        )
-
-    # Error 4: lag value is not an integer (string)
-    with pytest.raises(
-        ValueError, match="must be a dictionary with integer values for 'lag'"
-    ):
-        pf.feols("Y ~ X1", data=data, vcov="NW", vcov_kwargs={"lag": "5"})
-
-    # Error 5: lag value is not an integer (float)
-    with pytest.raises(
-        ValueError, match="must be a dictionary with integer values for 'lag'"
-    ):
-        pf.feols("Y ~ X1", data=data, vcov="NW", vcov_kwargs={"lag": 5.5})
-
-    # Error 6: lag value is not an integer (None)
-    with pytest.raises(
-        ValueError, match="must be a dictionary with integer values for 'lag'"
-    ):
-        pf.feols("Y ~ X1", data=data, vcov="NW", vcov_kwargs={"lag": None})
-
-    # Error 7: time_id value is not a string (integer)
-    with pytest.raises(
-        ValueError, match="must be a dictionary with string values for 'time_id'"
-    ):
-        pf.feols("Y ~ X1", data=data, vcov="NW", vcov_kwargs={"time_id": 123})
-
-    # Error 8: time_id value is not a string (None)
-    with pytest.raises(
-        ValueError, match="must be a dictionary with string values for 'time_id'"
-    ):
-        pf.feols("Y ~ X1", data=data, vcov="NW", vcov_kwargs={"time_id": None})
-
-    # Error 9: time_id column does not exist in data
-    with pytest.raises(
-        ValueError, match=r"The variable 'nonexistent_column' is not in the data\."
-    ):
-        pf.feols(
-            "Y ~ X1",
-            data=data,
-            vcov="NW",
-            vcov_kwargs={"time_id": "nonexistent_column"},
-        )
-
-    # Error 10: panel_id value is not a string (integer)
-    with pytest.raises(
-        ValueError, match="must be a dictionary with string values for 'panel_id'"
-    ):
-        pf.feols("Y ~ X1", data=data, vcov="NW", vcov_kwargs={"panel_id": 456})
-
-    # Error 11: panel_id value is not a string (list)
-    with pytest.raises(
-        ValueError, match=r"The function argument `vcov_kwargs` must be a."
-    ):
-        pf.feols(
-            "Y ~ X1", data=data, vcov="NW", vcov_kwargs={"panel_id": ["col1", "col2"]}
-        )
-
-    # Error 12: panel_id column does not exist in data
-    with pytest.raises(
-        ValueError, match=r"The variable 'missing_panel_column' is not in the data\."
-    ):
-        pf.feols(
-            "Y ~ X1",
-            data=data,
-            vcov="NW",
-            vcov_kwargs={"panel_id": "missing_panel_column"},
+            vcov_kwargs={"time_id": "year", "panel_id": "unit", "lag": 1},
         )
 
 
@@ -1072,7 +1960,7 @@ def test_errors_hac():
     )
 
     # Error 3: time_id is not provided if vcov is NW or DK
-    with pytest.raises(ValueError, match=r"Missing required 'time_id' for NW/DK vcov"):
+    with pytest.raises(ValueError, match=r"Missing required 'time_id' for vcov='NW'"):
         pf.feols(
             "Y ~ X1",
             data=data,
@@ -1083,7 +1971,7 @@ def test_errors_hac():
     # Error 4: lag is not provided if vcov is NW or DK
     with pytest.raises(
         ValueError,
-        match=r"We have not yet implemented the default Newey-West HAC lag. Please provide a lag value via the `vcov_kwargs`\.",
+        match=r"Time-series Newey-West inference requires an explicit lag.*'time_id': 'time', 'lag': 2",
     ):
         pf.feols(
             "Y ~ X1",
@@ -1123,7 +2011,7 @@ def test_errors_hac():
     data.loc[0, "time2"] = data.loc[1, "time2"]
     with pytest.raises(
         ValueError,
-        match=r"There are duplicate time periods in the data. This is not supported for HAC SEs\.",
+        match=r"time_id column 'time2' contains duplicate values",
     ):
         pf.feols(
             "Y ~ X1",
@@ -1138,7 +2026,7 @@ def test_errors_hac():
     for vcov in ["NW", "DK"]:
         with pytest.raises(
             ValueError,
-            match=r"There are duplicate time periods for the same panel id. This is not supported for HAC SEs\.",
+            match=r"duplicate pairs for panel_id='panel' and time_id='time3'",
         ):
             pf.feols(
                 "Y ~ X1",
@@ -1148,24 +2036,109 @@ def test_errors_hac():
             )
 
 
-def test_dfm_heterogeneity_test_standalone_errors():
-    """Invalid inputs to the standalone DFM test raise ValueError."""
-    rng = np.random.default_rng(1234)
-    n = 200
-    X = rng.standard_normal((n, 2))
-    y = rng.standard_normal(n)
+def test_time_series_nw_rejects_missing_time():
+    data = pd.DataFrame(
+        {"y": [1, 4, 3, 2], "x": [1, 2, 3, 4], "year": [1.0, 2, 3, np.nan]}
+    )
+    with pytest.raises(
+        ValueError,
+        match=r"Newey-West inference found 1 missing values in time_id column 'year'",
+    ):
+        pf.feols(
+            "y ~ x", data=data, vcov="NW", vcov_kwargs={"time_id": "year", "lag": 1}
+        )
 
-    with pytest.raises(ValueError, match="binary"):
-        _dfm_heterogeneity_test(y=y, treatment=rng.choice([0, 1, 2], n), X=X)
 
-    with pytest.raises(ValueError, match="same length"):
-        _dfm_heterogeneity_test(y=y, treatment=rng.binomial(1, 0.5, n // 2), X=X)
+def test_hac_names_missing_post_estimation_column():
+    fit = pf.feols("Y ~ X1", data=pf.get_data())
+    with pytest.raises(
+        ValueError,
+        match=r"vcov='NW' uses time_id='year'.*model's estimation sample.*refit",
+    ):
+        fit.vcov("NW", vcov_kwargs={"time_id": "year", "lag": 1})
 
-    with pytest.raises(ValueError, match="Not enough observations"):
-        _dfm_heterogeneity_test(
-            y=rng.standard_normal(5),
-            treatment=np.array([1, 1, 0, 0, 0]),
-            X=rng.standard_normal((5, 3)),
+
+@pytest.mark.parametrize("entry", ["did2s", "event_study"])
+@pytest.mark.parametrize("invalid", ["partial", "nullable", "all", "one", "absent"])
+def test_did2s_invalid_clusters(entry, invalid):
+    """Both DID2S entries reject undefined clustered inference before fitting."""
+    unit = np.repeat(np.arange(12), 6)
+    year = np.tile(np.arange(6), 12)
+    data = pd.DataFrame({"unit": unit, "year": year})
+    data["g"] = np.where(unit < 6, 3, 0)
+    data["treat"] = (year >= data.g) & (data.g > 0)
+    data["y"] = (
+        unit + year + data.treat + np.random.default_rng(42).normal(size=len(unit))
+    )
+    data["cluster"] = unit.astype(float)
+    error, message = NanInClusterVarError, "cluster.*missing"
+    if invalid == "partial":
+        data.loc[0, "cluster"] = np.nan
+    elif invalid == "nullable":
+        data["cluster"] = pd.Series(unit, dtype="Int64")
+        data.loc[0, "cluster"] = pd.NA
+    elif invalid == "all":
+        data["cluster"] = np.nan
+    elif invalid == "one":
+        data["cluster"] = "only"
+        error, message = ValueError, "at least two clusters"
+    else:
+        data = data.drop(columns="cluster")
+        error, message = ValueError, "cluster.*not.*data"
+    original = data.copy(deep=True)
+    with pytest.raises(error, match=message):
+        if entry == "did2s":
+            pf.did2s(
+                data,
+                yname="y",
+                first_stage="~ 0 | unit + year",
+                second_stage="~ treat",
+                treatment="treat",
+                cluster="cluster",
+            )
+        else:
+            pf.event_study(
+                data,
+                yname="y",
+                idname="unit",
+                tname="year",
+                gname="g",
+                estimator="did2s",
+                cluster="cluster",
+            )
+    pd.testing.assert_frame_equal(data, original)
+
+
+def test_did2s_unestimated_first_stage_fixef():
+    "did2s raises an informative error when first-stage fixed effects cannot be estimated for some levels (#1244)."
+    rng = np.random.default_rng(42)
+
+    n_units, n_years = 6, 5
+    rows = []
+    for unit in range(1, n_units + 1):
+        if unit == 1:
+            treat_start = 1  # always treated: no not-yet-treated observations
+        elif unit <= 3:
+            treat_start = 4
+        else:
+            treat_start = n_years + 1  # never treated
+        for year in range(1, n_years + 1):
+            treat = year >= treat_start
+            dep_var = 0.5 * unit + 0.3 * year + float(treat) + rng.normal()
+            rows.append((unit, year, treat, dep_var))
+    data = pd.DataFrame(rows, columns=["unit", "year", "treat", "dep_var"])
+
+    with pytest.raises(
+        ValueError,
+        match=r"First-stage predictions contain NaN values.*not-yet-treated first-stage sample",
+    ):
+        pf.did2s(
+            data,
+            yname="dep_var",
+            first_stage="~ 0 | unit + year",
+            second_stage="~ i(treat)",
+            treatment="treat",
+            cluster="unit",
         )
 
 
@@ -1220,7 +2193,10 @@ def unsupported_savi_vcov(request):
 
 
 def test_savi_rejects_unsupported_models(unsupported_savi_model):
-    with pytest.raises(NotImplementedError, match="supported only for feols"):
+    with pytest.raises(
+        NotImplementedError,
+        match=r"fit\.capabilities\.anytime_valid_inference is False",
+    ):
         unsupported_savi_model.evalue()
 
 
@@ -1242,6 +2218,30 @@ def test_savi_confint_rejects_weights_and_fixed_effects(unsupported_savi_design)
         fit.confint(inference_type="savi")
 
 
+def test_dfm_heterogeneity_test_standalone_errors():
+    """Invalid inputs to the standalone DFM test raise ValueError."""
+    rng = np.random.default_rng(1234)
+    n = 200
+    X = rng.standard_normal((n, 2))
+    y = rng.standard_normal(n)
+
+    with pytest.raises(ValueError, match="binary"):
+        _dfm_heterogeneity_test(y=y, treatment=rng.choice([0, 1, 2], n), X=X)
+
+    with pytest.raises(ValueError, match="same length"):
+        _dfm_heterogeneity_test(y=y, treatment=rng.binomial(1, 0.5, n // 2), X=X)
+
+    with pytest.raises(ValueError, match="Not enough observations"):
+        _dfm_heterogeneity_test(
+            y=rng.standard_normal(5),
+            treatment=np.array([1, 1, 0, 0, 0]),
+            X=rng.standard_normal((5, 3)),
+        )
+
+
+@pytest.fixture(params=["fepois", "feiv", "quantreg"])
+
+
 def test_savi_input_validation():
     fit = feols("Y ~ X1 + X2", pf.get_data())
     with pytest.raises(ValueError, match="mixture_precision must be positive"):
@@ -1257,19 +2257,19 @@ def test_savi_input_validation():
             "tidy",
             {"inference_type": "other"},
             ValueError,
-            r"Invalid argument\. Expecting one of",
+            r"inference_type must be one of",
         ),
         (
             "summary",
             {"inference_type": "other"},
             ValueError,
-            r"Invalid argument\. Expecting one of",
+            r"inference_type must be one of",
         ),
         (
             "confint",
             {"inference_type": "other"},
             ValueError,
-            r"Invalid argument\. Expecting one of",
+            r"inference_type must be one of",
         ),
         (
             "tidy",
@@ -1321,3 +2321,247 @@ def test_fixest_multi_rejects_savi_tidy_argument():
 
     with pytest.raises(TypeError):
         fit.tidy(inference_type="savi")
+
+
+@pytest.mark.parametrize(
+    ("vcov", "vcov_kwargs", "error", "match"),
+    [
+        ("HC4", None, ValueError, "vcov must be one of"),
+        (["f1"], None, TypeError, "vcov must be a string or a dict"),
+        ({"CRV2": "f1"}, None, ValueError, "exactly one key"),
+        ({"CRV1": 1}, None, TypeError, "must be a string"),
+        ({"CRV1": "f1^f2"}, None, ValueError, "interaction"),
+        ("NW", None, ValueError, "Missing required 'time_id'"),
+        ("DK", {"time_id": "f1"}, ValueError, "Missing required 'panel_id'"),
+        ("NW", {"time_id": "f1", "lags": 2}, ValueError, "vcov_kwargs accepts"),
+        (
+            "NW",
+            {"time_id": "f1", "lag": -1},
+            ValueError,
+            "'lag' must be a non-negative integer",
+        ),
+        # malformed kwargs still fail key validation before the NW/DK gate
+        ("iid", {"lags": 2}, ValueError, "vcov_kwargs accepts"),
+        ("iid", ["lag"], TypeError, "vcov_kwargs must be a dict"),
+        # valid kwargs are rejected unless vcov is NW or DK
+        (
+            "iid",
+            {"lag": 2},
+            ValueError,
+            "vcov_kwargs is only supported with vcov='NW' or vcov='DK'",
+        ),
+        (
+            "hetero",
+            {"time_id": "f1"},
+            ValueError,
+            "vcov_kwargs is only supported with vcov='NW' or vcov='DK'",
+        ),
+    ],
+)
+def test_vcov_spec_rejects_malformed_input(vcov, vcov_kwargs, error, match):
+    """`VcovSpec.from_user_input` validates `vcov` for post-estimation calls too."""
+    fit = pf.feols("Y ~ X1", get_data())
+    with pytest.raises(error, match=match):
+        fit.vcov(vcov, vcov_kwargs)
+
+
+@pytest.mark.parametrize(
+    ("kwargs", "error", "match"),
+    [
+        ({"weights": "~weights"}, ValueError, "bare column name, such as 'weights'"),
+        ({"vcov": "cluster"}, ValueError, r"vcov=\{'CRV1': 'cluster_var'\}"),
+        ({"vcov": {"CRV1": "~f1"}}, ValueError, "bare column name, such as 'f1'"),
+        ({"vcov": "NW"}, ValueError, r"vcov_kwargs=\{'time_id': 'year', 'lag': 2\}"),
+        ({"split": "~f1"}, KeyError, "bare column name, such as 'f1'"),
+    ],
+)
+def test_argument_errors_suggest_fix(kwargs, error, match):
+    """Common argument mistakes get a message that names the fix."""
+    with pytest.raises(error, match=match):
+        pf.feols("Y ~ X1", get_data(), **kwargs)
+
+
+@pytest.mark.parametrize(
+    ("estimator", "vcov", "error", "match"),
+    [
+        (pf.feols, "nid", NotImplementedError, "type 'nid'"),
+        (
+            partial(pf.quantreg, quantile=[0.25, 0.75]),
+            {"CRV3": "f1"},
+            VcovTypeNotSupportedError,
+            "CRV3 inference",
+        ),
+    ],
+)
+def test_estimation_rejects_unsupported_vcov(estimator, vcov, error, match):
+    """Estimators reject a `vcov` type they do not support."""
+    with pytest.raises(error, match=match):
+        estimator("Y ~ X1", get_data().dropna(), vcov=vcov)
+
+
+@pytest.mark.parametrize(
+    ("kwargs", "error", "match"),
+    [
+        ({"k_adj": "yes"}, TypeError, "k_adj must be True or False"),
+        ({"G_adj": 1}, TypeError, "G_adj must be True or False"),
+        ({"k_fixef": "all"}, ValueError, "k_fixef must be one of"),
+        ({"G_df": "max"}, ValueError, "G_df must be one of"),
+        ({"k_adjj": False}, ValueError, "ssc accepts the keys"),
+    ],
+)
+def test_ssc_rejects_invalid_options(kwargs, error, match):
+    """`Ssc` validates its options at construction."""
+    with pytest.raises(error, match=match):
+        pf.ssc(**kwargs)
+
+
+def test_estimation_rejects_malformed_ssc():
+    """The API resolves legacy dicts and rejects anything else."""
+    data = get_data()
+    with pytest.raises(ValueError, match="ssc accepts the keys"):
+        pf.feols("Y ~ X1", data, ssc={"k_adj": False, "adj": True})
+    with pytest.raises(TypeError, match=r"ssc must be created with pf\.ssc"):
+        pf.feols("Y ~ X1", data, ssc="k_adj=False")
+    legacy = pf.feols("Y ~ X1", data, ssc={"k_adj": False})
+    assert legacy.options.ssc == pf.ssc(k_adj=False)
+
+
+@pytest.mark.parametrize(
+    ("key", "value", "message"),
+    [
+        ("copy_data", "false", r"copy_data must be True or False; got 'false'"),
+        ("data", {}, r"data must be a supported DataFrame"),
+    ],
+)
+def test_estimation_type_errors_name_the_option(key, value, message):
+    kwargs = {"data": pf.get_data(N=20), key: value}
+    with pytest.raises(TypeError, match=message):
+        pf.feols("Y ~ X1", **kwargs)
+
+
+@pytest.mark.parametrize(
+    ("options", "error", "message"),
+    [
+        ({"quantile": []}, ValueError, r"quantile must include at least one value"),
+        ({"quantile": [0.25, 2.0]}, ValueError, r"quantile\[1\].*got 2.0"),
+        ({"maxiter": "20"}, TypeError, r"maxiter must be a positive integer"),
+    ],
+)
+def test_quantreg_explains_the_rejected_option(options, error, message):
+    with pytest.raises(error, match=message):
+        pf.quantreg("Y ~ X1", data=pf.get_data(N=20), **options)
+
+
+def test_feglm_reports_the_public_iteration_option():
+    with pytest.raises(ValueError, match=r"iwls_maxiter.*got 0"):
+        pf.feglm("Y ~ X1", data=pf.get_data(N=20), family="gaussian", iwls_maxiter=0)
+
+
+def test_invalid_weights_report_the_column_and_count():
+    data = pf.get_data(N=20).assign(weight=-1.0)
+    with pytest.raises(ValueError, match=r"weights column 'weight'.*20 negative"):
+        pf.feols("Y ~ X1", data, weights="weight")
+
+
+def test_invalid_solver_reports_available_choices():
+    with pytest.raises(
+        ValueError, match=r"solver must be one of .*np.linalg.solve.*got 'missing'"
+    ):
+        pf.feols("Y ~ X1", data=pf.get_data(N=20), solver="missing")
+
+
+def test_quantreg_nid_reports_bandwidth_outside_unit_interval():
+    data = pf.get_data(N=30).dropna()
+    with pytest.raises(ValueError, match=r"vcov='nid'.*Hall-Sheather bandwidth"):
+        pf.quantreg("Y ~ X1", data=data, quantile=0.99)
+
+
+def test_quantreg_nid_reports_singular_covariance():
+    # Both quantiles used to estimate the covariance have the same fitted value.
+    data = pd.DataFrame({"y": np.zeros(40)})
+    with pytest.raises(
+        np.linalg.LinAlgError,
+        match=(
+            r"could not compute the nid variance-covariance matrix\. "
+            r"A 1 by 1 matrix could not be inverted"
+        ),
+    ) as exc_info:
+        pf.quantreg("y ~ 1", data=data, method="fn", vcov="nid")
+
+    assert isinstance(exc_info.value.__cause__, np.linalg.LinAlgError)
+
+
+def test_wald_rejects_nonfinite_restrictions():
+    fit = pf.feols("Y ~ X1", pf.get_data(N=50))
+    with pytest.raises(ValueError, match=r"R must contain finite restriction weights"):
+        fit.wald_test(R=np.array([[1.0, np.nan]]))
+
+
+def test_ritest_explains_invalid_null_hypotheses():
+    fit = pf.feols("Y ~ X1", pf.get_data(N=50))
+    with pytest.raises(ValueError, match=r"resampvar='X1=nope'.*'x=0'"):
+        fit.ritest("X1=nope", reps=4)
+
+
+def test_ritest_names_non_string_resampvar():
+    fit = pf.feols("Y ~ X1", pf.get_data(N=50))
+    with pytest.raises(TypeError, match=r"resampvar; got int\. Use a string"):
+        fit.ritest(resampvar=1, reps=4)
+
+
+def test_event_study_names_missing_time_column():
+    data = pd.DataFrame({"y": [1, 2], "unit": [1, 1], "cohort": [0, 0]})
+    with pytest.raises(ValueError, match=r"tname='year' must name an existing column"):
+        pf.event_study(data, yname="y", idname="unit", tname="year", gname="cohort")
+
+
+def test_lpdid_explains_absence_of_treated_cohorts():
+    data = pd.DataFrame({"y": [1, 2], "unit": [1, 1], "year": [1, 2], "cohort": [0, 0]})
+    with pytest.raises(ValueError, match=r"lpdid\(\) found no finite event times"):
+        pf.lpdid(data, yname="y", idname="unit", tname="year", gname="cohort")
+
+
+@pytest.mark.parametrize(("window", "value"), [("pre_window", -2), ("post_window", 2)])
+def test_lpdid_rejects_unobserved_event_time_windows(window, value):
+    data = pd.DataFrame(
+        {"y": [1, 2, 4], "unit": [1, 1, 1], "year": [1, 2, 3], "cohort": [2, 2, 2]}
+    )
+    with pytest.raises(
+        ValueError, match=f"{window}={value} must match an observed event time"
+    ):
+        pf.lpdid(
+            data,
+            yname="y",
+            idname="unit",
+            tname="year",
+            gname="cohort",
+            **{window: value},
+        )
+
+
+def test_did2s_requires_formula_for_each_stage():
+    data = pd.DataFrame({"y": [1, 2], "treat": [0, 1], "unit": [1, 2]})
+    with pytest.raises(TypeError, match=r"first_stage must be a formula string"):
+        pf.did2s(
+            data,
+            yname="y",
+            first_stage=None,
+            second_stage="~ treat",
+            treatment="treat",
+            cluster="unit",
+        )
+
+
+def test_prediction_explains_required_fixed_effects():
+    data = pf.get_data(N=80)
+    fit = pf.feols("Y ~ X1 | f1", data)
+    with pytest.raises(
+        FactorEvaluationError, match=r"f1[\s\S]*fixed-effect columns.*newdata"
+    ):
+        fit.predict(data.drop(columns="f1"))
+
+
+def test_etable_names_bad_significance_code():
+    fit = pf.feols("Y ~ X1", pf.get_data(N=50))
+    with pytest.raises(TypeError, match=r"signif_code\[0\] must be numeric"):
+        pf.etable(fit, signif_code=["invalid", 0.01, 0.05])

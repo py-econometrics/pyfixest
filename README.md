@@ -3,7 +3,7 @@
 # PyFixest: Fast High-Dimensional Fixed Effects Regression in Python
 
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/license/mit)
-![Python Versions](https://img.shields.io/badge/Python-3.9–3.14-blue)
+![Python Versions](https://img.shields.io/badge/Python-3.11–3.15-blue)
 [![PyPI Version](https://img.shields.io/pypi/v/pyfixest.svg)](https://pypi.org/project/pyfixest/)
 [![Coverage](https://codecov.io/gh/py-econometrics/pyfixest/branch/master/graph/badge.svg)](https://codecov.io/gh/py-econometrics/pyfixest)
 [![Downloads](https://img.shields.io/pepy/dt/pyfixest)](https://pepy.tech/project/pyfixest)
@@ -30,6 +30,7 @@ For questions on `PyFixest`, head over to our [GitHub discussions](https://githu
   - Fast **quantile regression** via an interior-point solver
   - **Difference-in-differences** estimators, including TWFE, `Did2s`, local projections, and Sun-Abraham event studies
   - Regression **decomposition** following [Gelbach (2016)](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=1425737)
+  - **Varying slopes** for fixed effects with `f[x]` and `f[[x]]`
   - Multiple estimation syntax
 - **Inference**
   - Several **robust**, **cluster-robust**, and **HAC variance-covariance** estimators
@@ -41,7 +42,7 @@ For questions on `PyFixest`, head over to our [GitHub discussions](https://githu
     anytime-valid p-values, e-values, and confidence sequences following
     [Lindon et al. (2026)](https://doi.org/10.1080/01621459.2026.2692052)
 - **Post-Estimation & Reporting**
-  - **Publication-ready tables** with [Great Tables](https://posit-dev.github.io/great-tables/articles/intro.html) or LaTeX booktabs via the [maketables library](https://github.com/py-econometrics/maketables)
+  - **Publication-ready tables** with [Great Tables](https://posit-dev.github.io/great-tables/user-guide/introduction.html) or LaTeX booktabs via the [maketables library](https://github.com/py-econometrics/maketables)
 
 ## Installation
 
@@ -118,14 +119,20 @@ pf.feols("Y ~ X1 | f1 + f2", data=data).summary()
     ---
     RMSE: 1.441   R2: 0.609   R2 Within: 0.2
 
+Use `f1[X2]` to let the slope on `X2` vary across levels of `f1`:
+
+```python
+pf.feols("Y ~ X1 | f1[X2] + f2", data=data).summary()
+```
+
 `PyFixest` also supports multiple estimation syntax:
 
 ```python
-fit = pf.feols("Y + Y2 ~ X1 | csw0(f1, f2)", data=data, vcov={"CRV1": "group_id"})
+fit = pf.feols("sw(Y, Y2) ~ X1 | csw0(f1, f2)", data=data, vcov={"CRV1": "group_id"})
 fit.etable()
 ```
 
-For more examples, see the [quickstart](https://pyfixest.org/getting-started.html), the [formula syntax tutorial](https://pyfixest.org/tutorials/formula-syntax.html), and the [Poisson & GLMs tutorial](https://pyfixest.org/tutorials/poisson-glm.html).
+For more examples, see the [quickstart](https://pyfixest.org/getting-started.html) and the [formula syntax tutorial](https://pyfixest.org/tutorials/formula-syntax.html).
 
 ## Benchmarks
 
@@ -143,6 +150,10 @@ Runtime comparisons are hardware-dependent, especially for GPU backends. For the
 - [Quantile Regression](https://pyfixest.org/tutorials/quantile-regression.html)
 - [Changelog](https://pyfixest.org/changelog.html)
 - [Contributing](https://pyfixest.org/contributing.html)
+
+## Using PyFixest with Coding Agents
+
+PyFixest ships an agent skill inside the installed package at `pyfixest/skills/pyfixest/SKILL.md`. It tells coding agents how to call the current API and which R `fixest`, Stata and statsmodels habits to avoid. The [Agent Skill page](https://pyfixest.org/skills.html) shows how to copy it into your project, and [llms.txt](https://pyfixest.org/llms.txt) indexes the documentation for LLMs.
 
 ## Acknowledgements
 
@@ -265,6 +276,15 @@ Thanks goes to these wonderful people:
       <td align="center" valign="top" width="12.5%"><a href="https://github.com/felixschmitz"><img src="https://avatars.githubusercontent.com/u/33942086?v=4?s=40" width="40px;" alt="Felix Schmitz"/><br /><sub><b>Felix Schmitz</b></sub></a><br /><a href="https://github.com/py-econometrics/pyfixest/commits?author=felixschmitz" title="Code">💻</a></td>
       <td align="center" valign="top" width="12.5%"><a href="https://www.lazizbek.us/"><img src="https://avatars.githubusercontent.com/u/65546555?v=4?s=40" width="40px;" alt="Lazizbek Ravshanov"/><br /><sub><b>Lazizbek Ravshanov</b></sub></a><br /><a href="#infra-lazizbekravshanov" title="Infrastructure (Hosting, Build-Tools, etc)">🚇</a></td>
       <td align="center" valign="top" width="12.5%"><a href="https://michaellindon.github.io/about/"><img src="https://avatars.githubusercontent.com/u/4892846?v=4?s=40" width="40px;" alt="Michael Lindon"/><br /><sub><b>Michael Lindon</b></sub></a><br /><a href="https://github.com/py-econometrics/pyfixest/commits?author=michaellindon" title="Code">💻</a></td>
+      <td align="center" valign="top" width="12.5%"><a href="https://github.com/xuu33030"><img src="https://avatars.githubusercontent.com/u/268775543?v=4?s=40" width="40px;" alt="xuu33030"/><br /><sub><b>xuu33030</b></sub></a><br /><a href="https://github.com/py-econometrics/pyfixest/commits?author=xuu33030" title="Code">💻</a></td>
+      <td align="center" valign="top" width="12.5%"><a href="https://github.com/tonycoder-hub"><img src="https://avatars.githubusercontent.com/u/54679772?v=4?s=40" width="40px;" alt="Tony Jin"/><br /><sub><b>Tony Jin</b></sub></a><br /><a href="https://github.com/py-econometrics/pyfixest/commits?author=tonycoder-hub" title="Code">💻</a></td>
+      <td align="center" valign="top" width="12.5%"><a href="https://github.com/raashish1601"><img src="https://avatars.githubusercontent.com/u/94279692?v=4?s=40" width="40px;" alt="Raashish Aggarwal"/><br /><sub><b>Raashish Aggarwal</b></sub></a><br /><a href="https://github.com/py-econometrics/pyfixest/commits?author=raashish1601" title="Code">💻</a></td>
+      <td align="center" valign="top" width="12.5%"><a href="http://zhiyulu.org"><img src="https://avatars.githubusercontent.com/u/188999074?v=4?s=40" width="40px;" alt="Zhiyu Lu"/><br /><sub><b>Zhiyu Lu</b></sub></a><br /><a href="https://github.com/py-econometrics/pyfixest/commits?author=luzhiyu-econ" title="Code">💻</a></td>
+    </tr>
+    <tr>
+      <td align="center" valign="top" width="12.5%"><a href="https://github.com/mayuriphad"><img src="https://avatars.githubusercontent.com/u/163738104?v=4?s=40" width="40px;" alt="Mayuri"/><br /><sub><b>Mayuri</b></sub></a><br /><a href="https://github.com/py-econometrics/pyfixest/commits?author=mayuriphad" title="Code">💻</a></td>
+      <td align="center" valign="top" width="12.5%"><a href="http://johannes-schmieder.com"><img src="https://avatars.githubusercontent.com/u/47986688?v=4?s=40" width="40px;" alt="Johannes Schmieder"/><br /><sub><b>Johannes Schmieder</b></sub></a><br /><a href="https://github.com/py-econometrics/pyfixest/issues?q=author%3Ajohannes-schmieder" title="Bug reports">🐛</a></td>
+      <td align="center" valign="top" width="12.5%"><a href="https://www.markstudios.com"><img src="https://avatars.githubusercontent.com/u/24554186?v=4?s=40" width="40px;" alt="Mark Santos"/><br /><sub><b>Mark Santos</b></sub></a><br /><a href="https://github.com/py-econometrics/pyfixest/commits?author=markksantos" title="Documentation">📖</a></td>
     </tr>
   </tbody>
 </table>

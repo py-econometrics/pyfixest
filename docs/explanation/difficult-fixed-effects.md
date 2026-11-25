@@ -66,11 +66,14 @@ problem:
 - **LSMR.** The solver powering `FixedEffectsModels.jl`. It can be accessed in `pyfixest` via `pf.LsmrDemeaner(...)`.
 
 - **Modified LSMR with Schwarz preconditioning via `within`.**
-The [`within`](https://github.com/py-econometrics/within) crate, used by
-PyFixest's `pf.LsmrDemeaner(backend="within")`, takes a different approach: it
+The [`within`](https://github.com/py-econometrics/within) library, used by
+PyFixest's `pf.LsmrDemeaner(backend="within")` through its Python package
+`within-py`, takes a different approach: it
 explicitly builds and exploits the block structure of the normal
 equations to form a high-quality preconditioner for the linear problem.
-PyFixest defaults to modified LSMR with additive Schwarz preconditioning.
+PyFixest defaults to modified LSMR with `within`'s adaptive preconditioner,
+which starts with a diagonal preconditioner and escalates to additive Schwarz
+preconditioning when convergence stalls.
 
 ## The Normal Equations and Their Block Structure
 
@@ -463,7 +466,7 @@ The practical recommendation is straightforward: for well-connected
 graphs (high mobility, low sorting, cross-cutting factors), (accelerated)
 MAP is often hard to beat. For sparse
 graphs - low mobility, strong sorting, nested structures, or any
-combination thereof - vanilla MAP as in `MapDemeaner(backend="rust")` reveals poor convergence properties. Within PyFixest, `LsmrDemeaner()` via the `within` crate is the more robust choice on these sparse graphs.
+combination thereof - vanilla MAP as in `MapDemeaner(backend="rust")` reveals poor convergence properties. Within PyFixest, `LsmrDemeaner()` via `within` is the more robust choice on these sparse graphs.
 
 We conclude by showing two benchmarks from the `fixest` package that are designed to be simple and very challenging for the MAP algorithm. On the "simple" problem, the graph is dense and both PyFixest demeaners perform well; here, `within` LSMR tends to lose because its setup overhead does not amortize. On the "difficult" sparse problem, vanilla MAP degrades sharply, while `within` LSMR performs much better. In the checked-in results, `LsmrDemeaner()` is substantially faster than `MapDemeaner(backend="rust")` on the hard three-way specification.
 

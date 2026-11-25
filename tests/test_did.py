@@ -121,6 +121,11 @@ def test_did2s(data, weights):
     np.testing.assert_allclose(
         fit_did2s_py1.se(), fit_did2s_r1.iloc[:, 3].squeeze(), atol=1e-05, rtol=1e-05
     )
+    # the GMM covariance is recorded as clustered on the did2s cluster variable
+    covariance = fit_did2s_py1.variance_covariance
+    assert covariance.spec.is_clustered
+    assert covariance.spec.clustervar == ("state",)
+    assert (data["state"].nunique(),) == covariance.G
 
     # Model 2
     py_args["second_stage"] = "~i(rel_year, ref = -1.0)"
@@ -174,6 +179,53 @@ def test_did2s(data, weights):
     )
 
 
+@pytest.mark.against_r_extended
+@pytest.mark.skipif(not import_check, reason="R package did2s is not installed.")
+@pytest.mark.parametrize("weights", [None, "weights"])
+def test_did2s_interacted_fe_vs_r(data, weights):
+    """Compare interacted-FE estimates and standard errors with R did2s."""
+    data = data.assign(region=data["state"] % 3)
+    fit = did2s_pyfixest(
+        data=data,
+        yname="dep_var",
+        first_stage="~ X | unit + year:region",
+        second_stage="~ i(treat)",
+        treatment="treat",
+        cluster="state",
+        weights=weights,
+    )
+    r_weights = {} if weights is None else {"weights": weights}
+    reference = did2s.did2s(
+        data=data,
+        yname="dep_var",
+        first_stage=ro.Formula("~ X | unit + year^region"),
+        second_stage=ro.Formula("~ i(treat, ref=FALSE)"),
+        treatment="treat",
+        cluster_var="state",
+        **r_weights,
+    )
+    estimates = stats.coef(reference)
+    r_names = ro.r("function(fit) names(coef(fit))")(reference)
+    assert fit.coef().index.tolist() == [
+        name.replace("::TRUE", "::True") for name in r_names
+    ]
+    # First-stage iterative FE recovery affects residualized outcomes at 1e-6.
+    np.testing.assert_allclose(
+        fit.coef(),
+        np.asarray(estimates),
+        rtol=1e-5,
+        atol=1e-5,
+        err_msg="DID2S coefficients differ from R did2s",
+    )
+    np.testing.assert_allclose(
+        fit.se(),
+        np.asarray(fixest.se(reference)),
+        rtol=1e-5,
+        atol=1e-5,
+        err_msg="DID2S standard errors differ from R did2s",
+    )
+
+
 def test_errors(data):
     # test expected errors: treatment
 
@@ -211,6 +263,69 @@ def test_errors(data):
             treatment="treat",
             cluster="state",
         )
+
+
+@pytest.mark.parametrize(
+    "first_stage", ["~ X | state[year] + year", "~ 0 | state[[X]]"]
+)
+def test_did2s_rejects_varying_slopes_in_first_stage(data, first_stage):
+    with pytest.raises(ValueError, match="must not contain varying slopes"):
+        did2s_pyfixest(
+            data,
+            yname="dep_var",
+            first_stage=first_stage,
+            second_stage="~ i(rel_year)",
+            treatment="treat",
+            cluster="state",
+        )
+
+
+def test_did2s_wildboottest_ccv_unsupported(data):
+    "did2s's two-step GMM covariance does not support wild bootstrap or CCV inference."
+    fit = did2s_pyfixest(
+        data,
+        yname="dep_var",
+        first_stage="~ 0 | state + year",
+        second_stage="~ treat",
+        treatment="treat",
+        cluster="state",
+    )
+
+    assert fit.capabilities.wildboottest is False
+    assert fit.capabilities.cluster_causal_variance is False
+
+    with pytest.raises(
+        NotImplementedError,
+        match=r"Wild cluster bootstrap is only supported for unweighted OLS models",
+    ):
+        fit.wildboottest(param="treat", reps=99, seed=1)
+
+    with pytest.raises(
+        NotImplementedError,
+        match=r"The causal cluster variance estimator is not supported for 'did2s' fits\.",
+    ):
+        fit.ccv(treatment="treat", cluster="state")
+
+
+@pytest.mark.parametrize("estimator", ["twfe", "saturated"])
+def test_event_study_crv3_refits_with_feols(data, estimator):
+    "CRV3 on an event study must refit the linear model, not the Poisson estimator."
+    fit = event_study(
+        data=data,
+        yname="dep_var",
+        idname="unit",
+        tname="year",
+        gname="g",
+        estimator=estimator,
+        cluster="state",
+    )
+    fit.vcov({"CRV3": "state"})
+
+    expected = pf.feols(fit.model.formula, data=fit._data, vcov={"CRV3": "state"})
+
+    np.testing.assert_allclose(
+        fit.se().to_numpy(), expected.se().to_numpy(), rtol=1e-12, atol=0
+    )
 
 
 def test_lpdid():
@@ -289,13 +404,19 @@ def test_lpdid():
 @pytest.mark.against_r_core
 @pytest.mark.parametrize("unit", ["unit"])
 @pytest.mark.parametrize("cluster", ["unit", "unit2"])
-def test_fully_interacted(unit, cluster):
+@pytest.mark.parametrize("xfml", [None, "X"])
+def test_fully_interacted(unit, cluster, xfml):
     df_multi_cohort = pd.read_csv(
         resources.files("pyfixest.did.data").joinpath("df_het.csv")
     )
+    rng = np.random.default_rng(21)
     if cluster == "unit2":
-        rng = np.random.default_rng(21)
         df_multi_cohort["unit2"] = rng.choice(range(100), size=len(df_multi_cohort))
+    # Correlated with the outcome so that dropping it would move the estimates.
+    df_multi_cohort["X"] = df_multi_cohort["dep_var"] + rng.normal(
+        size=len(df_multi_cohort)
+    )
+    covariates = f" + {xfml}" if xfml is not None else ""
 
     saturated_py = pf.event_study(
         data=df_multi_cohort,
@@ -305,11 +426,14 @@ def test_fully_interacted(unit, cluster):
         gname="g",
         estimator="saturated",
         cluster=cluster,
+        xfml=xfml,
     )
     saturated_py.test_treatment_heterogeneity()
 
     saturated_r = fixest.feols(
-        ro.Formula("dep_var ~ 1 + sunab(g, year, no_agg = TRUE) | unit + year"),
+        ro.Formula(
+            f"dep_var ~ 1 + sunab(g, year, no_agg = TRUE){covariates} | unit + year"
+        ),
         data=df_multi_cohort,
         vcov=ro.Formula(f"~{cluster}"),
     )
@@ -338,12 +462,15 @@ def test_fully_interacted(unit, cluster):
     py_agg_tidy = saturated_py.aggregate()
 
     saturated_agg_r = fixest.feols(
-        ro.Formula("dep_var ~ 1 + sunab(g, year, no_agg = FALSE) | unit + year"),
+        ro.Formula(
+            f"dep_var ~ 1 + sunab(g, year, no_agg = FALSE){covariates} | unit + year"
+        ),
         data=df_multi_cohort,
         vcov=ro.Formula(f"~{cluster}"),
     )
 
     r_agg_tidy = pd.DataFrame(broom.tidy_fixest(saturated_agg_r)).T
+    r_agg_tidy = r_agg_tidy[r_agg_tidy.iloc[:, 0] != xfml]
 
     r_agg_est = r_agg_tidy.iloc[:, 1].astype(float).values
     r_agg_se = r_agg_tidy.loc[:, 2].astype(float).values

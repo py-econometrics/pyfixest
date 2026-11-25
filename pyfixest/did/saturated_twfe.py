@@ -1,15 +1,73 @@
 import re
 import warnings
+from collections.abc import Mapping
+from dataclasses import dataclass
+from typing import Any
 
-import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from scipy.stats import norm
 
 from pyfixest.estimation import feols
+from pyfixest.estimation.internals.model_state import WaldTest
 from pyfixest.estimation.models.feols_ import Feols
+from pyfixest.utils.dev_utils import _find_stack_level
 
 from .did2s import DID
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class EventStudyDesign:
+    """Event-study design a fitted event study was estimated on.
+
+    Published as `fit.event_study_design` by
+    [event_study()](/reference/did.estimation.event_study.qmd) with
+    `estimator="saturated"`. It is the only record of the design the fitted
+    model retains; the generic fitted-model classes carry no DiD state.
+
+    Parameters
+    ----------
+    yname : str
+        Name of the outcome variable.
+    idname : str
+        Name of the unit identifier variable.
+    tname : str
+        Name of the calendar-period variable.
+    gname : str
+        Name of the variable holding the unit-specific period of initial
+        treatment.
+    att : bool
+        Whether the average treatment effect on the treated was estimated
+        instead of the canonical event study with all leads and lags.
+    cohort_event_times : Mapping[str, Mapping[str, Any]]
+        Cohort-specific event-study curves, keyed by treatment cohort. Each
+        value holds the tidy coefficient table of that cohort (`"est"`) and
+        its event times (`"time"`).
+
+    Examples
+    --------
+    ```{python}
+    import pyfixest as pf
+
+    fit = pf.event_study(
+        pf.get_motherhood_event_study_data(),
+        yname="log_earnings",
+        idname="unit",
+        tname="year",
+        gname="g",
+        estimator="saturated",
+    )
+    design = fit.event_study_design
+    design.gname, sorted(design.cohort_event_times)
+    ```
+    """
+
+    yname: str
+    idname: str
+    tname: str
+    gname: str
+    att: bool
+    cohort_event_times: Mapping[str, Mapping[str, Any]]
 
 
 class SaturatedEventStudy(DID):
@@ -31,7 +89,7 @@ class SaturatedEventStudy(DID):
     cluster : str
         The name of the cluster variable.
     xfml : str
-        Additional covariates to include in the model.
+        Additional regressors to include in the model.
     att : bool
         Whether to use the average treatment effect.
     display_warning: bool
@@ -101,7 +159,9 @@ class SaturatedEventStudy(DID):
 
         if display_warning:
             warnings.warn(
-                "The SaturatedEventStudyClass is currently in beta. Please report any issues you may encounter."
+                "The SaturatedEventStudyClass is currently in beta. Please report any issues you may encounter.",
+                UserWarning,
+                stacklevel=_find_stack_level(),
             )
 
     def estimate(self) -> Feols:
@@ -111,37 +171,50 @@ class SaturatedEventStudy(DID):
         Returns
         -------
         Feols
-            The fitted Feols model object.
+            The fitted Feols model. It carries the event-study design
+            as `event_study_design`.
         """
-        self.mod, self._res_cohort_eventtime_dict = _saturated_event_study(
+        self.mod, cohort_event_times = _saturated_event_study(
             self._data,
             outcome=self._yname,
             time_id=self._tname,
             unit_id=self._idname,
             cluster=self._cluster,
+            xfml=self._xfml,
+        )
+        self.mod.event_study_design = EventStudyDesign(
+            yname=self._yname,
+            idname=self._idname,
+            tname=self._tname,
+            gname=self._gname,
+            att=self._att,
+            cohort_event_times=cohort_event_times,
         )
 
         return self.mod
 
-    # !TODO - implement the rest of the methods
     def vcov(self):
         """
-        Get the covariance matrix.
+        Get the variance-covariance matrix.
 
         Returns
         -------
         pd.DataFrame
-            A DataFrame containing the covariance matrix.
+            A DataFrame containing the variance-covariance matrix.
         """
         pass
 
     def iplot(self):
         """Plot DID estimates."""
+        import matplotlib.pyplot as plt
+
+        model = self.mod if isinstance(self, SaturatedEventStudy) else self
+
         cmp = plt.get_cmap("Set1")
 
         _, ax = plt.subplots(figsize=(10, 6))
 
-        for cohort, values in self._res_cohort_eventtime_dict.items():
+        for cohort, values in model.event_study_design.cohort_event_times.items():
             time = np.array(values["time"], dtype=float)
             est = values["est"]["Estimate"].astype(float).values
             ci_lower = values["est"]["2.5%"].astype(float).values
@@ -168,7 +241,7 @@ class SaturatedEventStudy(DID):
         """Get summary table."""
         return self.mod.summary()
 
-    def test_treatment_heterogeneity(self) -> pd.Series:
+    def test_treatment_heterogeneity(self) -> WaldTest:
         """
         Test for treatment heterogeneity in the event study design.
 
@@ -193,45 +266,46 @@ class SaturatedEventStudy(DID):
         ----------
         agg : str, optional
 
-                The type of aggregation to perform. Can be either "att" or "cohort" or "period".
-                Default is "att". If "att", computes the average treatment effect on the treated.
-                If "cohort", computes the average treatment effect by cohort. If "period",
-                computes the average treatment effect by period.
+                The type of aggregation to perform. Only "period" is supported,
+                which computes the average treatment effect by period.
 
         weighting : str, optional
 
-                    The type of weighting to use. Can be either 'shares' or 'variance'.
+                    The type of weighting to use. Only "shares" is supported.
 
         Returns
         -------
         pd.Series
             A Series containing the aggregated estimates.
         """
-        if agg not in ["period"]:
-            raise ValueError("agg must be either 'period'")
+        if agg != "period":
+            raise ValueError(f"agg must be 'period'; got agg={agg!r}.")
 
-        if weighting not in ["shares"]:
-            raise ValueError("weighting must be 'shares'.")
+        if weighting != "shares":
+            raise ValueError(
+                f"weighting must be 'shares'; got weighting={weighting!r}."
+            )
 
         model = self.mod if isinstance(self, SaturatedEventStudy) else self
+        design = model.event_study_design
 
-        cohort_event_dict = model._res_cohort_eventtime_dict
+        cohort_event_dict = design.cohort_event_times
         cohort_list = list(cohort_event_dict.keys())
         period_set = sorted(
             set(t for x in cohort_list for t in cohort_event_dict[x]["time"].tolist())
         )
 
         coefs = model._beta_hat
-        se = model._se
+        se = model.coeftable.se
         coefnames = model._coefnames
 
         if weighting == "shares":
             weights_df = compute_period_weights(
                 data=model._data,
-                cohort=model._gname,
+                cohort=design.gname,
                 period="rel_time",
                 treatment="is_treated",
-            ).set_index([self._gname, "rel_time"])
+            ).set_index([design.gname, "rel_time"])
 
         treated_periods = list(period_set)
 
@@ -259,7 +333,9 @@ class SaturatedEventStudy(DID):
             if weighting == "variance":
                 R /= np.sum(R)
 
-            res_dict = _compute_lincomb_stats(R=R, coefs=coefs, vcov=model._vcov)
+            res_dict = _compute_lincomb_stats(
+                R=R, coefs=coefs, vcov=model.variance_covariance.vcov
+            )
             df_agg.loc[period] = pd.Series(res_dict)
 
         return df_agg
@@ -283,6 +359,8 @@ class SaturatedEventStudy(DID):
         -------
         None
         """
+        import matplotlib.pyplot as plt
+
         df_agg = self.aggregate(agg=agg, weighting=weighting)
 
         time = np.array(df_agg.index, dtype=float).astype(float)
@@ -316,7 +394,7 @@ def _compute_lincomb_stats(R: np.ndarray, coefs: np.ndarray, vcov: np.ndarray) -
     coefs: np.ndarray
         1D numpy array of coefficient estimates,
     vcov: np.ndarray
-        The covariance matrix of coefs (same dimension as len(coefs)),
+        The variance-covariance matrix, with one row and column per coefficient,
 
     Returns
     -------
@@ -350,8 +428,10 @@ def _saturated_event_study(
     time_id: str,
     unit_id: str,
     cluster: str | None = None,
+    xfml: str | None = None,
 ):
-    ff = f"{outcome} ~ i(rel_time, first_treated_period, ref = -1, ref2=0) | {unit_id} + {time_id}"
+    covariates = f" + {xfml}" if xfml is not None else ""
+    ff = f"{outcome} ~ i(rel_time, C(first_treated_period), ref = -1, ref2=0){covariates} | {unit_id} + {time_id}"
     m = feols(fml=ff, data=df, vcov={"CRV1": cluster})  # type: ignore
     res = m.tidy().reset_index()
     res = res.join(
@@ -360,7 +440,6 @@ def _saturated_event_study(
         )
     )
     res["time"] = res["time"].astype(float)
-    # create a dict with cohort specific effect curves
     res_cohort_eventtime_dict: dict[str, dict[str, pd.DataFrame | np.ndarray]] = {}
     for cohort, res_cohort in res.groupby("cohort"):
         event_time = res_cohort["time"].to_numpy()
@@ -371,7 +450,7 @@ def _saturated_event_study(
 
 def _test_treatment_heterogeneity(
     model: Feols,
-) -> pd.Series:
+) -> WaldTest:
     """
     Test for treatment heterogeneity in the event study design.
 
@@ -384,9 +463,10 @@ def _test_treatment_heterogeneity(
 
     Returns
     -------
-    pd.Series
+    WaldTest
 
-            A Series containing the p-value of the test and the test statistic.
+            The chi2 test statistic of the joint null of no heterogeneity and
+            its p-value.
     """
     mmres = model.tidy().reset_index()
     P = mmres.shape[0]
@@ -394,16 +474,13 @@ def _test_treatment_heterogeneity(
         r".+::(?P<time>.+):.+::(?P<cohort>.+)", expand=True
     )
     mmres["time"] = mmres["time"].astype(float)
-    # indices of coefficients that are deviations from common event study coefs
     event_study_coefs = mmres.loc[~(mmres.cohort.isna()) & (mmres.time > 0)].index
-    # Method 2 (K x P) - more efficient
     K = len(event_study_coefs)
     R2 = np.zeros((K, P))
     for i, idx in enumerate(event_study_coefs):
         R2[i, idx] = 1
 
-    test_result = model.wald_test(R=R2, distribution="chi2")
-    return test_result
+    return model.wald_test(R=R2, distribution="chi2")
 
 
 def compute_period_weights(
@@ -444,7 +521,6 @@ def compute_period_weights(
     df = data[[cohort, period, treatment]].copy()
     ever_treated = df.loc[df[treatment] == 1, cohort].unique()
 
-    # post-treatment cells (l > 0)
     post = (
         df[df[treatment] == 1]
         .groupby([cohort, period])
@@ -456,7 +532,6 @@ def compute_period_weights(
     post = post.merge(denom_post, on=period)
     post["weight"] = post["n_grel"] / post["n_rel"]
 
-    # pre-treatment cells (l < 0)
     pre = (
         df[(df[treatment] == 0) & (df[cohort].isin(ever_treated))]
         .groupby([cohort, period])
@@ -468,7 +543,6 @@ def compute_period_weights(
     pre = pre.merge(denom_pre, on=period)
     pre["weight"] = pre["n_grel"] / pre["n_rel"]
 
-    # combine and (optionally) fill out the full grid
     out = pd.concat(
         [pre[[cohort, period, "weight"]], post[[cohort, period, "weight"]]],
         ignore_index=True,
