@@ -101,7 +101,9 @@ class ModelMatrix:
     drop_singletons : bool, default True
         Whether to drop rows in singleton levels.
     drop_intercept : bool, default False
-        Whether to remove the intercept.
+        Whether to remove the intercept column after Formulaic constructs the
+        model matrix. Unlike `- 1` or `0 +` in the formula, categorical
+        regressors keep their reference-level omission.
     fixed_effect_specifications : tuple[FixedEffectSpecification, ...], default ()
         Parsed fixed effects, which say whether each effect has an intercept
         and which varying slopes it has.
@@ -647,9 +649,13 @@ def create_model_matrix(
         If True, drop rows in singleton levels of any fixed effect.
     drop_intercept : bool, default=False
         If True, remove the intercept column from the design and instrument
-        matrices. The intercept is always removed when a fixed effect has
-        level intercepts, regardless of this option;
-        slope-only effects such as `f1[[z]]` keep it.
+        matrices after Formulaic constructs the model matrix. Because this
+        happens after categorical encoding, categorical regressors such as
+        `C(...)` and `i(...)` keep their reference-level omission; use `- 1`
+        or `0 +` in the formula to retain every level without an intercept.
+        The intercept is always removed when a fixed effect has level
+        intercepts, regardless of this option; slope-only effects such as
+        `f1[[z]]` keep it.
     ensure_full_rank : bool, default=True
         If True, formulaic will ensure the design matrix is full rank by
         dropping collinear columns.

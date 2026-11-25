@@ -3,6 +3,7 @@ import pandas as pd
 import polars as pl
 import pytest
 
+from pyfixest.did.estimation import did2s
 from pyfixest.estimation import feols, fepois
 from pyfixest.report.utils import (
     rename_categoricals,
@@ -518,3 +519,96 @@ def test_fixef_excludes_singleton_levels_from_prediction():
     assert np.isfinite(prediction[:-1]).all()
     assert np.isnan(prediction[-1])
     assert set(fixed_effects["level"]) == {"a,u", "b,v"}
+
+
+def test_drop_intercept_differs_from_formula_minus_one_for_categoricals():
+    """drop_intercept=True removes Intercept after categorical reference reduction (#1817)."""
+    df = get_data()
+
+    # C(): reference level (0.0) is omitted under drop_intercept=True, retained under - 1.
+    fit_c_drop = feols("Y ~ C(f2)", data=df, drop_intercept=True)
+    fit_c_minus1 = feols("Y ~ C(f2) - 1", data=df)
+
+    assert "Intercept" not in fit_c_drop.coef().index
+    assert "Intercept" not in fit_c_minus1.coef().index
+    assert len(fit_c_drop.coef()) == len(fit_c_minus1.coef()) - 1
+    assert "C(f2)[0.0]" in fit_c_minus1.coef().index
+    assert "C(f2)[0.0]" not in fit_c_drop.coef().index
+    assert "C(f2)[T.0.0]" not in fit_c_drop.coef().index
+    assert "C(f2)[T.1.0]" in fit_c_drop.coef().index
+    ssr_c_drop = float(np.sum(fit_c_drop.resid() ** 2))
+    ssr_c_minus1 = float(np.sum(fit_c_minus1.resid() ** 2))
+    assert ssr_c_drop > ssr_c_minus1
+
+    # i() with numeric levels: reference level (0.0) is omitted under drop_intercept=True.
+    fit_i_drop = feols("Y ~ X1 + i(f2)", data=df, drop_intercept=True)
+    fit_i_minus1 = feols("Y ~ X1 + i(f2) - 1", data=df)
+
+    assert "Intercept" not in fit_i_drop.coef().index
+    assert "Intercept" not in fit_i_minus1.coef().index
+    assert len(fit_i_drop.coef()) == len(fit_i_minus1.coef()) - 1
+    assert "f2::0.0" in fit_i_minus1.coef().index
+    assert "f2::0.0" not in fit_i_drop.coef().index
+    ssr_i_drop = float(np.sum(fit_i_drop.resid() ** 2))
+    ssr_i_minus1 = float(np.sum(fit_i_minus1.resid() ** 2))
+    assert ssr_i_drop > ssr_i_minus1
+
+    # i() with string levels: reference level ("a1") is omitted under drop_intercept=True.
+    rng = np.random.default_rng(1817)
+    levels = np.repeat(["a1", "a2", "a3"], 30)
+    offsets = np.repeat([2.5, -1.0, 0.5], 30)
+    x1 = rng.normal(size=90)
+    df_str = pd.DataFrame(
+        {
+            "Y": offsets + 0.5 * x1 + rng.normal(scale=0.5, size=90),
+            "X1": x1,
+            "a": pd.Series(levels, dtype="string"),
+        }
+    )
+    fit_str_drop = feols("Y ~ X1 + i(a)", data=df_str, drop_intercept=True)
+    fit_str_minus1 = feols("Y ~ X1 + i(a) - 1", data=df_str)
+
+    assert fit_str_drop.coef().index.tolist() == ["X1", "a::a2", "a::a3"]
+    assert fit_str_minus1.coef().index.tolist() == ["X1", "a::a1", "a::a2", "a::a3"]
+    assert float(np.sum(fit_str_drop.resid() ** 2)) > float(
+        np.sum(fit_str_minus1.resid() ** 2)
+    )
+
+
+def test_did2s_second_stage_drops_intercept_after_encoding():
+    """did2s() relies on drop_intercept=True to omit both Intercept and reference level."""
+    rng = np.random.default_rng(1817)
+    n_units = 20
+    periods = [0, 1, 2, 3]
+    rows = []
+    for unit in range(n_units):
+        unit_fe = rng.normal()
+        treated_unit = unit >= n_units // 2
+        for period in periods:
+            treat = int(treated_unit and period >= 2)
+            y = unit_fe + 0.5 * period + 2.0 * treat + rng.normal(scale=0.1)
+            rows.append({"unit": unit, "period": period, "treat": treat, "Y": y})
+    panel = pd.DataFrame(rows)
+
+    fit = did2s(
+        data=panel,
+        yname="Y",
+        first_stage="~ 0 | unit + period",
+        second_stage="~ i(treat)",
+        treatment="treat",
+        cluster="unit",
+    )
+
+    assert fit.coef().index.tolist() == ["treat::True"]
+    assert "Intercept" not in fit.coef().index
+    assert fit.options.drop_intercept is True
+
+    with pytest.raises(ValueError, match="must not remove the intercept"):
+        did2s(
+            data=panel,
+            yname="Y",
+            first_stage="~ 0 | unit + period",
+            second_stage="~ i(treat) - 1",
+            treatment="treat",
+            cluster="unit",
+        )

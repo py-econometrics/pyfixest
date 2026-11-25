@@ -59,6 +59,32 @@ fit5 = pf.feols("Y ~ X1  + np.power(X1,2)", data=data)
 
 Note - for the logarithm, we suggest to not rely on `np.log` but use the internal `log` operator.
 
+### Dropping the intercept
+
+Formulas include an intercept by default. To fit a model without an intercept,
+write `0 +` or `- 1` in the formula:
+
+```{python}
+fit_no_intercept = pf.feols("Y ~ C(f2) - 1", data=data)
+```
+
+With `- 1` or `0 +`, a categorical regressor such as `C(f2)` or `i(f2)` retains
+every level because no intercept spans them.
+
+In contrast, the `drop_intercept=True` estimation option removes the intercept
+column *after* Formulaic constructs the model matrix. With categorical
+regressors, Formulaic has already omitted the reference level, so
+`drop_intercept=True` keeps one column fewer than `- 1` and constrains the
+reference level's mean to zero (which `did2s()` relies on internally):
+
+```{python}
+fit_drop_intercept = pf.feols("Y ~ C(f2)", data=data, drop_intercept=True)
+len(fit_no_intercept.coef()), len(fit_drop_intercept.coef())
+```
+
+Unless you specifically want that post-encoding drop, use `- 1` or `0 +` in the
+formula to omit the intercept.
+
 ## Fixed Effects Syntax
 
 We can add fixed effects behind the `|` operator: here we add two fixed effects `f1` and `f2`.

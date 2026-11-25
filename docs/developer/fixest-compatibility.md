@@ -447,6 +447,37 @@ and full inference for the `0 +` models. Observed with R 4.5.3 and `fixest`
 
 **Status:** Intentional; pending maintainer review
 
+### `drop_intercept` option
+
+**pyfixest:** `feols()`, `feglm()`, `fepois()`, and `quantreg()` accept
+`drop_intercept=True`, which removes the `Intercept` column from the design
+matrix (and instrument matrix in IV models) after Formulaic constructs the
+model matrix. For categorical regressors such as `C(f)` and `i(f)`, Formulaic
+has already omitted the reference level, so `drop_intercept=True` yields one
+column fewer than `- 1` or `0 +` and constrains the reference level's linear
+predictor to zero. Writing `- 1` or `0 +` in the formula removes the intercept
+before encoding and retains every level.
+
+**`fixest`:** `fixest` 0.14.0 and 0.14.2 have no `drop_intercept` argument;
+removing the intercept is written in the formula with `0 +` or `- 1`.
+
+**Rationale:** `did2s()` relies on dropping the intercept after categorical
+encoding in its second stage because unit and period fixed effects were already
+absorbed in the first stage. Preserving the existing behavior avoids breaking
+`did2s()` and existing callers; users who want a standard model without an
+intercept are directed to `- 1` or `0 +` in the formula. See
+[#1817](https://github.com/py-econometrics/pyfixest/issues/1817).
+
+**Tests:**
+`tests/test_others.py::test_drop_intercept_differs_from_formula_minus_one_for_categoricals`
+pins `drop_intercept=True` versus `- 1` for `C()` and `i()` regressors;
+`tests/test_others.py::test_did2s_second_stage_drops_intercept_after_encoding`
+pins `did2s()`'s second-stage reliance on post-encoding intercept removal;
+`tests/test_iv.py::test_iv_drop_intercept_overrides_every_spelling` covers
+non-categorical IV formulas against live `fixest`.
+
+**Status:** Intentional; pending maintainer review
+
 ## Adding an entry
 
 Add an entry in the same PR that introduces or formalizes the difference: a
