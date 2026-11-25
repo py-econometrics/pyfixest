@@ -265,10 +265,9 @@ def feols(
     fit.vcov("iid").summary()
     ```
 
-    The `ssc` argument specifies the small-sample correction for inference. In
-    general, `feols()` uses all of `fixest::feols()` defaults, but sets the
-    `fixef.K` argument to `"none"` whereas the `fixest::feols()` default is `"nested"`.
-    See here for more details: [link to github](https://github.com/py-econometrics/pyfixest/issues/260).
+    The `ssc` argument specifies the small-sample correction for inference,
+    created with [ssc()](/reference/utils.utils.ssc.qmd). The default is
+    `pf.ssc(k_adj=True, k_fixef="nonnested", G_adj=True, G_df="min")`.
 
     `feols()` supports a range of multiple estimation syntax, i.e. you can estimate
     multiple models in one call. The following example estimates two models, one with
