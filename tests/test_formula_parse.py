@@ -16,7 +16,7 @@ import pytest
 from formulaic.parser.types import Factor, Term
 
 import pyfixest as pf
-from pyfixest.errors import FormulaSyntaxError
+from pyfixest.errors import FixedEffectEvaluationError, FormulaSyntaxError
 from pyfixest.estimation.formula.parse import (
     FixedEffectSpecification,
     Formula,
@@ -839,6 +839,80 @@ class TestVaryingSlopeParsing:
 
         assert isinstance(exc_info.value.__cause__, SyntaxError)
 
+    @pytest.mark.parametrize(
+        "fixed_effects,expected_factors",
+        [
+            ("`f1[0]`", ("f1[0]",)),
+            ("`f1[X2]`", ("f1[X2]",)),
+            ("`f1[[X2]]`", ("f1[[X2]]",)),
+            ('`frame["f1"]`', ('frame["f1"]',)),
+            ("`f1[0]`:f2", ("f1[0]", "f2")),
+        ],
+    )
+    def test_backtick_quoted_bracket_names_remain_lookups(
+        self, fixed_effects, expected_factors
+    ):
+        """Backtick-quoted bracket names parse as lookup fixed effects, not slopes."""
+        parsed = Formula.parse(f"Y ~ X1 | {fixed_effects}")[0]
+
+        assert not parsed.has_varying_slopes
+        assert parsed.absorbs_intercept
+        (spec,) = parsed.fixed_effect_specifications
+        assert spec.intercept is True
+        assert spec.slopes == ()
+        assert tuple(factor.expr for factor in spec.levels.factors) == expected_factors
+        assert all(
+            factor.eval_method is Factor.EvalMethod.LOOKUP
+            for factor in spec.levels.factors
+        )
+        assert parsed.render() == f"Y ~ X1 | {fixed_effects}"
+
+        reparsed = Formula.parse(parsed.render())[0]
+        assert (
+            reparsed.fixed_effect_specifications == parsed.fixed_effect_specifications
+        )
+
+    @pytest.mark.parametrize(
+        "fixed_effects",
+        ['frame["f1"]', '{frame["f1"]}', 'f1:frame["f2"]'],
+    )
+    def test_python_subscripts_in_fixed_effects_are_reserved_for_varying_slopes(
+        self, test_data, fixed_effects
+    ):
+        """Unquoted Python subscripts after `|` are parsed as varying slopes, not indexing."""
+        parsed = Formula.parse(f"Y ~ X1 | {fixed_effects}")[0]
+        with pytest.raises(FormulaSyntaxError, match="unsupported slope expression"):
+            _ = parsed.fixed_effect_specifications
+
+        with pytest.raises(FormulaSyntaxError, match="unsupported slope expression"):
+            pf.feols(
+                f"Y ~ X1 | {fixed_effects}",
+                data=test_data,
+                context={"frame": test_data},
+            )
+
+    @pytest.mark.parametrize("fixed_effects", ["frame[X2]", "{frame[X2]}"])
+    def test_python_subscript_with_column_name_parses_as_varying_slope(
+        self, test_data, fixed_effects
+    ):
+        """`frame[X2]` after `|` parses as a varying slope on `frame`, not indexing."""
+        parsed = Formula.parse(f"Y ~ X1 | {fixed_effects}")[0]
+
+        assert parsed.has_varying_slopes
+        (spec,) = parsed.fixed_effect_specifications
+        assert str(spec.levels) == "frame"
+        assert spec.intercept is True
+        assert tuple(map(str, spec.slopes)) == ("X2",)
+
+        with pytest.raises(
+            FixedEffectEvaluationError, match=r"Column `frame`.*is missing"
+        ):
+            pf.feols(
+                f"Y ~ X1 | {fixed_effects}",
+                data=test_data,
+                context={"frame": test_data},
+            )
+
 
 class TestValidation:
     """Tests for formula validation / error handling."""
@@ -1319,6 +1393,8 @@ class TestEdgeCases:
         "Y ~ `tick\\`name` | f1",
         "Y ~ X1 | f1[z]",
         "Y ~ X1 | f1[[z1, z2]]",
+        "Y ~ X1 | `f1[0]`",
+        'Y ~ X1 | `frame["f1"]`',
         "Y ~ `a\u0301`",
         "Y ~ `℘`",
         "Y ~ `a·b`",

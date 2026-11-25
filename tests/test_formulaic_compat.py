@@ -703,6 +703,7 @@ def test_fe_metadata_preserves_lookup_and_dependencies(data, name, quoted, inter
     "name, message",
     [
         ("my fe", "valid Python identifier"),
+        ("f1[0]", "valid Python identifier"),
         ("class", "cannot be a Python keyword"),
         ("\N{KELVIN SIGN}", "normalized identifier spelling"),
     ],

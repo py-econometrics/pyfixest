@@ -363,6 +363,48 @@ cross-dtype matching; users choose conversions.
 
 **Status:** Intentional; pending maintainer review
 
+### Fixed-effect subscripts reserved for varying slopes
+
+**pyfixest:** In fixed-effects position (after `|`), every Python-evaluated
+Formulaic factor (`Factor.EvalMethod.PYTHON`) whose AST is `ast.Subscript` —
+such as `f1[X2]`, `f1[[X2]]`, `frame["f1"]`, or `{frame["f1"]}` — is parsed as
+varying-slope syntax rather than ordinary Python indexing into a context
+object. Subscripts with invalid slope expressions such as `frame["f1"]` raise
+`FormulaSyntaxError`, and `frame[X2]` is interpreted as a varying slope on
+level `frame` rather than indexing `frame`. Backtick-quoted names containing
+brackets, such as `` `f1[0]` `` or `` `frame["f1"]` ``, parse as
+`Factor.EvalMethod.LOOKUP` factors and remain ordinary fixed-effect lookups
+rather than varying slopes; estimation separately rejects non-identifier
+fixed-effect column names with `FormulaSyntaxError`.
+
+**`fixest`:** `fixest` 0.14.0 likewise reserves `fe[x]` and `fe[[x]]` after
+`|` for varying slopes and treats `df["f1"]` and `df[["f1"]]` as varying-slope
+specifications on a fixed effect `df` (failing because `df` is not a column in
+the data) rather than R indexing. For a backtick-quoted bracket column such as
+`` `f1[0]` `` in fixed-effects position, `fixest` 0.14.0 fails with an
+internal `subscript out of bounds` error.
+
+**Rationale:** Mirrors `fixest`'s varying-slope syntax instead of Formulaic's
+ordinary Python subscript evaluation in fixed-effects position, replacing the
+pre-varying-slopes behavior where `fe[x]` could evaluate as Python indexing
+([#1757](https://github.com/py-econometrics/pyfixest/issues/1757),
+[#1832](https://github.com/py-econometrics/pyfixest/issues/1832)). Because
+fixed effects must be existing data columns with valid Python identifier
+names, reserving `ast.Subscript` after `|` does not conflict with valid
+fixed-effect column lookups, while keeping backtick-quoted bracket names as
+`LOOKUP` factors in the parser avoids misinterpreting literal column names as
+varying slopes.
+
+**Tests:**
+`tests/test_formula_parse.py::TestVaryingSlopeParsing::test_backtick_quoted_bracket_names_remain_lookups`,
+`::test_python_subscripts_in_fixed_effects_are_reserved_for_varying_slopes`,
+`::test_python_subscript_with_column_name_parses_as_varying_slope`,
+`tests/test_formula_parse.py::test_rendered_formula_preserves_parsed_factors`,
+and `tests/test_formulaic_compat.py::test_fe_rejects_invalid_column_names`;
+R 4.5.3 and `fixest` 0.14.0 behavior observed in a live comparison.
+
+**Status:** Intentional; pending maintainer review
+
 ### Boolean varying slopes
 
 **pyfixest:** `f1[b]` with a boolean `b` is accepted and treated as its 0/1
