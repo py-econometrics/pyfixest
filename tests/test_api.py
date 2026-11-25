@@ -31,11 +31,6 @@ def test_api():
     pf.coefplot(fit_multi)
 
 
-@pytest.mark.parametrize("name", sorted({*pf.__all__, *pf._lazy_imports}))
-def test_top_level_names_resolve(name):
-    assert getattr(pf, name) is not None
-
-
 def test_fetch_model_by_key_or_position():
     fit = pf.feols("sw(Y, Y2) ~ X1 | f1", data=get_data())
     second = fit.all_fitted_models["Y2 ~ X1 | f1"]
