@@ -626,6 +626,7 @@ def test_all_variables_multicollinear():
     [
         ("empty", "0 input rows"),
         ("missing", "missing values=4"),
+        ("infinite", "infinite values=4"),
         ("zero_weight", "zero weights=4"),
         ("singleton", "singleton fixed-effect levels=4"),
         ("separation", "separation=4"),
@@ -645,6 +646,8 @@ def test_empty_estimation_sample_reports_filtering(stage, message):
         data = data.iloc[:0]
     elif stage == "missing":
         data["y"] = np.nan
+    elif stage == "infinite":
+        data["x"] = np.inf
     elif stage == "zero_weight":
         data["w"] = 0.0
         kwargs["weights"] = "w"

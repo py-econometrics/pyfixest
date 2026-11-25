@@ -437,7 +437,7 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
     def _raise_empty_sample(self, *, dropped: DroppedRowCounts) -> None:
         raise EmptyEstimationSampleError(
             f"No observations are available for {self.model.model_name!r}. "
-            f"{dropped.empty_sample_explanation()}"
+            f"{dropped._empty_sample_explanation()}"
         )
 
     def _validate_response(self) -> None:

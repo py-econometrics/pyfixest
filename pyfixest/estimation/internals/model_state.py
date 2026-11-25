@@ -407,9 +407,8 @@ class DroppedRowCounts:
     singleton: int = 0
     separation: int = 0
 
-    # (field, message label) per filtering stage, in stage order matching
-    # ``DropStageOptions``. `total` and `empty_sample_explanation` derive from
-    # this table, so a new stage is declared in exactly one place.
+    # The total and the empty-sample message share this list in
+    # DropStageOptions order.
     _STAGE_LABELS: ClassVar[tuple[tuple[str, str], ...]] = (
         ("missing", "missing values"),
         ("infinite", "infinite values"),
@@ -423,14 +422,8 @@ class DroppedRowCounts:
         """Number of dropped rows over all stages."""
         return sum(getattr(self, field) for field, _label in self._STAGE_LABELS)
 
-    def empty_sample_explanation(self) -> str:
-        """Explanation and remedy for an empty estimation sample.
-
-        Rendered into ``EmptyEstimationSampleError`` after the model name:
-        either that filtering removed every input row — naming each stage
-        that dropped rows, in stage order — or that the model received no
-        input rows at all.
-        """
+    def _empty_sample_explanation(self) -> str:
+        """Format the cause and remedy for a sample known to be empty."""
         if not self.total:
             return (
                 "The model received 0 input rows. "

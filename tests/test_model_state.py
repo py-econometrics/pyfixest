@@ -99,13 +99,13 @@ def test_estimation_sample_counts_frequency_weights(
 def test_dropped_row_counts_empty_sample_explanation() -> None:
     empty = DroppedRowCounts()
     assert empty.total == 0
-    assert empty.empty_sample_explanation() == (
+    assert empty._empty_sample_explanation() == (
         "The model received 0 input rows. Pass data with observations for this model."
     )
 
     counts = DroppedRowCounts(missing=4, singleton=2)
     assert counts.total == 6
-    assert counts.empty_sample_explanation() == (
+    assert counts._empty_sample_explanation() == (
         "Filtering removed all 6 input rows "
         "(missing values=4, singleton fixed-effect levels=2). "
         "Check these inputs before refitting."
