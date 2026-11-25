@@ -91,7 +91,10 @@ from pyfixest.estimation.post_estimation.decomposition import (
     GelbachDecomposition,
     _decompose_arg_check,
 )
-from pyfixest.estimation.post_estimation.dfm_test import _dfm_heterogeneity_test
+from pyfixest.estimation.post_estimation.dfm_test import (
+    EffectHeterogeneityTest,
+    _dfm_heterogeneity_test,
+)
 from pyfixest.estimation.post_estimation.fixed_effects import (
     FixedEffectEstimates,
     build_fixed_effect_dummies,
@@ -283,6 +286,7 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
         randomization_inference=True,
         sherman_morrison_update=True,
         anytime_valid_inference=True,
+        effect_heterogeneity_test=True,
     )
 
     def __init__(
@@ -1116,43 +1120,49 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
 
         return self.wald
 
-    def dfm_heterogeneity_test(self, treatment: str) -> pd.Series:
+    def dfm_heterogeneity_test(self, treatment: str) -> EffectHeterogeneityTest:
         """
-        Omnibus test for treatment effect heterogeneity (DFM 2019).
+        Test whether the treatment effect varies with the model's regressors.
 
-        Tests whether the treatment effect varies systematically with
-        the covariates in the model. Under the null, the CATE does not
-        depend on X (homogeneous effect). Under the alternative, at
-        least one covariate modifies the treatment effect.
+        Implements the omnibus test of Ding, Feller, and Miratrix (2019). Under
+        the null hypothesis, the conditional average treatment effect does not
+        vary linearly with the regressors. The test fits a separate OLS
+        regression of the dependent variable on the regressors in each
+        treatment arm and jointly tests whether the arms' slopes are equal,
+        using a heteroskedasticity-robust sandwich variance.
 
-        The method fits separate OLS in each arm, takes the coefficient
-        difference, and runs a joint chi-squared test on the slopes
-        using a sandwich variance.
-
-        The covariates tested for effect modification are the model's own
-        regressors (as they enter the design matrix, e.g. `np.log(x)` or
-        factor dummies), excluding the treatment and the intercept.
+        The regressors tested for effect modification are the model's
+        regressors as they enter the model matrix, such as `np.log(X1)` or the
+        indicator columns of `C(f1)`, except the treatment and the intercept.
+        Include only pre-treatment regressors.
 
         Parameters
         ----------
         treatment : str
-            Name of the binary treatment coefficient (must be 0/1 and present
-            among the model's coefficients).
+            Name of the treatment coefficient, as listed by `fit.coef()`. Its
+            column must take the values 0 and 1. For a treatment written as
+            `C(D)`, pass the name of its indicator column, such as
+            `"C(D)[T.1]"`.
 
         Returns
         -------
-        pd.Series
-            Series with keys "statistic" (chi-squared) and "pvalue". The
-            degrees of freedom equal the number of covariates tested.
+        EffectHeterogeneityTest
+            The chi-squared statistic, its p-value, and the degrees of
+            freedom, the number of regressors tested. See
+            [EffectHeterogeneityTest](/reference/estimation.state.EffectHeterogeneityTest.qmd).
 
         Raises
         ------
         NotImplementedError
-            If the model is not plain OLS (e.g. IV, GLM, Poisson, quantile
-            regression), includes fixed effects, is weighted, or if the design
-            matrix was discarded (`lean=True`).
+            For IV, GLM, quantile regression, and difference-in-differences
+            fits, and for fits with fixed effects, weights, or clustered or
+            HAC inference. The test assumes independent observations.
+        MissingModelDataError
+            If the fit was estimated with `lean=True` or `store_data=False`.
         ValueError
-            If treatment is not in the model, or is not binary 0/1.
+            If `treatment` is not a coefficient of the model, is not coded
+            0/1, or leaves no other regressor to test, or if a treatment arm
+            has fewer observations than the number of regressors plus one.
 
         References
         ----------
@@ -1171,7 +1181,7 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
         n = 500
         X1 = rng.standard_normal(n)
         D = rng.binomial(1, 0.5, n)
-        # heterogeneous effect: tau(X1) = 1 + 2*X1
+        # the treatment effect 1 + 2 * X1 varies with X1
         Y = 1.0 + 0.5 * X1 + D * (1.0 + 2.0 * X1) + rng.standard_normal(n)
 
         data = pd.DataFrame({"Y": Y, "D": D, "X1": X1})
@@ -1179,70 +1189,67 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
         fit.dfm_heterogeneity_test(treatment="D")
         ```
         """
-        if type(self) is not Feols:
+        method = "dfm_heterogeneity_test"
+        self._require_capability(capability="effect_heterogeneity_test", method=method)
+        if self.model.has_fixef:
             raise NotImplementedError(
-                "dfm_heterogeneity_test() is only supported for OLS models (Feols). "
-                "It is not valid for IV, GLM, or quantile regression."
+                f"{method}() does not support fits with fixed effects. Write the "
+                "fixed effects as regressors, for example `C(f1)`, and refit."
             )
-
-        if self._has_fixef:
+        if self.options.has_weights:
             raise NotImplementedError(
-                "dfm_heterogeneity_test() is not supported for models with fixed "
-                "effects. Fit a model without fixed effects to use this test."
+                f"{method}() does not support weighted fits. Refit without `weights`."
             )
-
-        if self._has_weights:
+        spec = self.variance_covariance.spec
+        if spec.vcov_type not in ("iid", "hetero"):
             raise NotImplementedError(
-                "dfm_heterogeneity_test() is not supported for weighted models."
+                f"{method}() assumes independent observations and does not "
+                f"support fits with vcov={spec.vcov_type_detail!r}. Refit with "
+                "vcov='iid' or vcov='hetero'; the test computes its own "
+                "heteroskedasticity-robust variance either way."
             )
-
-        # The test refits OLS by arm on the model's design matrix. `lean=True`
-        # discards it, so fail with a clear message rather than an AttributeError.
-        if getattr(self, "_X", None) is None:
-            raise NotImplementedError(
-                "dfm_heterogeneity_test() needs the model matrix, which was "
-                "discarded because the model was fit with lean=True. Refit with "
-                "lean=False."
-            )
+        require_retained(self, method, "model_matrix")
 
         if treatment not in self._coefnames:
             raise ValueError(
-                f"Variable '{treatment}' not found in the model's coefficients. "
-                f"Available: {self._coefnames}"
+                f"{method}() could not find treatment={treatment!r} among the "
+                f"model's coefficients: {self._coefnames}. Pass one of these names."
             )
-
-        # Source y and the covariates from the fitted design matrix (columns
-        # aligned with self._coefnames) so transformed regressors and factor
-        # dummies are handled correctly and no dependence on self._data remains.
-        X = np.asarray(self._X)
-        treat_vec = X[:, self._coefnames.index(treatment)].ravel()
-        unique_vals = np.unique(treat_vec)
-        if not (len(unique_vals) == 2 and set(unique_vals) <= {0, 1}):
+        design = self.model_matrix.independent
+        treatment_values = design[treatment].to_numpy()
+        values = np.unique(treatment_values)
+        if not np.array_equal(values, [0, 1]):
             raise ValueError(
-                f"Treatment variable '{treatment}' must be binary (0/1). "
-                f"Found values: {unique_vals}"
+                f"{method}() needs a treatment coded 0/1, but {treatment!r} takes "
+                f"the values {values[:10]}."
             )
-
-        y = np.asarray(self._Y).ravel()
-
-        # All covariates except the treatment. The intercept is added
-        # inside the standalone _dfm_heterogeneity_test function.
-        covar_idx = [
-            i
-            for i, c in enumerate(self._coefnames)
-            if c not in (treatment, "Intercept")
+        tested = [
+            name for name in self._coefnames if name not in (treatment, "Intercept")
         ]
-        if not covar_idx:
+        if not tested:
             raise ValueError(
-                "Need at least one covariate (besides the treatment and "
-                "intercept) to test for heterogeneity."
+                f"{method}() needs at least one regressor besides the treatment "
+                "and the intercept to test for effect modification. Add "
+                "pre-treatment regressors to the formula."
             )
 
-        X_covars = X[:, covar_idx]
+        treated = treatment_values == 1
+        n_required = len(tested) + 1
+        n_treated = int(treated.sum())
+        n_control = treated.size - n_treated
+        if min(n_treated, n_control) < n_required:
+            raise ValueError(
+                f"{method}() fits a separate regression in each treatment arm "
+                f"and needs at least {n_required} observations per arm, one more "
+                f"than the {len(tested)} regressors tested. The treated arm has "
+                f"{n_treated} and the control arm {n_control}."
+            )
 
-        result = _dfm_heterogeneity_test(y=y, treatment=treat_vec, X=X_covars)
-
-        return pd.Series({"statistic": result["statistic"], "pvalue": result["pvalue"]})
+        return _dfm_heterogeneity_test(
+            y=self.model_matrix.dependent.to_numpy(dtype=np.float64).ravel(),
+            treated=treated,
+            X=design[tested].to_numpy(dtype=np.float64),
+        )
 
     def wildboottest(
         self,

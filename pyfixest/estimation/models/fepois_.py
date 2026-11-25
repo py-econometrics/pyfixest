@@ -79,6 +79,7 @@ class Fepois(Feglm):
         randomization_inference=True,
         sherman_morrison_update=False,
         anytime_valid_inference=False,
+        effect_heterogeneity_test=False,
     )
 
     def _fit_statistics(self) -> FitStatistics:

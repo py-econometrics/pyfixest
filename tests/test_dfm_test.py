@@ -3,7 +3,7 @@ Tests for the DFM heterogeneity test (Ding, Feller, Miratrix 2019).
 
 Numerical validation against the reference R implementation lives in
 `test_dfm_test_vs_r.py`. This file covers the Python-only paths: the Feols
-method reproduces the standalone function, covariates are read from the design
+method reproduces the standalone function, regressors are read from the model
 matrix (so transforms work), and -- last -- the power/size properties.
 
 Error and unsupported-model paths live in `test_errors.py`.
@@ -14,7 +14,10 @@ import pandas as pd
 import pytest
 
 import pyfixest as pf
-from pyfixest.estimation.post_estimation.dfm_test import _dfm_heterogeneity_test
+from pyfixest.estimation.post_estimation.dfm_test import (
+    EffectHeterogeneityTest,
+    _dfm_heterogeneity_test,
+)
 
 
 @pytest.fixture
@@ -46,21 +49,20 @@ def test_method_matches_standalone(heterogeneous_data):
     fit = pf.feols("Y ~ D + X1 + X2", data=heterogeneous_data)
     res = fit.dfm_heterogeneity_test(treatment="D")
 
-    assert isinstance(res, pd.Series)
-    assert list(res.index) == ["statistic", "pvalue"]
+    assert isinstance(res, EffectHeterogeneityTest)
 
     y = heterogeneous_data["Y"].to_numpy()
-    D = heterogeneous_data["D"].to_numpy()
+    treated = heterogeneous_data["D"].to_numpy() == 1
     X = heterogeneous_data[["X1", "X2"]].to_numpy()
-    ref = _dfm_heterogeneity_test(y=y, treatment=D, X=X)
+    ref = _dfm_heterogeneity_test(y=y, treated=treated, X=X)
 
-    np.testing.assert_allclose(res["statistic"], ref["statistic"], rtol=1e-10)
-    np.testing.assert_allclose(res["pvalue"], ref["pvalue"], rtol=1e-10)
-    assert ref["df"] == 2
+    np.testing.assert_allclose(res.stat, ref.stat, rtol=1e-10)
+    np.testing.assert_allclose(res.pvalue, ref.pvalue, rtol=1e-10)
+    assert res.df == 2
 
 
-def test_covariates_read_from_design_matrix():
-    """A transformed regressor is sourced from the design matrix, not raw data."""
+def test_regressors_read_from_model_matrix():
+    """A transformed regressor is read from the model matrix, not the raw data."""
     rng = np.random.default_rng(21)
     n = 1000
     X1 = rng.uniform(1.0, 5.0, n)  # positive so np.log is defined
@@ -70,34 +72,13 @@ def test_covariates_read_from_design_matrix():
     data = pd.DataFrame({"Y": Y, "D": D, "X1": X1, "X2": X2})
 
     fit = pf.feols("Y ~ D + np.log(X1) + X2", data=data)
-    # would KeyError if it read raw self._data["np.log(X1)"]
     res = fit.dfm_heterogeneity_test(treatment="D")
 
-    # equals the standalone called on the transformed design columns
-    covar_idx = [i for i, c in enumerate(fit._coefnames) if c not in ("D", "Intercept")]
     ref = _dfm_heterogeneity_test(
-        y=fit._Y.ravel(),
-        treatment=fit._X[:, fit._coefnames.index("D")],
-        X=fit._X[:, covar_idx],
+        y=Y, treated=D == 1, X=np.column_stack([np.log(X1), X2])
     )
-    assert ref["df"] == 2
-    np.testing.assert_allclose(res["statistic"], ref["statistic"], rtol=1e-10)
-
-
-def test_standalone_accepts_1d_covariate():
-    """A 1-D X is treated as a single covariate (df=1)."""
-    rng = np.random.default_rng(202)
-    n = 500
-    X = rng.standard_normal(n)  # 1-D
-    D = rng.binomial(1, 0.5, n)
-    Y = X + D * (1.0 + 3.0 * X) + rng.standard_normal(n)
-
-    res = _dfm_heterogeneity_test(y=Y, treatment=D, X=X)
-    assert res["df"] == 1
-    np.testing.assert_allclose(
-        res["statistic"],
-        _dfm_heterogeneity_test(y=Y, treatment=D, X=X.reshape(n, 1))["statistic"],
-    )
+    assert res.df == 2
+    np.testing.assert_allclose(res.stat, ref.stat, rtol=1e-10)
 
 
 # --- power and size (property-based, come last) -----------------------------
@@ -106,10 +87,10 @@ def test_standalone_accepts_1d_covariate():
 def test_detects_heterogeneity(heterogeneous_data):
     """Under strong heterogeneity, the test rejects the null."""
     fit = pf.feols("Y ~ D + X1 + X2", data=heterogeneous_data)
-    assert fit.dfm_heterogeneity_test(treatment="D")["pvalue"] < 0.001
+    assert fit.dfm_heterogeneity_test(treatment="D").pvalue < 0.001
 
 
 def test_no_false_positive(homogeneous_data):
     """Under a constant treatment effect, the test does not reject."""
     fit = pf.feols("Y ~ D + X1 + X2", data=homogeneous_data)
-    assert fit.dfm_heterogeneity_test(treatment="D")["pvalue"] > 0.05
+    assert fit.dfm_heterogeneity_test(treatment="D").pvalue > 0.05

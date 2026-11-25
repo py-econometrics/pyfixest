@@ -1177,6 +1177,13 @@ class Capabilities:
         ``did2s()`` and ``event_study()`` fits do not. SAVI additionally
         requires unweighted estimation, a model without fixed effects, and an
         iid or heteroskedasticity-robust variance estimator.
+    effect_heterogeneity_test : bool
+        Whether ``dfm_heterogeneity_test()``, the omnibus test of treatment
+        effect heterogeneity, is available. Only ``feols()`` fits without
+        instruments support it; ``did2s()`` and ``event_study()`` fits do not.
+        The test additionally requires unweighted estimation, a model without
+        fixed effects, and an iid or heteroskedasticity-robust variance
+        estimator.
 
     Examples
     --------
@@ -1204,6 +1211,7 @@ class Capabilities:
     randomization_inference: bool
     sherman_morrison_update: bool
     anytime_valid_inference: bool
+    effect_heterogeneity_test: bool
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)

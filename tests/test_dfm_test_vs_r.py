@@ -67,9 +67,9 @@ def test_dfm_matches_r(seed, n, p, p_treat, hetero):
     """Python statistic and p-value match the reference R implementation."""
     Y, D, X = _make_data(seed, n, p, p_treat, hetero)
 
-    py = _dfm_heterogeneity_test(y=Y, treatment=D, X=X)
+    py = _dfm_heterogeneity_test(y=Y, treated=D == 1, X=X)
     r_stat, r_pval = _run_r(Y, D, X)
 
-    np.testing.assert_allclose(py["statistic"], r_stat, rtol=rtol)
-    np.testing.assert_allclose(py["pvalue"], r_pval, rtol=rtol)
-    assert py["df"] == p
+    np.testing.assert_allclose(py.stat, r_stat, rtol=rtol)
+    np.testing.assert_allclose(py.pvalue, r_pval, rtol=rtol)
+    assert py.df == p

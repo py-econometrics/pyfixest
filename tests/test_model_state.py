@@ -175,6 +175,7 @@ _ALL_CAPABILITIES = frozenset(field.name for field in fields(Capabilities))
                 "randomization_inference",
                 "sherman_morrison_update",
                 "anytime_valid_inference",
+                "effect_heterogeneity_test",
             },
         ),
         (
@@ -184,6 +185,7 @@ _ALL_CAPABILITIES = frozenset(field.name for field in fields(Capabilities))
                 "randomization_inference",
                 "sherman_morrison_update",
                 "anytime_valid_inference",
+                "effect_heterogeneity_test",
             },
         ),
     ],

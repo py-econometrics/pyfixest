@@ -83,6 +83,7 @@ class Feglm(Feols):
         randomization_inference=False,
         sherman_morrison_update=False,
         anytime_valid_inference=False,
+        effect_heterogeneity_test=False,
     )
 
     def __init__(
