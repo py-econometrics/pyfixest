@@ -69,10 +69,10 @@ for fml in formulas:
     pf.feols(fml, data)
 ```
 
-IV allows one endogenous variable and only `feols`. Multiple estimation:
+IV allows one endogenous regressor and only `feols`. Multiple estimation:
 `sw(X2, Z1)` fits one model per term, `csw(X1, X2)` adds terms cumulatively,
 `sw0`/`csw0` also fit the model without them, and `mvsw(X1, X2)` fits every
-subset. All five work among the covariates (`Y ~ csw(X1, X2)`) and in the
+subset. All five work among the regressors (`Y ~ csw(X1, X2)`) and in the
 fixed-effects part (`Y ~ X1 | csw0(f1, f2)`); on the left-hand side use only
 `sw` (`sw(Y, Y2) ~ X1`). `split="f1"` fits one model per value of `f1`;
 `fsplit="f1"` adds the full sample first.
@@ -156,7 +156,7 @@ fit.sample_info.n_obs, fit.sample_info.dropped_by_stage  # dropped rows by reaso
 fit.model.depvar, fit.model.fixed_effects  # GLMs add fit.convergence; IV fits fit.first_stage
 ```
 
-## Multiple estimation results
+## Fitted models from multiple estimation
 
 ```python
 multi = pf.feols("Y ~ X1 | csw0(f1, f2)", data)

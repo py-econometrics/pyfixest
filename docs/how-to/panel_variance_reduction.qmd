@@ -1,6 +1,6 @@
 ---
 title: "Variance Reduction in AB Tests"
-description: "How to reduce the variance of estimators in AB tests and beyond using exogenous control variables via CUPED, linear regression, and fixed effects estimators."
+description: "How to reduce the variance of estimators in AB tests and beyond using pre-treatment regressors via CUPED, linear regression, and fixed effects estimators."
 categories: [Panel, AB Testing]
 ---
 
@@ -75,7 +75,7 @@ In the next step, we will look at three different ways to compute the average tr
 - First, we will compute a standard "difference in means" estimator and conduct a two-sampled t-test for inference. We do this both by hand and by means of linear regression. While standard, we will show that this estimator is relatively inefficient as it throws aways valuable information from the pre-treatment periods.
 - In a second step, we improve on the difference in means estimator and include pre-treatment measures of the outcome variable to our regression model. In the tech blog world, this method
   is often referred to as CUPED (which stands for "Controlled-experiment Using Pre-Experiment Data" as far as we know). We will demonstrate that CUPED uted leads to a significant reduction in the variance of our estimators. Pre-treatment averages are a "good control" variable because a) under uncondional randomization, pre-treatment averages should be uncorrelated of the treatment assignment and b) pre-treatment averages should be highly predictive of the post-treatment outcome. The intuition here is simply that users will behave similarly "after" the experiment starts / when receiving the treatment than they did before.
-- In a third step, we show that instead of using pre-treatment averages as a control variable, we can simply fit a panel model and control for user and time fixed effect.
+- In a third step, we show that instead of using pre-treatment averages as a regressor, we can simply fit a panel model and control for user and time fixed effect.
 
 All three estimators identify the same average treatment effect, but the CUPED and panel estimator are much more efficient: they produce lower variances.
 
@@ -150,12 +150,12 @@ fit_difference_in_means.summary()
 
 Note that no aggregation step is needed and that we get identical point estimates. As a bonus, we get standard errors and confidence intervals in the process.
 
-## Cuped: Using Pre-Experimental Measures of the Outcomes Variable as Controls
+## CUPED with pre-experimental outcome measures {#cuped-using-pre-experimental-measures-of-the-outcomes-variable-as-controls}
 
 Sometimes, throwing away data can be a winning strategy ("garbage in garbage out"), but not in this example: we have high-quality pre-experimental measures of the behavior
 of our users at hand, and we should use it in our favor!
 
-More specifically, instead of throwing away all of the pre-experimental measures, we could instead have used them as a control!
+More specifically, instead of throwing away all of the pre-experimental measures, we could instead have used them as pre-treatment regressors!
 
 This should help reduce the variance of our estimators because pre-experimental behavior is likely to be highly predicitive of what users do after the launch of the experiment. Consequently, including these baselines in our regression models should help us "explain residual errors" and thereby reduce the variance of our
 estimators.
@@ -212,7 +212,7 @@ We can compare with the previous results:
 pf.etable([fit_difference_in_means, fit_cuped])
 ```
 
-Point estimates for the difference-in-means estimator is -0.536, while it is 0.201 for the Cuped estimator. But most importantly, the standard errors are much smaller for the CUPED estimator (0.03 vs 0.209). Because we have fitted a regression model with covariates, we have used heteroskedasticity-robust standard errors, which should be more conservative than the iid errors used in the difference-in-means regression.
+Point estimates for the difference-in-means estimator is -0.536, while it is 0.201 for the Cuped estimator. But most importantly, the standard errors are much smaller for the CUPED estimator (0.03 vs 0.209). Because we have fitted a model with pre-treatment regressors, we have used heteroskedasticity-robust standard errors, which should be more conservative than the iid errors used in the difference-in-means regression.
 
 ## Panel Estimator
 
@@ -436,7 +436,7 @@ All of a sudden, the difference-in-means estimator has lower variance!
 display(se_sim_18)
 ```
 
-The reason we do not achieve variance reduction this time is that the addition of pre-treatment covariates / unit fixed effects simply explains less unobserved variance than before.
+The reason we do not achieve variance reduction this time is that adding pre-treatment regressors or unit fixed effects simply explains less unobserved variance than before.
 
 ## Other useful links
 
