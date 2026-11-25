@@ -74,47 +74,43 @@ def feols(
     data : DataFrameType
         A pandas or polars dataframe containing the variables in the formula.
 
-    vcov : Union[VcovTypeOptions, dict[str, str]]
-        Variance estimator. Options include "iid",
-          "hetero", "HC1", "HC2", "HC3", "NW" for Newey-West HAC standard errors,
+    vcov : VcovTypeOptions or dict[str, str], optional
+        Variance estimator. Default is None, which means "iid". Options include "iid",
+        "hetero", "HC1", "HC2", "HC3", "NW" for Newey-West HAC standard errors,
         "DK" for Driscoll-Kraay HAC standard errors, or a dictionary for CRV1/CRV3 inference.
         Note that NW and DK require to pass additional keyword arguments via the `vcov_kwargs` argument.
         For time-series HAC, you need to pass the 'time_id' column. For panel-HAC, you need to add
         pass both 'time_id' and 'panel_id'. See `vcov_kwargs` for details.
 
-    vcov_kwargs : Optional[dict[str, any]]
-         Additional keyword arguments to pass to the vcov function. These keywoards include
+    vcov_kwargs : dict[str, str | int], optional
+         Additional keyword arguments to pass to the vcov function. These keywords include
         "lag" for the number of lag to use in the Newey-West (NW) and Driscoll-Kraay (DK) HAC standard errors.
         "time_id" for the time ID used for NW and DK standard errors, and "panel_id" for the panel
-         identifier used for NW and DK standard errors. Currently, the the time difference between consecutive time
+         identifier used for NW and DK standard errors. Currently, the time difference between consecutive time
          periods is always treated as 1. More flexible time-step selection is work in progress.
 
-    weights : Union[None, str], optional.
-        Default is None. Weights for WLS estimation. If None, all observations
-        are weighted equally. If a string, the name of the column in `data` that
-        contains the weights.
+    weights : str or None, optional
+        Default is None, which weights all observations equally. Otherwise, the
+        name of the column in `data` that contains the observation weights.
 
-    ssc : str
-        The small-sample correction for inference, created with `ssc()`.
+    ssc : Ssc or Mapping[str, Any], optional
+        The small-sample correction for inference, created with `ssc()`. Default is
+        None, which uses the defaults of `ssc()`.
 
     fixef_rm : FixedRmOptions
         Use "singleton" (default) to drop rows in singleton levels or "none"
         to retain them. This can affect standard errors.
 
     collin_tol : float, optional
-        Tolerance for collinearity check, by default 1e-10.
+        Tolerance for collinearity check, by default 1e-09.
 
     drop_intercept : bool, optional
         Whether to drop the intercept from the model, by default False.
 
     copy_data : bool, optional
-        Whether to copy the data before estimation, by default True.
-        If set to False, the data is not copied, which can save memory but
-        may lead to unintended changes in the input data outside of `fepois`.
-        For example, the input data set is re-index within the function.
-        As far as I know, the only other relevant case is
-        when using interacted fixed effects, in which case you'll find
-        a column with interacted fixed effects in the data set.
+        Whether to copy the data before estimation, by default True. If False, the
+        data is not copied, which can save memory but may lead to unintended changes
+        in the input data.
 
     store_data : bool, optional
         Whether the fitted model retains the data, by default True. Set to
@@ -130,9 +126,10 @@ def feols(
         to obtain the appropriate standard-errors at estimation time,
         since obtaining different SEs won't be possible afterwards.
 
-    weights_type: WeightsTypeOptions, optional
-        Options include `aweights` or `fweights`. `aweights` implement analytic or
-        precision weights, while `fweights` implement frequency weights. For details
+    weights_type : WeightsTypeOptions, optional
+        How to interpret `weights`: "aweights" for analytic (precision) weights or
+        "fweights" for frequency weights, which suit data in which identical
+        observations are aggregated into one row. Default is "aweights". For details
         see this blog post: https://notstatschat.rbind.io/2020/08/04/weights-in-statistics/.
 
     solver : SolverOptions, optional.
@@ -160,7 +157,7 @@ def feols(
     reps: int
         Deprecated legacy argument for compressed regression bootstrap inference.
 
-    context : int or Mapping[str, Any]
+    context : int or Mapping[str, Any], optional
         A dictionary containing additional context variables to be used by
         formulaic during the creation of the model matrix. This can include
         custom factorization functions, transformations, or any other
@@ -169,12 +166,12 @@ def feols(
     seed: Optional[int]
         Deprecated legacy argument for compressed regression bootstrap inference.
 
-    split: Optional[str]
+    split : str, optional
         A character string, i.e. 'split = var'. If provided, the sample is split according to the
         variable and one estimation is performed for each value of that variable. If you also want
         to include the estimation for the full sample, use the argument fsplit instead.
 
-    fsplit: Optional[str]
+    fsplit : str, optional
         This argument is the same as split but also includes the full sample as the first estimation.
 
     Returns

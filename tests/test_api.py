@@ -1,5 +1,10 @@
 from __future__ import annotations
 
+import ast
+import inspect
+import re
+from collections import Counter
+
 import duckdb
 import numpy as np
 import pandas as pd
@@ -497,3 +502,66 @@ def test_context_capture_iv_first_stage(spline_data, context):
         explicit_fit.first_stage.diagnostics.f_stat,
         rtol=1e-12,
     )
+
+
+ENTRY_POINTS = (pf.feols, pf.feglm, pf.fepois, pf.quantreg)
+SHARED_PARAMETERS = sorted(
+    name
+    for name, count in Counter(
+        name for func in ENTRY_POINTS for name in inspect.signature(func).parameters
+    ).items()
+    if count > 1
+)
+# Estimators that describe a parameter in their own words. All others that take
+# the parameter must share one docstring block.
+OWN_PARAMETER_DOCS = {
+    # only feols takes instruments, and quantreg takes no fixed effects
+    "fml": {"feols", "quantreg"},
+    # other variance estimators, and the default is "nid"
+    "vcov": {"quantreg"},
+    # quantreg uses the seed for method="pfn"
+    "seed": {"feols", "quantreg"},
+    "separation_check": {"quantreg"},
+}
+
+
+def _parameter_docs(func):
+    """Map each documented parameter of `func` to its docstring block."""
+    docstring = inspect.getdoc(func)
+    section = re.split(r"^Parameters\n-+\n", docstring, flags=re.MULTILINE)[1]
+    section = re.split(r"^[A-Z]\w+\n-+\n", section, flags=re.MULTILINE)[0]
+    starts = list(re.finditer(r"^(\w+) ?:", section, flags=re.MULTILINE))
+    ends = [match.start() for match in starts[1:]] + [len(section)]
+    return {
+        match[1]: section[match.start() : end].strip()
+        for match, end in zip(starts, ends, strict=True)
+    }
+
+
+@pytest.mark.parametrize("func", ENTRY_POINTS, ids=lambda func: func.__name__)
+def test_docstring_parameters_and_defaults_match_signature(func):
+    parameters = inspect.signature(func).parameters
+    docs = _parameter_docs(func)
+    assert set(docs) == set(parameters)
+
+    for name, doc in docs.items():
+        for stated in re.findall(
+            r'(?:[Bb]y default|Defaults to|Default is) ("[^"]*"|[\w.+-]*\w)',
+            " ".join(doc.split()),
+        ):
+            assert ast.literal_eval(stated) == parameters[name].default, name
+
+
+@pytest.mark.parametrize("name", SHARED_PARAMETERS)
+def test_shared_parameter_docs_are_identical(name):
+    docs = {
+        func.__name__: _parameter_docs(func)[name]
+        for func in ENTRY_POINTS
+        if name in inspect.signature(func).parameters
+    }
+    own = OWN_PARAMETER_DOCS.get(name, set())
+    shared = {doc for estimator, doc in docs.items() if estimator not in own}
+
+    assert len(shared) <= 1, f"{name!r} docs differ across {sorted(set(docs) - own)}"
+    # an exception must name an estimator whose text actually differs
+    assert all(docs[estimator] not in shared for estimator in own)
