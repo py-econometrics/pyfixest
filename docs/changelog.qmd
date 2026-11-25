@@ -102,6 +102,11 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
 - Fits no longer emit pandas 3.1's `Pandas4Warning` about the deprecated
   `inplace=` keyword, and `copy_data=False` no longer resets the index of the
   data you pass in ([#2069](https://github.com/py-econometrics/pyfixest/pull/2069)).
+- The `GelbachDecomposition.etable()` and `.coefplot()` docstring examples import
+  `gelbach_data` from `pyfixest.utils.dgps` instead of calling the nonexistent
+  `pf.gelbach_data()`. The `AttributeError` for `pf.make_table`, removed in an
+  earlier release, now names `pyfixest` instead of `pyfixest.report`
+  ([#2132](https://github.com/py-econometrics/pyfixest/pull/2132)).
 
 ## PyFixest 0.70.0
 
