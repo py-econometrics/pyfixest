@@ -42,6 +42,9 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
 
 ### Bug Fixes
 
+- `wald_test()` now raises a `ValueError` for non-finite `q` values instead of
+  returning a `NaN` or infinite test statistic
+  ([#2104](https://github.com/py-econometrics/pyfixest/issues/2104)).
 - Time-series Newey–West inference with a missing `time_id` value raises a
   `ValueError` naming the column and the number of affected rows. Before, it
   aborted the Python process. HAC errors name the `time_id` and `panel_id`
