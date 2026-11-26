@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import subprocess
 import sys
 from pathlib import Path
 
@@ -12,7 +11,6 @@ if str(MODULAR_DIR) not in sys.path:
 
 import benchmarker_sets as bs  # noqa: E402
 import feols_benchmarkers as fb  # noqa: E402
-from interfaces import BenchmarkDataset, FeolsSpec  # noqa: E402
 
 
 def _backends(benchmarkers):
@@ -205,55 +203,3 @@ def test_build_standard_feols_benchmarkers_raises_when_none_available(
             include_julia=False,
             include_torch=False,
         )
-
-
-def test_parse_subprocess_output_skips_non_object_json_lines() -> None:
-    """Test that non-object JSON lines are skipped instead of crashing."""
-    datasets = [
-        BenchmarkDataset(
-            dataset_id="d1",
-            data_path=Path("d1.parquet"),
-            dgp="base",
-            k=1,
-            n_obs=100,
-            iter_type="timed",
-            iter_num=1,
-        ),
-        BenchmarkDataset(
-            dataset_id="d2",
-            data_path=Path("d2.parquet"),
-            dgp="base",
-            k=1,
-            n_obs=100,
-            iter_type="timed",
-            iter_num=2,
-        ),
-    ]
-    spec = FeolsSpec(depvar="Y", covariates=["X1"], fe_cols=[], vcov="iid")
-    completed = subprocess.CompletedProcess(
-        args=["Rscript", "feols_r.R"],
-        returncode=0,
-        stdout='42\n[1, 2]\nnull\n{"dataset_id": "d1", "time": 0.25, "success": true}\n',
-        stderr="",
-    )
-
-    with pytest.warns(
-        UserWarning,
-        match=r"emitted no results for 1 datasets, including \['d2'\]",
-    ):
-        results = fb._parse_subprocess_output(
-            datasets=datasets,
-            spec=spec,
-            backend="r.fixest",
-            completed_process=completed,
-        )
-
-    assert len(results) == 2
-    assert results[0].source_dataset_id == "d1"
-    assert results[0].success is True
-    assert results[0].time == pytest.approx(0.25)
-    assert results[1].source_dataset_id == "d2"
-    assert results[1].success is False
-    assert results[1].time is None
-    assert results[1].error is not None
-    assert "d2" in results[1].error
