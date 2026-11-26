@@ -42,6 +42,10 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
 
 ### Bug Fixes
 
+- `collin_tol=nan` and `iwls_tol=nan` now raise a `ValueError`, and Boolean
+  `maxiter` / `iwls_maxiter` values in `quantreg()`, `feglm()`, and `fepois()`
+  now raise a `TypeError`
+  ([#2107](https://github.com/py-econometrics/pyfixest/issues/2107)).
 - `wald_test()` now raises a `ValueError` for non-finite `q` values instead of
   returning a `NaN` or infinite test statistic
   ([#2104](https://github.com/py-econometrics/pyfixest/issues/2104)).

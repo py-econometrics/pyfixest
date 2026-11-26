@@ -2420,6 +2420,13 @@ def test_estimation_type_errors_name_the_option(key, value, message):
         ({"quantile": []}, ValueError, r"quantile must include at least one value"),
         ({"quantile": [0.25, 2.0]}, ValueError, r"quantile\[1\].*got 2.0"),
         ({"maxiter": "20"}, TypeError, r"maxiter must be a positive integer"),
+        ({"maxiter": True}, TypeError, r"maxiter must be a positive integer.*got True"),
+        (
+            {"maxiter": False},
+            TypeError,
+            r"maxiter must be a positive integer.*got False",
+        ),
+        ({"collin_tol": float("nan")}, ValueError, r"collin_tol.*got nan"),
     ],
 )
 def test_quantreg_explains_the_rejected_option(options, error, message):
@@ -2430,6 +2437,18 @@ def test_quantreg_explains_the_rejected_option(options, error, message):
 def test_feglm_reports_the_public_iteration_option():
     with pytest.raises(ValueError, match=r"iwls_maxiter.*got 0"):
         pf.feglm("Y ~ X1", data=pf.get_data(N=20), family="gaussian", iwls_maxiter=0)
+
+
+def test_estimation_rejects_nan_tolerances_and_bool_iwls_maxiter():
+    data = pf.get_data(N=20)
+    with pytest.raises(ValueError, match=r"collin_tol.*got nan"):
+        pf.feols("Y ~ X1", data=data, collin_tol=float("nan"))
+    with pytest.raises(ValueError, match=r"iwls_tol.*got nan"):
+        pf.feglm("Y ~ X1", data=data, family="gaussian", iwls_tol=float("nan"))
+    with pytest.raises(TypeError, match=r"iwls_maxiter must be an integer.*got True"):
+        pf.feglm("Y ~ X1", data=data, family="gaussian", iwls_maxiter=True)
+    with pytest.raises(TypeError, match=r"iwls_maxiter must be an integer.*got False"):
+        pf.feglm("Y ~ X1", data=data, family="gaussian", iwls_maxiter=False)
 
 
 def test_invalid_weights_report_the_column_and_count():
