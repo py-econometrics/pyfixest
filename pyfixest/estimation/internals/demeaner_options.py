@@ -18,7 +18,7 @@ def _resolve_demeaner(demeaner: AnyDemeaner | None) -> AnyDemeaner:
         return demeaner
     raise TypeError(
         "demeaner must be created with pf.MapDemeaner() or pf.LsmrDemeaner(); "
-        f"got {type(demeaner).__name__}. To select a backend, pass for example "
+        f"got {type(demeaner).__name__}. To select a demeaner backend, pass for example "
         "demeaner=pf.MapDemeaner(backend='rust')."
     )
 
