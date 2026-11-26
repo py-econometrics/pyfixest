@@ -12,11 +12,11 @@ from pyfixest.estimation.internals.literals import QuantregMultiOptions
 from pyfixest.estimation.internals.model_state import (
     FittedValues,
     QuantregEstimationOptions,
+    SampleSplit,
     VcovSpec,
 )
 from pyfixest.estimation.quantreg.quantreg_ import Quantreg
 from pyfixest.estimation.quantreg.utils import get_hall_sheather_bandwidth
-from pyfixest.utils.dev_utils import DataFrameType
 
 
 class QuantregMulti:
@@ -31,8 +31,7 @@ class QuantregMulti:
         quantile: list[float],
         multi_method: QuantregMultiOptions,
         lookup_demeaned_data: dict[frozenset[int], DemeanedData],
-        sample_split_var: str | None = None,
-        sample_split_value: str | int | None = None,
+        sample_split: SampleSplit | None = None,
     ):
         # `options.quantile` is the first requested quantile; each child fit
         # carries its own quantile and shares every other option.
@@ -44,8 +43,7 @@ class QuantregMulti:
                 data=data,
                 options=replace(options, quantile=q),
                 lookup_demeaned_data=lookup_demeaned_data,
-                sample_split_var=sample_split_var,
-                sample_split_value=sample_split_value,
+                sample_split=sample_split,
             )
             for q in self.quantiles
         }
@@ -53,7 +51,6 @@ class QuantregMulti:
 
     def prepare_model_matrix(self) -> None:
         """Prepare the model inputs for every requested quantile."""
-        # TODO: prepare once and share immutable state across quantiles.
         for quantreg in self.all_quantregs.values():
             quantreg.prepare_model_matrix()
             quantreg.to_array()
@@ -63,7 +60,6 @@ class QuantregMulti:
 
     def get_fit(self) -> dict[float, Quantreg]:
         "Fit multiple quantile regressions via either algo 2 or 3 of CFM."
-        # sort q increasing
         q = np.sort(self.quantiles)
         n_quantiles = len(q)
 
@@ -74,29 +70,25 @@ class QuantregMulti:
 
         q_median = q[q_median_idx]
 
-        # data fixed across qregs, just need take from first one
         X = self.all_quantregs[q[q_median_idx]].within_data.design
         Y = self.all_quantregs[q[q_median_idx]].within_data.response
-        hessian = X.T @ X
         N = self.all_quantregs[q[q_median_idx]].sample_info.n_obs
         rng = np.random.default_rng(self.all_quantregs[q[q_median_idx]].options.seed)
-
-        # fit first quantile regression using "pfn"
 
         fit_kwargs = {
             "X": X,
             "Y": Y,
-            "q": q_median,  # first eval at the "central" quantile
+            "q": q_median,
         }
 
         if self.options.method == "pfn":
             fit_kwargs["rng"] = rng
-        beta_hat = self.all_quantregs[q[q_median_idx]]._fit(**fit_kwargs)[0]
+        median_quantreg = self.all_quantregs[q[q_median_idx]]
+        median_quantreg.solution = median_quantreg._fit(**fit_kwargs)
+        beta_hat = median_quantreg.solution.beta
 
-        self.all_quantregs[q[q_median_idx]]._beta_hat = beta_hat
-        self.all_quantregs[q[q_median_idx]]._u_hat = (
-            Y.flatten() - (X @ beta_hat).flatten()
-        )
+        median_quantreg._beta_hat = beta_hat
+        median_quantreg._u_hat = Y.flatten() - (X @ beta_hat).flatten()
 
         def _direction_helper(i, direction):
             if direction == "left":
@@ -116,11 +108,13 @@ class QuantregMulti:
                 i_prev = _direction_helper(i, direction)
 
                 beta_hat_prev = self.all_quantregs[q[i_prev]]._beta_hat
-                beta_hat = self.all_quantregs[q[i]].fit_qreg_pfn(
+                quantreg = self.all_quantregs[q[i]]
+                quantreg.solution = quantreg.fit_qreg_pfn(
                     X=X, Y=Y, q=q[i], beta_init=beta_hat_prev, eta=0.5
-                )[0]
-                self.all_quantregs[q[i]]._beta_hat = beta_hat
-                self.all_quantregs[q[i]]._u_hat = Y.flatten() - (X @ beta_hat).flatten()
+                )
+                beta_hat = quantreg.solution.beta
+                quantreg._beta_hat = beta_hat
+                quantreg._u_hat = Y.flatten() - (X @ beta_hat).flatten()
 
             for i in range(q_median_idx - 1, -1, -1):
                 _cfm1_fun(i, "left")
@@ -139,9 +133,11 @@ class QuantregMulti:
                 kappa = np.median(np.abs(u_hat_prev - np.median(u_hat_prev)))
                 h_G = get_hall_sheather_bandwidth(q=q[i_prev], N=N)
                 delta = kappa * (norm.ppf(q[i_prev] + h_G) - norm.ppf(q[i_prev] - h_G))
-                J = (np.sum(np.abs(u_hat_prev) < delta) * hessian) / (2 * N * delta)
+                near_zero = np.abs(u_hat_prev) < delta
+                X_near_zero = X[near_zero]
+                J = (X_near_zero.T @ X_near_zero) / (2 * N * delta)
 
-                M = X.T @ (q[i] - (u_hat_prev < 0))[:, None]
+                M = X.T @ (q[i] - (u_hat_prev <= 0))[:, None] / N
                 beta_new = beta_hat_prev + np.linalg.solve(J, M).flatten()
 
                 self.all_quantregs[q[i]]._beta_hat = beta_new
@@ -169,7 +165,6 @@ class QuantregMulti:
             )
             quantreg.fitted_values = FittedValues(link=fitted, response=fitted)
 
-        # sort self.all_quantregs by q
         self.all_quantregs = dict(
             sorted(self.all_quantregs.items(), key=lambda item: item[0])
         )
@@ -179,21 +174,25 @@ class QuantregMulti:
         self,
         vcov: str | dict[str, str],
         vcov_kwargs: dict[str, str | int] | None = None,
-        data: DataFrameType | None = None,
     ) -> dict[float, Quantreg]:
         "Compute variance-covariance matrices for all models in the quantile regression process."
         for quantreg in self.all_quantregs.values():
-            quantreg.vcov(vcov=vcov, vcov_kwargs=vcov_kwargs, data=data)
+            quantreg.vcov(vcov=vcov, vcov_kwargs=vcov_kwargs)
 
         return self.all_quantregs
 
+    def _publish_fit_statistics(self) -> None:
+        "Publish the goodness-of-fit measures of every quantile."
+        for quantreg in self.all_quantregs.values():
+            quantreg._publish_fit_statistics()
+
     def _check_vcov_support(self, spec: VcovSpec) -> None:
-        "Reject a covariance estimator the quantile regressions cannot compute."
+        "Reject a variance estimator the quantile regressions cannot compute."
         for quantreg in self.all_quantregs.values():
             quantreg._check_vcov_support(spec)
 
     def _vcov_from_spec(self, spec: VcovSpec) -> dict[float, Quantreg]:
-        "Compute the covariance of a parsed `spec` for every quantile."
+        "Compute the variance-covariance matrix for `spec` at every quantile."
         for quantreg in self.all_quantregs.values():
             quantreg._vcov_from_spec(spec)
 

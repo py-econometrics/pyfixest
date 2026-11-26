@@ -1,3 +1,6 @@
+import re
+import warnings
+
 import numpy as np
 import pandas as pd
 import pytest
@@ -256,3 +259,52 @@ def test_wald_test_multiple_equations(R, q, fml):
 
     np.testing.assert_allclose(wald_stat, r_wald_stat, rtol=1e-03, atol=1e-05)
     np.testing.assert_allclose(p_value, r_p_value, rtol=1e-03, atol=1e-05)
+
+
+@pytest.mark.parametrize(
+    "R, q, expected_message",
+    [
+        pytest.param(
+            [[0, 1, -1]],
+            [0],
+            "Distribution changed to chi2, as R is not an identity matrix.",
+            id="non-identity-R",
+        ),
+        pytest.param(
+            np.eye(3),
+            [1.0, 0.0, 0.0],
+            "Distribution changed to chi2, as q is not a zero vector.",
+            id="nonzero-q",
+        ),
+        pytest.param(
+            [[0, 1, -1], [1, 0, 0]],
+            [0, 1.0],
+            "Distribution changed to chi2, as R is not an identity matrix and q is not a zero vector.",
+            id="non-identity-R-nonzero-q",
+        ),
+    ],
+)
+def test_wald_test_chi2_warning_names_the_triggered_reason(R, q, expected_message):
+    # The F fallback warning must only claim the restrictions that actually
+    # forced the switch to chi2.
+    data = pf.get_data()
+    fit = pf.feols("Y ~ X1 + X2", data)
+
+    with pytest.warns(UserWarning, match=re.escape(expected_message)) as record:
+        wald = fit.wald_test(R=R, q=q)
+
+    assert len(record) == 1
+    assert str(record[0].message) == expected_message
+    assert wald.distribution == "chi2"
+
+
+def test_wald_test_joint_null_keeps_F_without_warning():
+    data = pf.get_data()
+    fit = pf.feols("Y ~ X1 + X2", data)
+
+    with warnings.catch_warnings(record=True) as record:
+        warnings.simplefilter("always")
+        wald = fit.wald_test(R=np.eye(3), q=[0, 0, 0])
+
+    assert not [w for w in record if "Distribution changed to chi2" in str(w.message)]
+    assert wald.distribution == "F"

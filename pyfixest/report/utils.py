@@ -7,6 +7,7 @@ from pyfixest.estimation.FixestMulti_ import FixestMulti
 from pyfixest.estimation.models.feiv_ import Feiv
 from pyfixest.estimation.models.feols_ import Feols
 from pyfixest.estimation.models.fepois_ import Fepois
+from pyfixest.utils.dev_utils import _find_stack_level
 
 ModelInputType = FixestMulti | Feols | Fepois | Feiv | list[Feols | Fepois | Feiv]
 
@@ -14,7 +15,11 @@ ModelInputType = FixestMulti | Feols | Fepois | Feiv | list[Feols | Fepois | Fei
 def _check_label_keys_in_covars(label_keys: list[str], covariate_names: list[str]):
     for label_key in label_keys:
         if label_key not in covariate_names:
-            warnings.warn(f"The label key '{label_key}' is not in the covariate names.")
+            warnings.warn(
+                f"The label key '{label_key}' is not in the covariate names.",
+                UserWarning,
+                stacklevel=_find_stack_level(),
+            )
 
 
 def _relabel_expvar(
@@ -91,14 +96,12 @@ def _rename_categorical(
     else:
         pattern = r"([^[]+)\[(?:T\.)?([^]]+)\]"
 
-    # Replace labels with empty dictionary if not provided
     if labels is None:
         labels = {}
-    # Apply the regex to extract the variable and value
     match = re.search(pattern, col_name)
     if match:
         variable = match.group(1)
-        variable = labels.get(variable, variable)  # apply label if any
+        variable = labels.get(variable, variable)
         value_raw = match.group(2)
 
         # Try parsing as float so that e.g. "2.0" can become "2"
@@ -107,7 +110,6 @@ def _rename_categorical(
             numeric_val = float(value_raw)
             value_int = int(numeric_val) if numeric_val.is_integer() else numeric_val
         except ValueError:
-            # If not numeric at all, we'll leave it as-is
             pass
 
         return template.format(variable=variable, value=value_raw, value_int=value_int)
@@ -240,6 +242,7 @@ def _post_processing_input_checks(
     Raises
     ------
         TypeError: If the models argument is not of the expected type.
+        ValueError: If the models argument contains no models.
 
     """
     models_list: list[Feols | Fepois | Feiv] = []
@@ -249,14 +252,23 @@ def _post_processing_input_checks(
     elif isinstance(models, FixestMulti):
         models_list = models.to_list()
     elif isinstance(models, (list, ValuesView)):
-        if all(isinstance(m, (Feols, Fepois, Feiv)) for m in models):
-            models_list = models
-        else:
-            raise TypeError(
-                "All elements in the models list must be instances of Feols, Feiv, or Fepois."
-            )
+        for position, model in enumerate(models):
+            if not isinstance(model, (Feols, Fepois, Feiv)):
+                raise TypeError(
+                    f"models[{position}] must be a fitted model; got {type(model).__name__}."
+                )
+            models_list.append(model)
     else:
-        raise TypeError("Invalid type for models argument.")
+        raise TypeError(
+            f"models must be a fitted model, a FixestMulti, or a list of fitted models; "
+            f"got {type(models).__name__}. Pass the result of a call such as feols()."
+        )
+
+    if not models_list:
+        raise ValueError(
+            "models must contain at least one fitted model; got none. "
+            "Pass the result of a call such as feols()."
+        )
 
     if check_duplicate_model_names or rename_models is not None:
         all_model_names = [model.model.model_name for model in models_list]
@@ -279,7 +291,9 @@ def _post_processing_input_checks(
             for i, model in enumerate(duplicates):
                 model._model_name_plot = f"Model {i}: {model.model.model_name}"
                 warnings.warn(
-                    f"The model name '{model.model.model_name}' is duplicated for models in the `models` you provided. To avoid overlapping model names / plots, the _model_name_plot attribute has been changed to '{model._model_name_plot}'."
+                    f"The model name '{model.model.model_name}' is duplicated for models in the `models` you provided. To avoid overlapping model names / plots, the _model_name_plot attribute has been changed to '{model._model_name_plot}'.",
+                    UserWarning,
+                    stacklevel=_find_stack_level(),
                 )
 
         if rename_models is not None:
@@ -289,7 +303,9 @@ def _post_processing_input_checks(
                     f"""
                     The following model names specified in rename_models are not found in the models:
                     {model_name_diff}
-                    """
+                    """,
+                    UserWarning,
+                    stacklevel=_find_stack_level(),
                 )
 
     return models_list

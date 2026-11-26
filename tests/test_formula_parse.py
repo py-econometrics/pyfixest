@@ -7,19 +7,26 @@ This module contains:
 - Part 3: Edge case tests
 """
 
+import re
 import warnings
 
 import formulaic
 import numpy as np
 import pytest
+from formulaic.parser.types import Factor, Term
 
 import pyfixest as pf
 from pyfixest.errors import FormulaSyntaxError
-from pyfixest.estimation.formula.parse import Formula, _expand_all_multiple_estimation
+from pyfixest.estimation.formula.parse import (
+    FixedEffectSpecification,
+    Formula,
+    _expand_all_multiple_estimation,
+)
 from pyfixest.estimation.formula.utils import (
     _get_position_of_first_parenthesis_pair,
     _preprocess_fixed_effect_interactions,
 )
+from tests._varying_slope_cases import ALL_SLOPE_CASES
 
 # =============================================================================
 # Fixtures
@@ -46,225 +53,276 @@ class TestMultipleEstimationExpansion:
             # No multiple estimation
             ("Y ~ X1", ["Y ~ X1"]),
             ("Y ~ X1 + X2", ["Y ~ X1 + X2"]),
+            ("Y ~ sw(X1)", ["Y ~ (X1)"]),
+            ("Y ~ csw(X1)", ["Y ~ (X1)"]),
+            ("Y ~ sw0(X1)", ["Y ~ (1)", "Y ~ (X1)"]),
+            ("Y ~ csw0(X1)", ["Y ~ (1)", "Y ~ (X1)"]),
+            ("Y ~ X1 | sw0(f1)", ["Y ~ X1 | (1)", "Y ~ X1 | (f1)"]),
+            ("Y ~ X1 | csw0(f1)", ["Y ~ X1 | (1)", "Y ~ X1 | (f1)"]),
+            (
+                "Y ~ csw(X1, X2):Z1",
+                ["Y ~ (X1):Z1", "Y ~ (X1 + X2):Z1"],
+            ),
+            (
+                "Y ~ csw0(X1, X2):Z1",
+                ["Y ~ (1):Z1", "Y ~ (X1):Z1", "Y ~ (X1 + X2):Z1"],
+            ),
+            (
+                "Y ~ csw0(1 + X1, X2):Z1",
+                ["Y ~ (1):Z1", "Y ~ (1 + X1):Z1", "Y ~ (1 + X1 + X2):Z1"],
+            ),
+            (
+                "Y ~ csw(X1, X2)*Z1",
+                ["Y ~ (X1)*Z1", "Y ~ (X1 + X2)*Z1"],
+            ),
+            (
+                "Y ~ f3*sw(X1, X2)",
+                ["Y ~ f3*(X1)", "Y ~ f3*(X2)"],
+            ),
+            (
+                "Y ~ Z1*csw(X1, X2)",
+                ["Y ~ Z1*(X1)", "Y ~ Z1*(X1 + X2)"],
+            ),
+            (
+                "Y ~ X1 + X2 + Z1 - csw(X1, X2)",
+                ["Y ~ X1 + X2 + Z1 - (X1)", "Y ~ X1 + X2 + Z1 - (X1 + X2)"],
+            ),
+            (
+                "Y ~ X1 | csw(f1, f2):f3",
+                ["Y ~ X1 | (f1):f3", "Y ~ X1 | (f1 + f2):f3"],
+            ),
             # sw() cases
-            ("Y ~ sw(X1, X2)", ["Y ~ X1", "Y ~ X2"]),
-            ("Y ~ A + sw(X1, X2)", ["Y ~ A + X1", "Y ~ A + X2"]),
-            ("Y ~ sw(X1, X2, X3)", ["Y ~ X1", "Y ~ X2", "Y ~ X3"]),
+            ("Y ~ sw(X1, X2)", ["Y ~ (X1)", "Y ~ (X2)"]),
+            ("Y ~ A + sw(X1, X2)", ["Y ~ A + (X1)", "Y ~ A + (X2)"]),
+            ("Y ~ sw(X1, X2, X3)", ["Y ~ (X1)", "Y ~ (X2)", "Y ~ (X3)"]),
             # csw() cases
-            ("Y ~ csw(X1, X2)", ["Y ~ X1", "Y ~ X1 + X2"]),
+            ("Y ~ csw(X1, X2)", ["Y ~ (X1)", "Y ~ (X1 + X2)"]),
+            # A space before the parenthesis, as fixest allows
+            ("Y ~ sw (X1, X2)", ["Y ~ (X1)", "Y ~ (X2)"]),
+            ("Y ~ X1 | csw (f1, f2)", ["Y ~ X1 | (f1)", "Y ~ X1 | (f1 + f2)"]),
             (
                 "Y ~ A + csw(X1, X2, X3)",
                 [
-                    "Y ~ A + X1",
-                    "Y ~ A + X1 + X2",
-                    "Y ~ A + X1 + X2 + X3",
+                    "Y ~ A + (X1)",
+                    "Y ~ A + (X1 + X2)",
+                    "Y ~ A + (X1 + X2 + X3)",
                 ],
             ),
             # sw0() cases
-            ("Y ~ sw0(X1, X2)", ["Y ~ 1", "Y ~ X1", "Y ~ X2"]),
-            ("Y ~ A + sw0(X1, X2)", ["Y ~ A + 1", "Y ~ A + X1", "Y ~ A + X2"]),
+            ("Y ~ sw0(X1, X2)", ["Y ~ (1)", "Y ~ (X1)", "Y ~ (X2)"]),
+            ("Y ~ A + sw0(X1, X2)", ["Y ~ A + (1)", "Y ~ A + (X1)", "Y ~ A + (X2)"]),
             # csw0() cases
-            ("Y ~ csw0(X1, X2)", ["Y ~ 1", "Y ~ X1", "Y ~ X1 + X2"]),
+            ("Y ~ csw0(X1, X2)", ["Y ~ (1)", "Y ~ (X1)", "Y ~ (X1 + X2)"]),
             (
                 "Y ~ A + csw0(X1, X2, X3)",
                 [
-                    "Y ~ A + 1",
-                    "Y ~ A + X1",
-                    "Y ~ A + X1 + X2",
-                    "Y ~ A + X1 + X2 + X3",
+                    "Y ~ A + (1)",
+                    "Y ~ A + (X1)",
+                    "Y ~ A + (X1 + X2)",
+                    "Y ~ A + (X1 + X2 + X3)",
                 ],
             ),
             # mvsw() cases - all combinations of arguments, with zero step
             (
                 "Y ~ mvsw(X1, X2)",
-                ["Y ~ 1", "Y ~ X1", "Y ~ X2", "Y ~ X1 + X2"],
+                ["Y ~ (1)", "Y ~ (X1)", "Y ~ (X2)", "Y ~ (X1 + X2)"],
             ),
             (
                 "Y ~ mvsw(X1, X2, X3)",
                 [
-                    "Y ~ 1",
-                    "Y ~ X1",
-                    "Y ~ X2",
-                    "Y ~ X3",
-                    "Y ~ X1 + X2",
-                    "Y ~ X1 + X3",
-                    "Y ~ X2 + X3",
-                    "Y ~ X1 + X2 + X3",
+                    "Y ~ (1)",
+                    "Y ~ (X1)",
+                    "Y ~ (X2)",
+                    "Y ~ (X3)",
+                    "Y ~ (X1 + X2)",
+                    "Y ~ (X1 + X3)",
+                    "Y ~ (X2 + X3)",
+                    "Y ~ (X1 + X2 + X3)",
                 ],
             ),
             (
                 "Y ~ A + mvsw(X1, X2)",
-                ["Y ~ A + 1", "Y ~ A + X1", "Y ~ A + X2", "Y ~ A + X1 + X2"],
+                ["Y ~ A + (1)", "Y ~ A + (X1)", "Y ~ A + (X2)", "Y ~ A + (X1 + X2)"],
             ),
             (
                 "Y ~ A + mvsw(X1, X2, X3)",
                 [
-                    "Y ~ A + 1",
-                    "Y ~ A + X1",
-                    "Y ~ A + X2",
-                    "Y ~ A + X3",
-                    "Y ~ A + X1 + X2",
-                    "Y ~ A + X1 + X3",
-                    "Y ~ A + X2 + X3",
-                    "Y ~ A + X1 + X2 + X3",
+                    "Y ~ A + (1)",
+                    "Y ~ A + (X1)",
+                    "Y ~ A + (X2)",
+                    "Y ~ A + (X3)",
+                    "Y ~ A + (X1 + X2)",
+                    "Y ~ A + (X1 + X3)",
+                    "Y ~ A + (X2 + X3)",
+                    "Y ~ A + (X1 + X2 + X3)",
                 ],
             ),
             # mvsw() with single argument
-            ("Y ~ mvsw(X1)", ["Y ~ 1", "Y ~ X1"]),
+            ("Y ~ mvsw(X1)", ["Y ~ (1)", "Y ~ (X1)"]),
             # mvsw() with fixed effects
             (
                 "Y ~ mvsw(X1, X2) | f1",
-                ["Y ~ 1 | f1", "Y ~ X1 | f1", "Y ~ X2 | f1", "Y ~ X1 + X2 | f1"],
+                [
+                    "Y ~ (1) | f1",
+                    "Y ~ (X1) | f1",
+                    "Y ~ (X2) | f1",
+                    "Y ~ (X1 + X2) | f1",
+                ],
             ),
             # mvsw() in fixed effects
             (
                 "Y ~ X1 | mvsw(f1, f2)",
-                ["Y ~ X1 | 1", "Y ~ X1 | f1", "Y ~ X1 | f2", "Y ~ X1 | f1 + f2"],
+                [
+                    "Y ~ X1 | (1)",
+                    "Y ~ X1 | (f1)",
+                    "Y ~ X1 | (f2)",
+                    "Y ~ X1 | (f1 + f2)",
+                ],
             ),
             # Multiple estimation with sums of variables
-            ("Y ~ sw0(f1, f1+f2)", ["Y ~ 1", "Y ~ f1", "Y ~ f1+f2"]),
-            ("Y ~ csw0(f1, f1+f2)", ["Y ~ 1", "Y ~ f1", "Y ~ f1 + f1+f2"]),
+            ("Y ~ sw0(f1, f1+f2)", ["Y ~ (1)", "Y ~ (f1)", "Y ~ (f1+f2)"]),
+            ("Y ~ csw0(f1, f1+f2)", ["Y ~ (1)", "Y ~ (f1)", "Y ~ (f1 + f1+f2)"]),
             # Fixed effects with multiple estimation
-            ("Y ~ X1 | sw(f1, f2)", ["Y ~ X1 | f1", "Y ~ X1 | f2"]),
+            ("Y ~ X1 | sw(f1, f2)", ["Y ~ X1 | (f1)", "Y ~ X1 | (f2)"]),
             # Two operators in the same formula part
             (
                 "Y ~ sw(X1, X2) + csw(X3, X4)",
                 [
-                    "Y ~ X1 + X3",
-                    "Y ~ X1 + X3 + X4",
-                    "Y ~ X2 + X3",
-                    "Y ~ X2 + X3 + X4",
+                    "Y ~ (X1) + (X3)",
+                    "Y ~ (X1) + (X3 + X4)",
+                    "Y ~ (X2) + (X3)",
+                    "Y ~ (X2) + (X3 + X4)",
                 ],
             ),
             # Three operators in the same formula part
             (
                 "Y ~ sw(X1, X2) + csw(X3, X4) + sw0(X5, X6)",
                 [
-                    "Y ~ X1 + X3 + 1",
-                    "Y ~ X1 + X3 + X5",
-                    "Y ~ X1 + X3 + X6",
-                    "Y ~ X1 + X3 + X4 + 1",
-                    "Y ~ X1 + X3 + X4 + X5",
-                    "Y ~ X1 + X3 + X4 + X6",
-                    "Y ~ X2 + X3 + 1",
-                    "Y ~ X2 + X3 + X5",
-                    "Y ~ X2 + X3 + X6",
-                    "Y ~ X2 + X3 + X4 + 1",
-                    "Y ~ X2 + X3 + X4 + X5",
-                    "Y ~ X2 + X3 + X4 + X6",
+                    "Y ~ (X1) + (X3) + (1)",
+                    "Y ~ (X1) + (X3) + (X5)",
+                    "Y ~ (X1) + (X3) + (X6)",
+                    "Y ~ (X1) + (X3 + X4) + (1)",
+                    "Y ~ (X1) + (X3 + X4) + (X5)",
+                    "Y ~ (X1) + (X3 + X4) + (X6)",
+                    "Y ~ (X2) + (X3) + (1)",
+                    "Y ~ (X2) + (X3) + (X5)",
+                    "Y ~ (X2) + (X3) + (X6)",
+                    "Y ~ (X2) + (X3 + X4) + (1)",
+                    "Y ~ (X2) + (X3 + X4) + (X5)",
+                    "Y ~ (X2) + (X3 + X4) + (X6)",
                 ],
             ),
             # Multiple estimation in covariates and fixed effects
             (
                 "Y ~ sw(X1, X2) | sw(f1, f2)",
                 [
-                    "Y ~ X1 | f1",
-                    "Y ~ X1 | f2",
-                    "Y ~ X2 | f1",
-                    "Y ~ X2 | f2",
+                    "Y ~ (X1) | (f1)",
+                    "Y ~ (X1) | (f2)",
+                    "Y ~ (X2) | (f1)",
+                    "Y ~ (X2) | (f2)",
                 ],
             ),
             (
                 "Y ~ csw(X1, X2) | csw(f1, f2)",
                 [
-                    "Y ~ X1 | f1",
-                    "Y ~ X1 | f1 + f2",
-                    "Y ~ X1 + X2 | f1",
-                    "Y ~ X1 + X2 | f1 + f2",
+                    "Y ~ (X1) | (f1)",
+                    "Y ~ (X1) | (f1 + f2)",
+                    "Y ~ (X1 + X2) | (f1)",
+                    "Y ~ (X1 + X2) | (f1 + f2)",
                 ],
             ),
             # Multiple estimation in dependent vars, covariates, and fixed effects
             (
                 "sw(Y1, Y2) ~ sw(X1, X2) | sw(f1, f2)",
                 [
-                    "Y1 ~ X1 | f1",
-                    "Y1 ~ X1 | f2",
-                    "Y1 ~ X2 | f1",
-                    "Y1 ~ X2 | f2",
-                    "Y2 ~ X1 | f1",
-                    "Y2 ~ X1 | f2",
-                    "Y2 ~ X2 | f1",
-                    "Y2 ~ X2 | f2",
+                    "(Y1) ~ (X1) | (f1)",
+                    "(Y1) ~ (X1) | (f2)",
+                    "(Y1) ~ (X2) | (f1)",
+                    "(Y1) ~ (X2) | (f2)",
+                    "(Y2) ~ (X1) | (f1)",
+                    "(Y2) ~ (X1) | (f2)",
+                    "(Y2) ~ (X2) | (f1)",
+                    "(Y2) ~ (X2) | (f2)",
                 ],
             ),
             # Multiple dep vars with sw in covariates and csw in fixed effects
             (
                 "sw(Y1, Y2) ~ sw(X1, X2) | csw(f1, f2)",
                 [
-                    "Y1 ~ X1 | f1",
-                    "Y1 ~ X1 | f1 + f2",
-                    "Y1 ~ X2 | f1",
-                    "Y1 ~ X2 | f1 + f2",
-                    "Y2 ~ X1 | f1",
-                    "Y2 ~ X1 | f1 + f2",
-                    "Y2 ~ X2 | f1",
-                    "Y2 ~ X2 | f1 + f2",
+                    "(Y1) ~ (X1) | (f1)",
+                    "(Y1) ~ (X1) | (f1 + f2)",
+                    "(Y1) ~ (X2) | (f1)",
+                    "(Y1) ~ (X2) | (f1 + f2)",
+                    "(Y2) ~ (X1) | (f1)",
+                    "(Y2) ~ (X1) | (f1 + f2)",
+                    "(Y2) ~ (X2) | (f1)",
+                    "(Y2) ~ (X2) | (f1 + f2)",
                 ],
             ),
             # sw0 in covariates + sw in fixed effects
             (
                 "Y ~ sw0(X1, X2) | sw(f1, f2)",
                 [
-                    "Y ~ 1 | f1",
-                    "Y ~ 1 | f2",
-                    "Y ~ X1 | f1",
-                    "Y ~ X1 | f2",
-                    "Y ~ X2 | f1",
-                    "Y ~ X2 | f2",
+                    "Y ~ (1) | (f1)",
+                    "Y ~ (1) | (f2)",
+                    "Y ~ (X1) | (f1)",
+                    "Y ~ (X1) | (f2)",
+                    "Y ~ (X2) | (f1)",
+                    "Y ~ (X2) | (f2)",
                 ],
             ),
             # csw in covariates + csw0 in fixed effects
             (
                 "Y ~ csw(X1, X2) | csw0(f1, f2)",
                 [
-                    "Y ~ X1 | 1",
-                    "Y ~ X1 | f1",
-                    "Y ~ X1 | f1 + f2",
-                    "Y ~ X1 + X2 | 1",
-                    "Y ~ X1 + X2 | f1",
-                    "Y ~ X1 + X2 | f1 + f2",
+                    "Y ~ (X1) | (1)",
+                    "Y ~ (X1) | (f1)",
+                    "Y ~ (X1) | (f1 + f2)",
+                    "Y ~ (X1 + X2) | (1)",
+                    "Y ~ (X1 + X2) | (f1)",
+                    "Y ~ (X1 + X2) | (f1 + f2)",
                 ],
             ),
             # sw(dep vars) + csw(covariates) + sw(fixed effects)
             (
                 "sw(Y1, Y2) ~ csw(X1, X2) | sw(f1, f2)",
                 [
-                    "Y1 ~ X1 | f1",
-                    "Y1 ~ X1 | f2",
-                    "Y1 ~ X1 + X2 | f1",
-                    "Y1 ~ X1 + X2 | f2",
-                    "Y2 ~ X1 | f1",
-                    "Y2 ~ X1 | f2",
-                    "Y2 ~ X1 + X2 | f1",
-                    "Y2 ~ X1 + X2 | f2",
+                    "(Y1) ~ (X1) | (f1)",
+                    "(Y1) ~ (X1) | (f2)",
+                    "(Y1) ~ (X1 + X2) | (f1)",
+                    "(Y1) ~ (X1 + X2) | (f2)",
+                    "(Y2) ~ (X1) | (f1)",
+                    "(Y2) ~ (X1) | (f2)",
+                    "(Y2) ~ (X1 + X2) | (f1)",
+                    "(Y2) ~ (X1 + X2) | (f2)",
                 ],
             ),
             # mvsw in covariates + sw in fixed effects
             (
                 "Y ~ mvsw(X1, X2) | sw(f1, f2)",
                 [
-                    "Y ~ 1 | f1",
-                    "Y ~ 1 | f2",
-                    "Y ~ X1 | f1",
-                    "Y ~ X1 | f2",
-                    "Y ~ X2 | f1",
-                    "Y ~ X2 | f2",
-                    "Y ~ X1 + X2 | f1",
-                    "Y ~ X1 + X2 | f2",
+                    "Y ~ (1) | (f1)",
+                    "Y ~ (1) | (f2)",
+                    "Y ~ (X1) | (f1)",
+                    "Y ~ (X1) | (f2)",
+                    "Y ~ (X2) | (f1)",
+                    "Y ~ (X2) | (f2)",
+                    "Y ~ (X1 + X2) | (f1)",
+                    "Y ~ (X1 + X2) | (f2)",
                 ],
             ),
             # mvsw in covariates + csw in fixed effects
             (
                 "Y ~ mvsw(X1, X2) | csw(f1, f2)",
                 [
-                    "Y ~ 1 | f1",
-                    "Y ~ 1 | f1 + f2",
-                    "Y ~ X1 | f1",
-                    "Y ~ X1 | f1 + f2",
-                    "Y ~ X2 | f1",
-                    "Y ~ X2 | f1 + f2",
-                    "Y ~ X1 + X2 | f1",
-                    "Y ~ X1 + X2 | f1 + f2",
+                    "Y ~ (1) | (f1)",
+                    "Y ~ (1) | (f1 + f2)",
+                    "Y ~ (X1) | (f1)",
+                    "Y ~ (X1) | (f1 + f2)",
+                    "Y ~ (X2) | (f1)",
+                    "Y ~ (X2) | (f1 + f2)",
+                    "Y ~ (X1 + X2) | (f1)",
+                    "Y ~ (X1 + X2) | (f1 + f2)",
                 ],
             ),
         ],
@@ -308,11 +366,11 @@ class TestParenthesisPair:
     def test_expansion_with_leading_nested_group(self):
         """sw() arguments wrapped in parentheses expand correctly end to end."""
         result = list(_expand_all_multiple_estimation("Y ~ sw((X1+X2), X3)"))
-        assert result == ["Y ~ (X1+X2)", "Y ~ X3"]
+        assert result == ["Y ~ ((X1+X2))", "Y ~ (X3)"]
 
 
 class TestFormulaParse:
-    """Tests for Formula.parse() and Formula.parse_to_dict()."""
+    """Tests for Formula.parse()."""
 
     @pytest.mark.parametrize(
         "formula,expected_count",
@@ -358,7 +416,7 @@ class TestFormulaParse:
         result = Formula.parse("Y ~ X1 + X2")
         assert len(result) == 1
         f = result[0]
-        assert f.second_stage == "Y ~ 1 + X1 + X2"
+        assert f.second_stage == formulaic.Formula("Y ~ 1 + X1 + X2")
         assert not f.is_fixed_effects
         assert not f.is_instrumental_variable
 
@@ -367,37 +425,23 @@ class TestFormulaParse:
         result = Formula.parse("Y ~ X1 | f1")
         assert len(result) == 1
         f = result[0]
-        assert f.second_stage == "Y ~ X1"
+        assert f.second_stage == formulaic.Formula("Y ~ X1")
         assert str(f.fixed_effects) == "f1"
 
     # def test_parse_iv(self):
     #     result = Formula.parse("Y ~ X1 | f1 | Z1 ~ W1")
     #     assert len(result) == 1
     #     f = result[0]
-    #     assert f.second_stage == "Y ~ X1 + Z1"
+    #     assert f.second_stage == formulaic.Formula("Y ~ X1 + Z1")
     #     assert f.fixed_effects == "f1"
-    #     assert f.first_stage == "Z1 ~ W1"
+    #     assert f.as_first_stage().second_stage == "Z1 ~ W1"
 
     def test_parse_multiple_dependents(self):
         """Y + Y2 ~ X1 is preprocessed to sw(Y, Y2) ~ X1."""
         result = Formula.parse("Y + Y2 ~ X1")
         assert len(result) == 2
-        assert result[0].second_stage == "Y ~ 1 + X1"
-        assert result[1].second_stage == "Y2 ~ 1 + X1"
-
-    def test_parse_to_dict_groups_by_fe(self):
-        """Test parsing of formulas into dictionary."""
-        result = Formula.parse_to_dict("Y ~ X1 | sw(f1, f2)")
-        assert "f1" in result
-        assert "f2" in result
-        assert len(result["f1"]) == 1
-        assert len(result["f2"]) == 1
-
-    def test_parse_to_dict_no_fe(self):
-        """Test parsing of formulas into dictionary without fixed effects."""
-        result = Formula.parse_to_dict("Y ~ X1")
-        assert None in result
-        assert len(result[None]) == 1
+        assert result[0].second_stage == formulaic.Formula("Y ~ 1 + X1")
+        assert result[1].second_stage == formulaic.Formula("Y2 ~ 1 + X1")
 
     def test_parse_sw_in_fe_and_independent(self):
         """Cross-product: sw in both independent and FE."""
@@ -411,14 +455,17 @@ class TestFormulaParse:
         second_stages = [f.second_stage for f in result]
         fixed_effects = [str(f.fixed_effects) for f in result]
         assert second_stages == [
-            "Y1 ~ X1",
-            "Y1 ~ X1",
-            "Y1 ~ X2",
-            "Y1 ~ X2",
-            "Y2 ~ X1",
-            "Y2 ~ X1",
-            "Y2 ~ X2",
-            "Y2 ~ X2",
+            formulaic.Formula(stage)
+            for stage in [
+                "Y1 ~ X1",
+                "Y1 ~ X1",
+                "Y1 ~ X2",
+                "Y1 ~ X2",
+                "Y2 ~ X1",
+                "Y2 ~ X1",
+                "Y2 ~ X2",
+                "Y2 ~ X2",
+            ]
         ]
         assert fixed_effects == [
             "f1",
@@ -454,14 +501,17 @@ class TestFormulaParse:
         second_stages = [f.second_stage for f in result]
         fixed_effects = [str(f.fixed_effects) for f in result]
         assert second_stages == [
-            "Y ~ 1",
-            "Y ~ 1",
-            "Y ~ X1",
-            "Y ~ X1",
-            "Y ~ X2",
-            "Y ~ X2",
-            "Y ~ X1 + X2",
-            "Y ~ X1 + X2",
+            formulaic.Formula(stage)
+            for stage in [
+                "Y ~ 1",
+                "Y ~ 1",
+                "Y ~ X1",
+                "Y ~ X1",
+                "Y ~ X2",
+                "Y ~ X2",
+                "Y ~ X1 + X2",
+                "Y ~ X1 + X2",
+            ]
         ]
         assert fixed_effects == [
             "f1",
@@ -474,13 +524,6 @@ class TestFormulaParse:
             "f1 + f2",
         ]
 
-    def test_parse_to_dict_csw0_fe_groups(self):
-        """parse_to_dict should group csw0 FE correctly, with None for zero-step."""
-        result = Formula.parse_to_dict("Y ~ X1 | csw0(f1, f2)")
-        assert None in result  # zero step
-        assert "f1" in result
-        assert "f1 + f2" in result
-
 
 class TestFixedEffectInteractions:
     """Tests for canonical and legacy fixed-effect interaction syntax."""
@@ -491,7 +534,7 @@ class TestFixedEffectInteractions:
             parsed = Formula.parse("Y ~ X1 | f1:f2")[0]
 
         assert str(parsed._formula.rhs[1]) == "1 + f1:f2"
-        assert parsed.formula == "Y ~ X1 | f1:f2"
+        assert parsed.render() == "Y ~ X1 | f1:f2"
 
     def test_legacy_interaction_warns_once_and_is_canonical(self):
         canonical = Formula.parse("Y ~ X1 | f1:f2")[0]
@@ -504,7 +547,7 @@ class TestFixedEffectInteractions:
 
         assert len(caught) == 1
         assert legacy._formula.rhs[1] == canonical._formula.rhs[1]
-        assert legacy.formula == canonical.formula == "Y ~ X1 | f1:f2"
+        assert legacy.render() == canonical.render() == "Y ~ X1 | f1:f2"
 
     @pytest.mark.parametrize(
         "fixed_effects,expected",
@@ -519,7 +562,7 @@ class TestFixedEffectInteractions:
 
         assert len(caught) == 1
         assert set(str(parsed.fixed_effects).split(" + ")) == set(expected.split(" + "))
-        assert "^" not in parsed.formula
+        assert "^" not in parsed.render()
 
     def test_rewrite_is_scoped_to_top_level_fixed_effects(self):
         formula = "Y^out ~ (X1 + X2)^2 + [X3 ~ (Z1 + Z2)^2] | I(f1^2) + f2^f3"
@@ -546,7 +589,255 @@ class TestFixedEffectInteractions:
             iv_power = Formula.parse("Y ~ X1 + [X2 ~ (Z1 + Z2)^2] | f1:f2")[0]
 
         assert str(nested_fe.fixed_effects) == "I(f1 ^ 2)"
-        assert str(iv_power.instruments) == "1 + Z1 + Z2 + Z1:Z2"
+        assert str(iv_power.instruments) == "Z1 + Z2 + Z1:Z2"
+
+
+class TestInstrumentalVariableBoundaries:
+    @pytest.mark.parametrize(
+        "formula, canonical",
+        [
+            ("Y ~ X1 | X2 ~ Z1", "Y ~ X1 + [X2 ~ Z1]"),
+            ("Y ~ X1 | f1 | X2 ~ Z1", "Y ~ X1 + [X2 ~ Z1] | f1"),
+            (
+                "Y ~ X1 | f1 | X2 ~ {(Z1 > 0) | (Z2 > 0)}",
+                "Y ~ X1 + [X2 ~ {(Z1 > 0) | (Z2 > 0)}] | f1",
+            ),
+        ],
+    )
+    def test_legacy_iv_preserves_formula_roles(self, formula, canonical):
+        with pytest.warns(DeprecationWarning, match="fixest-style") as caught:
+            parsed = Formula.parse(formula)[0]
+        assert len(caught) == 1
+        reference = Formula.parse(canonical)[0]
+        assert parsed.render() == reference.render()
+        assert parsed.is_fixed_effects == reference.is_fixed_effects
+        assert parsed.is_instrumental_variable
+
+    @pytest.mark.parametrize(
+        "formula",
+        [
+            "Y ~ X1 + [X2 ~ Z1] | f1",
+            "Y ~ X1 + [X2 ~ Z1] | f1 + f2[X1]",
+            "Y ~ X1 | f1[X2]",
+            "Y ~ X1 | I(f1 & ~f2)",
+        ],
+    )
+    def test_valid_brackets_and_python_tilde_preserved(self, formula):
+        with warnings.catch_warnings():
+            warnings.simplefilter("error", DeprecationWarning)
+            parsed = Formula.parse(formula)[0]
+        assert parsed.is_fixed_effects
+        assert parsed.is_instrumental_variable == ("[X2 ~ Z1]" in formula)
+
+
+class TestVaryingSlopeParsing:
+    """Tests for fixed-effect specs shaped like `within.Effect` terms."""
+
+    @pytest.mark.parametrize(
+        "fixed_effects,expected",
+        [
+            ("f1", [("f1", True, ())]),
+            ("f1:f2", [("f1:f2", True, ())]),
+            ("f1[z]", [("f1", True, ("z",))]),
+            ("f1[z1, z2]", [("f1", True, ("z1", "z2"))]),
+            ("f1[(z1, z2)]", [("f1", True, ("z1", "z2"))]),
+            ("f1[[z]]", [("f1", False, ("z",))]),
+            ("f1[[z1, z2]]", [("f1", False, ("z1", "z2"))]),
+            ("f1:f2[[z1, z2]]", [("f1:f2", False, ("z1", "z2"))]),
+            ("f1[z, z + 0]", [("f1", True, ("z", "z + 0"))]),
+            ("f1[np.log(z)]", [("f1", True, ("np.log(z)",))]),
+            ("f1[(z1 + z2)**2]", [("f1", True, ("(z1 + z2) ** 2",))]),
+            ("f1[[z**2]]", [("f1", False, ("z ** 2",))]),
+            # Signs and scales leave fitted models unchanged, so only parsing
+            # can detect a dropped operator.
+            ("f1[-z]", [("f1", True, ("-z",))]),
+            ("f1[+z]", [("f1", True, ("+z",))]),
+            ("f1[z1 - z2]", [("f1", True, ("z1 - z2",))]),
+            ("f1[z / 2]", [("f1", True, ("z / 2",))]),
+            ("f1[z // 2]", [("f1", True, ("z // 2",))]),
+            ("f1[z % 2]", [("f1", True, ("z % 2",))]),
+            (
+                'f1[transform(z, mode="scale", center=True)]',
+                [("f1", True, ("transform(z, mode='scale', center=True)",))],
+            ),
+        ],
+    )
+    def test_fixed_effect_specs(self, fixed_effects, expected):
+        parsed = Formula.parse(f"Y ~ X1 | {fixed_effects}")[0]
+
+        assert all(
+            isinstance(spec, FixedEffectSpecification)
+            for spec in parsed.fixed_effect_specifications
+        )
+        assert [
+            (
+                str(spec.levels),
+                spec.intercept,
+                tuple(str(slope) for slope in spec.slopes),
+            )
+            for spec in parsed.fixed_effect_specifications
+        ] == expected
+
+    @pytest.mark.parametrize(
+        "case",
+        ALL_SLOPE_CASES,
+        ids=lambda case: case.fml,
+    )
+    def test_varying_slope_formulas_parse(self, case):
+        """The formulas compared with R fixest parse to the expected effects."""
+        parsed = Formula.parse(case.fml)[0]
+
+        assert (
+            tuple(
+                (str(spec.levels), spec.intercept, tuple(map(str, spec.slopes)))
+                for spec in parsed.fixed_effect_specifications
+            )
+            == case.effects
+        )
+
+    @pytest.mark.parametrize(
+        "fixed_effects,expected",
+        [
+            ("f1 + f2:f3", ["f1", "f2:f3"]),
+            ("f1[z]", ["f1[z]"]),
+            ("f1:f2[[z1, z2**2]]", ["f1:f2[[z1, z2 ** 2]]"]),
+            ("f1 + f1[[z]] + f2", ["f1[z]", "f2"]),
+        ],
+    )
+    def test_effect_names_use_fixest_syntax(self, fixed_effects, expected):
+        parsed = Formula.parse(f"Y ~ X1 | {fixed_effects}")[0]
+
+        assert [spec.name for spec in parsed.fixed_effect_specifications] == expected
+
+    @pytest.mark.parametrize(
+        "formula,expected",
+        [
+            ("Y ~ X1 | f1[[z]]", "Y ~ 1 + X1 | f1[[z]]"),
+            ("Y ~ 0 + X1 | f1[[z]]", "Y ~ 0 + X1 | f1[[z]]"),
+            ("Y ~ X1 | f1[z]", "Y ~ X1 | f1[z]"),
+        ],
+    )
+    def test_slope_only_models_render_their_intercept(self, formula, expected):
+        """Slope-only effects absorb no constant, so the name shows the choice."""
+        assert Formula.parse(formula)[0].render() == expected
+
+    def test_no_fixed_effects_have_no_specs(self):
+        parsed = Formula.parse("Y ~ X1")[0]
+
+        assert parsed.fixed_effect_specifications == ()
+
+    @pytest.mark.parametrize(
+        "fixed_effects,expected_slopes",
+        [
+            ("f2[z2, z1] + f1[[z3]]", ("z2", "z1", "z3")),
+            ("firm[[z]] + region[[w]] + firm[[v]]", ("z", "v", "w")),
+        ],
+    )
+    def test_flattened_slope_order_follows_merged_effects(
+        self, fixed_effects, expected_slopes
+    ):
+        parsed = Formula.parse(f"Y ~ X1 | {fixed_effects}")[0]
+
+        assert tuple(map(str, parsed.fixed_effect_slopes)) == expected_slopes
+
+    def test_stepwise_varying_slopes_parse_each_effect(self):
+        parsed = Formula.parse("Y ~ X1 | sw(f1[z], f2[[z]])")
+
+        assert [
+            (str(spec.levels), spec.intercept, tuple(map(str, spec.slopes)))
+            for model in parsed
+            for spec in model.fixed_effect_specifications
+        ] == [("f1", True, ("z",)), ("f2", False, ("z",))]
+
+    @pytest.mark.parametrize(
+        "fixed_effects,reason,example",
+        [
+            ("f1[[]]", "must specify at least one slope", "f1[[z]]"),
+            ("f1[()]", "must specify at least one slope", "f1[z]"),
+            ("f1[z][z2]", "nested varying-slope subscripts", "f1[z1, z2]"),
+            ("f1[z]:f2", "only supported on the final factor", "f1:f2[z]"),
+            ("f1:f2[z]:f3", "only supported on the final factor", "f1:f2[z]"),
+            (
+                "f1[z1]:f2[z2]",
+                "cannot specify more than one varying-slope expression",
+                "f1:f2[z1, z2]",
+            ),
+        ],
+    )
+    def test_invalid_varying_slope_terms(self, fixed_effects, reason, example):
+        parsed = Formula.parse(f"Y ~ X1 | {fixed_effects}")[0]
+
+        with pytest.raises(
+            FormulaSyntaxError,
+            match=rf"`{re.escape(fixed_effects)}`.*{reason}.*`{re.escape(example)}`",
+        ):
+            _ = parsed.fixed_effect_specifications
+
+    @pytest.mark.parametrize(
+        "expression",
+        ["f1 + f2", "-f1"],
+    )
+    def test_varying_slope_level_rejects_arithmetic(self, expression):
+        parsed = Formula.parse(f"Y ~ X1 | {{({expression})[z]}}")[0]
+
+        with pytest.raises(
+            FormulaSyntaxError,
+            match=(
+                rf"unsupported fixed-effect level expression `{re.escape(expression)}`.*"
+                r"Arithmetic.*grouping column.*`group\[z\]`"
+            ),
+        ):
+            _ = parsed.fixed_effect_specifications
+
+    @pytest.mark.parametrize(
+        "fixed_effects",
+        [
+            "f1[z1:z2]",  # slice
+            "f1[0]",  # no column name
+            'f1["z"]',
+            "f1[z, 0]",  # a constant among valid slopes
+            "f1[z[0]]",  # unsupported syntax
+            "f1[z > 0]",
+            "f1[z and z2]",
+            "f1[z & z2]",
+            "f1[z if flag else z2]",
+            "f1[[x for x in z]]",
+            "f1[(lambda x: x)(z)]",
+            "f1[log(*z)]",  # positional unpacking
+            "f1[log(z[0])]",  # nested inside a supported call
+            "f1[transform(z, **options)]",  # keyword unpacking
+        ],
+    )
+    def test_unsupported_slope_expressions(self, fixed_effects):
+        # Exercise the complete Python grammar directly: the legacy IV
+        # preprocessor treats `~` in a formula as an IV separator.
+        term = Term([Factor(fixed_effects, eval_method=Factor.EvalMethod.PYTHON)])
+
+        with pytest.raises(
+            FormulaSyntaxError,
+            match=r"Invalid fixed-effect term.*unsupported slope expression.*Slopes must be.*`f1\[z\]`",
+        ):
+            FixedEffectSpecification.from_term(term)
+
+    @pytest.mark.parametrize("slope", ["X1:X2", "0", '"X1"'])
+    def test_unsupported_slopes_in_formula(self, slope):
+        parsed = Formula.parse(f"Y ~ X1 | f1[{slope}]")[0]
+
+        with pytest.raises(FormulaSyntaxError, match="unsupported slope expression"):
+            _ = parsed.fixed_effect_specifications
+
+    def test_invalid_python_factor_reports_expression_and_syntax(self):
+        # Formulaic rejects malformed Python before a Formula can expose this
+        # guard, so exercise it with a directly constructed fixed-effect term.
+        term = Term([Factor("f1[", eval_method=Factor.EvalMethod.PYTHON)])
+
+        with pytest.raises(
+            FormulaSyntaxError,
+            match=r"Could not parse fixed-effect expression `f1\[`.*Expected a valid Python expression.*`f1\[z\]`",
+        ) as exc_info:
+            FixedEffectSpecification.from_term(term)
+
+        assert isinstance(exc_info.value.__cause__, SyntaxError)
 
 
 class TestValidation:
@@ -566,6 +857,18 @@ class TestValidation:
         """Check maximum number of tildes is not exceeded."""
         with pytest.raises(formulaic.errors.FormulaSyntaxError):
             Formula.parse("Y ~ X1 ~ X2 ~ X3")
+
+    @pytest.mark.parametrize(
+        "fml",
+        [
+            "Y ~ X1 + sw([X2 ~ Z1], Z2)",
+            "Y ~ X1 + sw0([X2 ~ Z1], [X2 ~ Z2]) | f1",
+        ],
+    )
+    def test_multiple_estimation_mixing_iv_and_non_iv(self, fml):
+        """One multiple estimation call cannot mix IV and non-IV models."""
+        with pytest.raises(FormulaSyntaxError, match="cannot mix IV and non-IV"):
+            Formula.parse(fml)
 
     def test_three_parts_without_iv(self):
         """Y ~ X | f1 | f2 should error (should be Y ~ X | f1 + f2)."""
@@ -593,7 +896,9 @@ class TestValidation:
     )
     def test_extra_parens_in_multiple_estimation(self, formula):
         """sw((a, b)) should error — extra parens swallow the separator."""
-        with pytest.raises(FormulaSyntaxError, match="at least 2 arguments"):
+        with pytest.raises(
+            formulaic.errors.FormulaSyntaxError, match="Unknown operator ','"
+        ):
             Formula.parse(formula)
 
 
@@ -606,6 +911,20 @@ class TestValidation:
     "formula,expected_n_models",
     [
         ("Y ~ X1", 1),
+        ("Y ~ sw(X1)", 1),
+        ("Y ~ csw(X1)", 1),
+        ("Y ~ sw0(X1)", 2),
+        ("Y ~ csw0(X1)", 2),
+        ("Y ~ X1 | sw0(f1)", 2),
+        ("Y ~ X1 | csw0(f1)", 2),
+        ("Y ~ csw(X1, X2):Z1", 2),
+        ("Y ~ csw0(X1, X2):Z1", 3),
+        ("Y ~ csw0(1 + X1, X2):Z1", 3),
+        ("Y ~ csw(X1, X2)*Z1", 2),
+        ("Y ~ f3*sw(X1, X2)", 2),
+        ("Y ~ Z1*csw(X1, X2)", 2),
+        ("Y ~ X1 + X2 + Z1 - csw(X1, X2)", 2),
+        ("Y ~ X1 | csw(f1, f2):f3", 2),
         ("Y ~ sw(X1, X2)", 2),
         ("Y ~ csw(X1, X2)", 2),
         ("Y ~ sw0(X1, X2)", 3),
@@ -627,6 +946,66 @@ def test_correct_number_of_models(test_data, formula: str, expected_n_models: in
     assert n_models == expected_n_models, (
         f"Expected {expected_n_models} models for '{formula}', got {n_models}"
     )
+
+
+@pytest.mark.parametrize(
+    "formula,expected_n_models",
+    [
+        ("Y ~ csw(X1, X1)", 1),
+        ("Y ~ X1 + sw0(X1, X2)", 2),
+        ("Y ~ csw(X1, X2) | X2 ~ Z1", 1),
+        ("Y ~ csw0(X2, X1) | X2 ~ Z1", 2),
+        ("Y ~ X1 + [X2 ~ Z1] + sw0(Z2, X2)", 2),
+    ],
+)
+def test_duplicate_stepwise_models_warn(
+    test_data, formula: str, expected_n_models: int
+):
+    """Steps that parse to the same model warn instead of silently collapsing."""
+    with pytest.warns(UserWarning, match="parse to the same model"):
+        fit = pf.feols(formula, data=test_data)
+
+    assert len(fit.to_list()) == expected_n_models
+
+
+@pytest.mark.parametrize(
+    "formula,kwargs",
+    [
+        ("Y ~ X1 + csw(X1, X2)", {}),
+        ("Y ~ csw(X1, Z2) + [X2 ~ Z1]", {}),
+        ("Y ~ X1", {"fsplit": "f1"}),
+    ],
+)
+def test_distinct_stepwise_models_do_not_warn(test_data, formula: str, kwargs):
+    with warnings.catch_warnings():
+        warnings.filterwarnings(
+            "error", message=".*parse to the same model", category=UserWarning
+        )
+        pf.feols(formula, data=test_data, **kwargs)
+
+
+def test_stepwise_call_over_several_lines_matches_single_line(test_data):
+    """A triple-quoted formula with one stepwise argument per line fits the same models."""
+    multiline = """
+    Y ~ csw(
+        X1,
+        X2,
+        f2
+    )
+    | f1
+    """
+    fit_multiline = pf.feols(multiline, data=test_data).to_list()
+    fit_single_line = pf.feols("Y ~ csw(X1, X2, f2) | f1", data=test_data).to_list()
+
+    assert [fit.model.formula for fit in fit_multiline] == [
+        "Y ~ X1 | f1",
+        "Y ~ X1 + X2 | f1",
+        "Y ~ X1 + X2 + f2 | f1",
+    ]
+    for multiline_fit, single_line_fit in zip(
+        fit_multiline, fit_single_line, strict=True
+    ):
+        np.testing.assert_allclose(multiline_fit.coef(), single_line_fit.coef())
 
 
 def test_explicit_no_fe_coefficients_match(test_data):
@@ -651,6 +1030,7 @@ def test_interacted_fixed_effect_matches_manual_interaction(test_data):
     """Interacted fixed effects match an explicitly constructed group."""
     data = test_data.dropna(subset=["Y", "X1", "f1", "f2"]).copy()
     data["f1_f2"] = list(zip(data["f1"], data["f2"], strict=True))
+    data["f1_f2"] = data["f1_f2"].astype("category")
 
     interacted = pf.feols("Y ~ X1 | f1:f2", data=data, fixef_rm="none")
     manual = pf.feols("Y ~ X1 | f1_f2", data=data, fixef_rm="none")
@@ -671,17 +1051,7 @@ class TestEdgeCases:
         """Test intercept only."""
         result = Formula.parse("Y ~ 1")
         assert len(result) == 1
-        assert result[0].second_stage == "Y ~ 1"
-
-    def test_no_fe_in_dict(self):
-        """No fixed effects results in None key in parse_to_dict."""
-        result = Formula.parse_to_dict("Y ~ X1")
-        assert None in result
-
-    def test_fe_key_in_dict(self):
-        """Fixed effects are used as keys in parse_to_dict."""
-        result = Formula.parse_to_dict("Y ~ X1 | f1")
-        assert "f1" in result
+        assert result[0].second_stage == formulaic.Formula("Y ~ 1")
 
     def test_multiple_dependent_variables(self):
         """Test multiple independent variables."""
@@ -700,7 +1070,7 @@ class TestEdgeCases:
         """A `+` nested in a transform is not a multiple-dependent separator."""
         result = Formula.parse(formula)
         assert len(result) == 1
-        assert result[0].second_stage == expected_second_stage
+        assert result[0].second_stage == formulaic.Formula(expected_second_stage)
 
     def test_transformed_dependent_matches_precomputed_column(self, test_data):
         """`I(Y + Y2)` estimates the summed outcome, not two separate models."""
@@ -718,51 +1088,189 @@ class TestEdgeCases:
         """Endogenous variable should be added to second_stage covariates."""
         result = Formula.parse("Y ~ X1 | Z1 ~ W1")
         f = result[0]
-        assert "Z1" in f.second_stage
-        # assert f.first_stage == "Z1 ~ W1"
+        assert "Z1" in f.second_stage.rhs
+        # assert f.as_first_stage().second_stage == "Z1 ~ W1"
+
+    @pytest.mark.parametrize(
+        "formula",
+        [
+            "Y ~ X1 + [[X2 ~ Z1] ~ Z2]",
+            "Y ~ X1 + [X2 ~ [Z1 ~ Z2]]",
+        ],
+        ids=["nested-endogenous", "nested-instruments"],
+    )
+    def test_reject_nested_multistage_formulas(self, formula):
+        """An IV block cannot contain another IV block on either side."""
+        with pytest.raises(FormulaSyntaxError, match="Nested instrumental-variable"):
+            Formula.parse(formula)
+
+    @pytest.mark.parametrize(
+        "rhs",
+        [
+            "X1 - [X2 ~ Z1]",
+            "-([X2 ~ Z1])",
+        ],
+    )
+    def test_reject_unsupported_iv_second_stage(self, rhs):
+        """Algebra must preserve the declared endogenous term in the regression."""
+        with pytest.raises(
+            FormulaSyntaxError,
+            match=r"removed or transformed the endogenous terms.*X2.*instrument block remains",
+        ):
+            Formula.parse(f"Y ~ {rhs}")
+
+    @pytest.mark.parametrize(
+        "formula, expected",
+        [
+            ("Y ~ X2 + [X2 ~ Z1]", "Y ~ 1 + [X2 ~ Z1]"),
+            ("Y ~ [X2 ~ Z1] + X2", "Y ~ 1 + [X2 ~ Z1]"),
+            ("Y ~ X2 | X2 ~ Z1", "Y ~ 1 + [X2 ~ Z1]"),
+            ("Y ~ log(X2) + [log(X2) ~ Z1]", "Y ~ 1 + [log(X2) ~ Z1]"),
+            ("Y ~ X2:Z2 + [X2:Z2 ~ Z1]", "Y ~ 1 + [X2:Z2 ~ Z1]"),
+            ("Y ~ `my var` + [`my var` ~ Z1]", "Y ~ 1 + [`my var` ~ Z1]"),
+            ("Y ~ I(`my var`) + [I(`my var`) ~ Z1]", "Y ~ 1 + [I(`my var`) ~ Z1]"),
+            ("Y ~ Q('my var') + [Q('my var') ~ Z1]", "Y ~ 1 + [Q('my var') ~ Z1]"),
+            ("Y ~ [X2 ~ Z1]^2", "Y ~ 1 + [X2 ~ Z1]"),
+            ("Y ~ X1 + [X2 ~ Z1] - 1", "Y ~ 0 + X1 + [X2 ~ Z1]"),
+            ("Y ~ X1 + [X2 ~ Z1] - X1", "Y ~ 1 + [X2 ~ Z1]"),
+            (
+                "Y ~ (X1 * X3 - X1:X3) + [X2:Z2 ~ (Z1 + Z3)^2]",
+                "Y ~ X1 + X3 + [X2:Z2 ~ Z1 + Z3 + Z1:Z3]",
+            ),
+            (
+                "Y ~ [X2 ~ Z1 / Z3] + (X1 + X3)^2 | f1:f2",
+                "Y ~ X1 + X3 + X1:X3 + [X2 ~ Z1 + Z1:Z3] | f1:f2",
+            ),
+        ],
+    )
+    def test_iv_semantic_deduplication(self, formula, expected):
+        """Equivalent evaluated terms define the same IV stages, controls and intercept."""
+        parsed = Formula.parse(formula)[0]
+        reference = Formula.parse(expected)[0]
+        assert set(parsed.exogenous).isdisjoint(parsed.endogenous)
+        assert parsed.second_stage == reference.second_stage
+        assert (
+            parsed.as_first_stage().second_stage
+            == reference.as_first_stage().second_stage
+        )
+        # Formulaic keeps repeated terms, such as the intercept of the controls
+        # and the instruments, unless the first stage removes them.
+        first_stage_terms = list(parsed.as_first_stage().exogenous)
+        assert len(first_stage_terms) == len(set(first_stage_terms))
+        assert parsed.instruments == reference.instruments
+        assert parsed.render() == reference.render()
 
     def test_iv_transformed_endogenous_in_second_stage(self):
-        """A transformed endogenous variable survives the _hat term filtering."""
-        f = Formula.parse("Y ~ X1 | log(Z1) ~ W1")[0]
-        assert f.second_stage == "Y ~ 1 + X1 + log(Z1)"
-        assert f.first_stage.startswith("log(Z1) ~")
+        """A transformed endogenous variable is retained in the second stage."""
+        f = Formula.parse("Y ~ X1 + [log(Z1) ~ W1]")[0]
+        assert f.second_stage == formulaic.Formula("Y ~ 1 + X1 + log(Z1)")
+        assert str(f.as_first_stage().second_stage.lhs) == "log(Z1)"
+
+    @pytest.mark.parametrize(
+        "formula",
+        ["Y ~ X1 + [X2:Z2 ~ Z1]", "Y ~ X1 | X2:Z2 ~ Z1"],
+        ids=["bracket", "pipe"],
+    )
+    def test_iv_interacted_endogenous_preserves_parsed_stages(self, formula):
+        """An endogenous interaction stays intact without generated lookup terms."""
+        parsed = Formula.parse(formula)[0]
+        assert parsed.exogenous == formulaic.Formula("1 + X1")
+        assert parsed.endogenous == formulaic.Formula("0 + X2:Z2")
+        assert parsed.instruments == formulaic.Formula("0 + Z1")
+        assert parsed.second_stage == formulaic.Formula("Y ~ X1 + X2:Z2")
+
+        first_stage = parsed.as_first_stage().second_stage
+        expected_first_stage = formulaic.Formula("X2:Z2 ~ Z1 + X1")
+        assert first_stage.lhs == expected_first_stage.lhs
+        assert set(first_stage.rhs) == set(expected_first_stage.rhs)
+        assert Formula.parse(parsed.render())[0].second_stage == parsed.second_stage
+
+    @pytest.mark.parametrize(
+        "formula_template",
+        [
+            "Y ~ {exogenous} | X1 ~ {instruments}",
+            "Y ~ {exogenous} + [X1 ~ {instruments}]",
+        ],
+        ids=["pipe", "bracket"],
+    )
+    @pytest.mark.parametrize(
+        "instruments",
+        ["Z1", "1 + Z1", "0 + Z1", "-1 + Z1", "Z1 + 1", "Z1 + 0", "Z1 - 1"],
+    )
+    @pytest.mark.parametrize(
+        "exogenous, expected",
+        [
+            ("X2", "X1 ~ 1 + Z1 + X2"),
+            ("1 + X2", "X1 ~ 1 + Z1 + X2"),
+            ("X2 + 1", "X1 ~ 1 + Z1 + X2"),
+            ("1", "X1 ~ 1 + Z1"),
+            ("-1 + X2", "X1 ~ 0 + Z1 + X2"),
+            ("0 + X2", "X1 ~ 0 + Z1 + X2"),
+            ("X2 + 0", "X1 ~ 0 + Z1 + X2"),
+            ("X2 - 1", "X1 ~ 0 + Z1 + X2"),
+            ("0", "X1 ~ 0 + Z1"),
+            ("-1", "X1 ~ 0 + Z1"),
+        ],
+    )
+    def test_iv_first_stage_preserves_intercept_choice(
+        self, formula_template, instruments, exogenous, expected
+    ):
+        """The main equation sets the first-stage intercept, whatever the block says."""
+        formula = formula_template.format(exogenous=exogenous, instruments=instruments)
+        parsed = Formula.parse(formula)[0]
+        first_stage = parsed.as_first_stage().second_stage
+        expected_stage = formulaic.Formula(expected)
+        assert first_stage.lhs == expected_stage.lhs
+        assert set(first_stage.rhs) == set(expected_stage.rhs)
+        plain_block = Formula.parse(f"Y ~ {exogenous} + [X1 ~ Z1]")[0]
+        assert parsed.second_stage == plain_block.second_stage
+        assert parsed.render() == plain_block.render()
+        reparsed = Formula.parse(parsed.render())[0]
+        assert (
+            reparsed.as_first_stage().second_stage
+            == parsed.as_first_stage().second_stage
+        )
 
     def test_iv_with_fe_endogenous_in_second_stage(self):
         """Endogenous variable should be in second_stage even with FE."""
         result = Formula.parse("Y ~ X1 | f1 | Z1 ~ W1")
         f = result[0]
-        assert "Z1" in f.second_stage
+        assert "Z1" in f.second_stage.rhs
         assert str(f.fixed_effects) == "f1"
-        assert str(f.first_stage) == "Z1 ~ 1 + W1 + X1"
+        first_stage = f.as_first_stage()
+        assert not first_stage.is_instrumental_variable
+        assert first_stage.fixed_effects == f.fixed_effects
+        assert first_stage.second_stage == formulaic.Formula("Z1 ~ 1 + X1 + W1")
 
     def test_explicit_no_fe_syntax(self):
         """Y ~ X1 | 0 and Y ~ X1 should produce equivalent formulas."""
-        result_explicit = Formula.parse_to_dict("Y ~ X1 | 0")
-        result_implicit = Formula.parse_to_dict("Y ~ X1")
+        result_explicit = Formula.parse("Y ~ X1 | 0")
+        result_implicit = Formula.parse("Y ~ X1")
 
-        assert list(result_explicit.keys()) == [None]
-        assert list(result_implicit.keys()) == [None]
+        assert len(result_explicit) == len(result_implicit) == 1
 
-        f_explicit = result_explicit[None][0]
-        f_implicit = result_implicit[None][0]
+        f_explicit = result_explicit[0]
+        f_implicit = result_implicit[0]
         assert f_explicit.second_stage == f_implicit.second_stage
         assert not f_explicit.is_fixed_effects
         assert not f_implicit.is_fixed_effects
 
     def test_explicit_no_fe_with_iv(self):
         """Y ~ 1 | 0 | Z1 ~ X1 and Y ~ 1 | Z1 ~ X1 should be equivalent."""
-        result_explicit = Formula.parse_to_dict("Y ~ 1 | 0 | Z1 ~ X1")
-        result_implicit = Formula.parse_to_dict("Y ~ 1 | Z1 ~ X1")
+        result_explicit = Formula.parse("Y ~ 1 | 0 | Z1 ~ X1")
+        result_implicit = Formula.parse("Y ~ 1 | Z1 ~ X1")
 
-        assert list(result_explicit.keys()) == [None]
-        assert list(result_implicit.keys()) == [None]
+        assert len(result_explicit) == len(result_implicit) == 1
 
-        f_explicit = result_explicit[None][0]
-        f_implicit = result_implicit[None][0]
+        f_explicit = result_explicit[0]
+        f_implicit = result_implicit[0]
         assert f_explicit.second_stage == f_implicit.second_stage
         assert not f_explicit.is_fixed_effects
         assert not f_implicit.is_fixed_effects
-        assert f_explicit.first_stage == f_implicit.first_stage
+        assert (
+            f_explicit.as_first_stage().second_stage
+            == f_implicit.as_first_stage().second_stage
+        )
 
     def test_formula_roundtrip(self):
         """Parsing a formula and reconstructing it should preserve structure."""
@@ -776,7 +1284,7 @@ class TestEdgeCases:
             result = Formula.parse(fml)
             assert len(result) == 1
             # Reconstructed formula should re-parse to the same structure
-            reparsed = Formula.parse(result[0].formula)
+            reparsed = Formula.parse(result[0].render())
             assert len(reparsed) == 1
             assert reparsed[0].second_stage == result[0].second_stage
             assert reparsed[0].is_fixed_effects == result[0].is_fixed_effects
@@ -788,4 +1296,72 @@ class TestEdgeCases:
                 == result[0].is_instrumental_variable
             )
             if result[0].is_instrumental_variable:
-                assert reparsed[0].first_stage == result[0].first_stage
+                assert (
+                    reparsed[0].as_first_stage().second_stage
+                    == result[0].as_first_stage().second_stage
+                )
+
+
+@pytest.mark.parametrize(
+    "fml",
+    [
+        "Y ~ X1",
+        "Y ~ X1 - 1",
+        "Y ~ 0",
+        "Y ~ X1:X2 | f1:f2",
+        "Y ~ {X1 + X2} | {f1 + f2}",
+        "Y ~ `X1 + X2` | `f1 + f2`",
+        'Y ~ log(X1) + np.log(X2) | Q("my fe")',
+        "Y ~ {X1 ** 2} + {np.pi} | f1",
+        "Y ~ X2 + [X1 ~ Z1] | f1",
+        "Y ~ X2 - 1 + [X1 ~ Z1 - 1]",
+        "Y ~ `say \"hi\"` + `path\\name` | `say 'hello'`",
+        "Y ~ `tick\\`name` | f1",
+        "Y ~ X1 | f1[z]",
+        "Y ~ X1 | f1[[z1, z2]]",
+        "Y ~ `a\u0301`",
+        "Y ~ `℘`",
+        "Y ~ `a·b`",
+    ],
+)
+def test_rendered_formula_preserves_parsed_factors(fml):
+    (parsed,) = Formula.parse(fml)
+    assert repr(parsed) == str(parsed) == parsed.render()
+    (reparsed,) = Formula.parse(parsed.render())
+    for part in [
+        "dependent",
+        "exogenous",
+        "endogenous",
+        "instruments",
+        "fixed_effects",
+    ]:
+        if (
+            part in ("endogenous", "instruments")
+            and not parsed.is_instrumental_variable
+        ) or (part == "fixed_effects" and not parsed.is_fixed_effects):
+            continue
+
+        def factors(terms):
+            return [
+                [(factor.expr, factor.eval_method) for factor in term.factors]
+                for term in terms
+            ]
+
+        assert factors(getattr(reparsed, part)) == factors(getattr(parsed, part)), (
+            parsed.render()
+        )
+
+
+@pytest.mark.parametrize(
+    "fml, expected",
+    [
+        ("Y ~ X1 | {f1 + f2}", "Y ~ X1 | {f1 + f2}"),
+        ("Y ~ X1 | `f1 + f2`", "Y ~ X1 | `f1 + f2`"),
+        ("Y ~ X1 | f1 + f2", "Y ~ X1 | f1 + f2"),
+        ("Y ~ X1", "Y ~ 1 + X1"),
+        ("Y ~ X1 - 1", "Y ~ 0 + X1"),
+    ],
+)
+def test_rendered_formula_names(fml, expected):
+    (parsed,) = Formula.parse(fml)
+    assert parsed.render() == expected

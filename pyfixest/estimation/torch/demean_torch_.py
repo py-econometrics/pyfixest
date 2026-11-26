@@ -23,6 +23,7 @@ from pyfixest.estimation.torch._sparse_dummy import (
     _scale_sparse_rows,
 )
 from pyfixest.estimation.torch.lsmr_torch import lsmr_torch, lsmr_torch_batched
+from pyfixest.utils.dev_utils import _find_stack_level
 
 # Minimum K (number of RHS columns) for batched SpMM to beat sequential SpMV.
 # Benchmarked breakeven is device-specific.
@@ -60,14 +61,14 @@ def _get_device(dtype: torch.dtype = torch.float64) -> torch.device:
             "Pass `dtype=torch.float32` to `demean_torch` for GPU acceleration. "
             "Falling back to CPU.",
             UserWarning,
-            stacklevel=3,
+            stacklevel=_find_stack_level(),
         )
         return torch.device("cpu")
     warnings.warn(
-        "No GPU available — torch demeaning will run on CPU, which is slower "
-        "than the scipy backend. Consider using `demean_scipy` instead.",
+        "No GPU is available. Torch demeaning will run on CPU. "
+        "Use LsmrDemeaner(backend='within') for the default CPU backend.",
         UserWarning,
-        stacklevel=3,
+        stacklevel=_find_stack_level(),
     )
     return torch.device("cpu")
 
@@ -88,7 +89,6 @@ def _demean_torch_on_device_impl(
     if weights is None:
         weights = np.ones(x.shape[0], dtype=np.float64)
 
-    # Track original shape to restore on output
     was_1d = x.ndim == 1
     x_2d = x[:, None] if was_1d else x
     weights_1d = weights.ravel()
@@ -103,19 +103,15 @@ def _demean_torch_on_device_impl(
     x_t = torch.from_numpy(x_c).to(dtype=dtype, device=device)
     w_t = torch.from_numpy(w_c).to(dtype=dtype, device=device)
 
-    # Ensure flist is 2D
     flist_2d = flist if flist.ndim == 2 else flist[:, None]
 
-    # Build sparse dummy matrix (unweighted)
     D_unweighted = _build_sparse_dummy(flist_2d, device, dtype)
     _, D_cols = D_unweighted.shape
     K = x_t.shape[1]
 
-    # Apply sqrt-weights
     sqrt_w = torch.sqrt(w_t)
     x_w = x_t * sqrt_w[:, None]
 
-    # Weight the dummy matrix: D_weighted = diag(sqrt_w) @ D_unweighted
     D_weighted = _scale_sparse_rows(D_unweighted, sqrt_w)
 
     # Diagonal preconditioning: M_inv = 1 / sqrt(D_unweighted^T @ w)
@@ -140,7 +136,6 @@ def _demean_torch_on_device_impl(
     theta = torch.zeros(D_cols, K, dtype=dtype, device=device)
 
     if _should_use_batched_lsmr(device, K):
-        # Batched: single call, K columns solved simultaneously via SpMM
         Z, istop_vec, _itn, *_ = lsmr_torch_batched(
             A_precond,
             x_w,
@@ -152,7 +147,6 @@ def _demean_torch_on_device_impl(
         theta = M_inv.unsqueeze(1) * Z
         success = all(_lsmr_istop_is_success(code) for code in istop_vec.tolist())
     else:
-        # Sequential: K < threshold, per-column single-RHS path is faster
         success = True
         for k in range(K):
             z, istop, _itn, _normr, _normar, _normA, _condA, _normx = lsmr_torch(
@@ -166,7 +160,6 @@ def _demean_torch_on_device_impl(
             theta[:, k] = M_inv * z
             success = success and _lsmr_istop_is_success(istop)
 
-    # Compute residuals: x_demeaned = x - D_unweighted @ theta
     x_demeaned = x_t - D_unweighted @ theta
 
     result = x_demeaned.cpu().numpy()
@@ -216,7 +209,10 @@ def demean_torch(
         True if LSMR converged for all columns.
     """
     if flist is None:
-        raise ValueError("flist cannot be None")
+        raise ValueError(
+            "Torch demeaning needs an array of fixed-effect level codes, one row "
+            "per observation and one column per fixed effect. flist was None."
+        )
     if weights is None:
         weights = np.ones(x.shape[0], dtype=np.float64)
 

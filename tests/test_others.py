@@ -64,6 +64,45 @@ def test_integer_XY():
     np.testing.assert_allclose(fit1.coef().xs("X"), fit2.coef().xs("X"))
 
 
+@pytest.mark.filterwarnings("ignore::RuntimeWarning")
+@pytest.mark.parametrize("dtype", ["Float64", "Int64"])
+def test_log_nullable_dtype(dtype):
+    # log() drops pd.NA rows like non-positive ones (#1807).
+    data = get_data().dropna()
+    data["X3"] = pd.array(np.arange(1, len(data) + 1), dtype=dtype)
+    data.loc[data.index[:4], "X3"] = [pd.NA, pd.NA, 0, -1]
+    x3 = data["X3"].to_numpy(dtype="float64", na_value=np.nan)
+    data["log_X3"] = np.log(np.where(x3 > 0, x3, np.nan))
+
+    fit = feols("Y ~ log(X3)", data=data)
+    expected = feols("Y ~ log_X3", data=data)
+
+    np.testing.assert_allclose(fit.coef().to_numpy(), expected.coef().to_numpy())
+    assert fit.sample_info.n_obs == expected.sample_info.n_obs
+
+
+@pytest.mark.filterwarnings("ignore::RuntimeWarning")
+def test_log_drop_stages():
+    # log() is np.log: zero and inf rows drop as infinite, negative and NaN
+    # rows as missing, and predict() returns -inf/NaN like fixest (#1806).
+    data = get_data().dropna(subset=["Y", "X2"]).reset_index(drop=True)
+    data["Xp"] = data["X2"].abs() + 1
+    data.loc[[0, 1, 2], "Xp"] = 0.0
+    data.loc[[3, 4], "Xp"] = -1.0
+    data.loc[5, "Xp"] = np.nan
+    data.loc[6, "Xp"] = np.inf
+
+    fit = feols("Y ~ log(Xp)", data=data)
+
+    assert fit.sample_info.dropped_by_stage.missing == 3
+    assert fit.sample_info.dropped_by_stage.infinite == 4
+    assert fit.sample_info.n_obs == len(data) - 7
+
+    y_hat = fit.predict(newdata=data.head(7))
+    assert np.isinf(y_hat[[0, 1, 2, 6]]).all()
+    assert np.isnan(y_hat[[3, 4, 5]]).all()
+
+
 def test_coef_update():
     rng = np.random.default_rng(1234)
     data = get_data().dropna(subset=["Y", "X1", "X2"])
@@ -369,8 +408,8 @@ def _fixef_test_data(n=500, with_nan=False, seed=11):
         {
             "Y": rng.normal(size=n),
             "X1": rng.normal(size=n),
-            "g": rng.choice(["north", "south", "east"], n),
-            "h": rng.choice(["u", "v", "w", "x"], n),
+            "g": pd.Series(rng.choice(["north", "south", "east"], n), dtype="string"),
+            "h": pd.Series(rng.choice(["u", "v", "w", "x"], n), dtype="string"),
         }
     )
     if with_nan:
@@ -465,8 +504,8 @@ def test_fixef_excludes_singleton_levels_from_prediction():
         {
             "Y": [1.0, 2.0, 2.0, 4.0, 3.0],
             "X1": [0.0, 1.0, 0.0, 1.0, 2.0],
-            "g": ["a", "a", "b", "b", "c"],
-            "h": ["u", "u", "v", "v", "w"],
+            "g": pd.Series(["a", "a", "b", "b", "c"], dtype="string"),
+            "h": pd.Series(["u", "u", "v", "v", "w"], dtype="string"),
         }
     )
 

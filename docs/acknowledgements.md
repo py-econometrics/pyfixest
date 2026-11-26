@@ -17,10 +17,10 @@ More concretely, we have borrowed the following API conventions and ideas direct
 | **Formula syntax** | `feols()`, `fepois()`, `feglm()` function and argument names; the `i()` interaction operator; multiple estimation syntax via `sw()`, `sw0()`, `csw()`, `csw0()` |
 | **Multiple Estimation Optimizations** | The core idea that most of the work of fixed effects regression can be pooled / cached when estimating multiple models with the same fixed effects structure|
 | **Demeaning / FWL** | The alternating-projections algorithm in PyFixest is a standalone implementation in numba/rust, but uses the same convergence criteria and default parameters |
-| **Small-sample corrections** | The `ssc()` function to control small sample adjustments, and all of its defaults - `adj`, `fixef_K`, `cluster_adj`, `cluster_df` - mirror fixest exactly (see fixest's [standard errors vignette](https://cran.r-project.org/web/packages/fixest/vignettes/standard_errors.html)) |
+| **Small-sample corrections** | The `ssc()` function to choose a small-sample correction, and all of its defaults - `adj`, `fixef_K`, `cluster_adj`, `cluster_df` - mirror fixest exactly (see fixest's [standard errors vignette](https://cran.r-project.org/web/packages/fixest/vignettes/standard_errors.html)) |
 | **Collinearity detection** | The algorithm is a Rust/Numba re-implementation of Laurent Berge's [C++ routine in fixest](https://github.com/lrberge/fixest/blob/a4d1a9bea20aa7ab7ab0e0f1d2047d8097971ad7/src/lm_related.cpp#L130), re-licensed under MIT with Laurent's permission |
 | **Post-estimation** | `etable()`, `coefplot()`, `iplot()`, `coef()` etc mirror fixest's output and plotting functionality |
-| **On the fly variance covariance adjustments** | As in `fixest`, you can adjust the vcov post estimation by calling a `vcov()` method on the results object (`Feols` in pyfixest and `fixest` in `fixest`) |
+| **Updating inference after estimation** | As in `fixest`, you can update the variance estimator after estimation by calling `vcov()` on the fitted model (`Feols` in pyfixest and `fixest` in `fixest`) |
 | **Predict method for fixed effects** | The `predict()`  and `fixef()` methods in PyFixest mirrors fixest's functionality for obtaining fitted values, fixed effects, and linear predictions |
 
 You can learn more about fixest [on github](https://github.com/lrberge/fixest), via its [documentation](https://lrberge.github.io/fixest/), or by reading the [associated paper](https://arxiv.org/abs/2601.21749).

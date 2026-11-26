@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import numpy as np
 import pytest
 
@@ -5,9 +7,20 @@ import pyfixest as pf
 from pyfixest.utils.utils import get_data, ssc
 
 
+@pytest.mark.parametrize("vcov", ["hetero", {"CRV1": "group_id"}])
+@pytest.mark.parametrize("fml", ["Y ~ X1 + X2", "Y ~ sw(X1, X2)"])
+def test_missing_param_is_rejected(vcov, fml):
+    fit = pf.feols(fml, data=get_data(N=100, seed=9), vcov=vcov)
+    with pytest.raises(ValueError, match=r"param.*coefficient"):
+        fit.wildboottest(reps=9, seed=1)
+
+
 @pytest.fixture
 def data():
-    return get_data(N=2_000, seed=9)
+    data = get_data(N=2_000, seed=9)
+    # collinear with the f1 fixed effects; the fit drops it
+    data["Xc"] = data.groupby("f1")["X2"].transform("mean")
+    return data
 
 
 # note - tests currently fail because of ssc adjustments
@@ -25,7 +38,7 @@ def test_hc_equivalence(data, fml):
     np.testing.assert_allclose(tstat / boot_tstat, np.sqrt(ssc))
 
 
-@pytest.mark.parametrize("fml", ["Y~X1", "Y~X1|f1", "Y~X1|f1+f2"])
+@pytest.mark.parametrize("fml", ["Y~X1", "Y~X1|f1", "Y~X1|f1+f2", "Y~X1+Xc|f1"])
 def test_crv1_equivalence(data, fml):
     fixest = pf.feols(
         fml, data=data, vcov={"CRV1": "group_id"}, ssc=ssc(k_adj=False, G_adj=False)

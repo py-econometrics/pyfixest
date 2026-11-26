@@ -102,6 +102,11 @@ ssc_fmls = (
     "Y ~ X1 + X2 | f1 + f2",
     "Y ~ X1 + X2 | f1 + f2 + f3",
     "Y ~ X1 + X2 | f1:f2",
+    # Representative slope structures for the SSC grid; the dedicated slope
+    # suite covers the wider range of formulas and estimation behavior.
+    "Y ~ X1 + X2 | f1[Z1]",
+    "Y ~ X1 + X2 | f1[[Z1]]",
+    "Y ~ X1 + X2 | f1[[Z1]] + f2",
 )
 
 
@@ -147,6 +152,8 @@ FEOLS_FORMULA_F3_CASES = (
         for fml in FEOLS_FORMULAS
         if "f3" in fml
         for f3_type in ALL_F3_TYPES[1:]
+        # Object fixed effects are intentionally rejected; covariates still allow them.
+        if f3_type != "object" or "f3" not in fml.partition("|")[2]
     ),
 )
 
@@ -158,7 +165,7 @@ def convert_f3(data: pd.DataFrame, f3_type: str) -> pd.DataFrame:
     elif f3_type == "int":
         data["f3"] = data["f3"].astype(float).astype(np.int32)
     elif f3_type == "str":
-        data["f3"] = data["f3"].astype(str)
+        data["f3"] = data["f3"].astype("string")
     elif f3_type == "object":
         data["f3"] = data["f3"].astype(object)
     elif f3_type == "float":

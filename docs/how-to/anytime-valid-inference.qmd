@@ -6,7 +6,6 @@ aliases:
 categories: [Inference, AB Testing]
 toc: true
 toc-title: "On this page"
-toc-location: left
 ---
 
 ## Decisions based on interim A/B-test results
@@ -1867,7 +1866,7 @@ fig
 ```
 
 ::: {.figure-caption}
-The same experiments are analyzed with and without a pre-treatment covariate for regression adjustment. In this design, adjustment narrows the median SAVI confidence sequence (top) and raises the share of experiments that can stop by the end of the planned runtime (bottom).
+The same experiments are analyzed with and without a pre-treatment regressor for regression adjustment. In this design, adjustment narrows the median SAVI confidence sequence (top) and raises the share of experiments that can stop by the end of the planned runtime (bottom).
 :::
 
 By day twenty, the median SAVI confidence-sequence half-width falls from
@@ -1883,7 +1882,7 @@ At day twenty, the average treatment estimates are
 `{python} f"{mean_estimate['adjusted']:.3f}"` with adjustment, against a true
 average effect of `{python} f"{ADJUSTMENT_EFFECT:.3f}"`. Both are close to the
 true value in these 200 simulations; the adjusted analysis is more precise
-because the pre-experimental covariate predicts the experimental outcome.
+because the pre-experimental regressor predicts the experimental outcome.
 
 To check whether adjustment inflates false positives in this design, the
 simulation is repeated with an average treatment effect of zero. Across

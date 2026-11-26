@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import duckdb
 import numpy as np
 import pandas as pd
@@ -27,6 +29,17 @@ def test_api():
     pf.summary(fit_multi)
     pf.etable(fit_multi)
     pf.coefplot(fit_multi)
+
+
+def test_fetch_model_by_key_or_position():
+    fit = pf.feols("sw(Y, Y2) ~ X1 | f1", data=get_data())
+    second = fit.all_fitted_models["Y2 ~ X1 | f1"]
+
+    assert fit.fetch_model("Y2 ~ X1 | f1", print_fml=False) is second
+    assert fit.fetch_model(1, print_fml=False) is second
+    assert fit.fetch_model("1", print_fml=False) is second
+    with pytest.raises(KeyError, match=r"Available keys: \['Y ~ X1 \| f1'"):
+        fit.fetch_model("Y3 ~ X1 | f1")
 
 
 def test_feols_args():
@@ -103,17 +116,6 @@ def test_fepois_args():
     np.testing.assert_allclose(fit4.coef(), fit5.coef(), rtol=1e-12)
 
 
-def test_map_demeaner_defaults_to_rust():
-    data = pf.get_data()
-
-    assert pf.MapDemeaner().backend == "rust"
-
-    fit = pf.feols("Y ~ X1 | f1", data=data)
-
-    assert isinstance(fit.options.demeaner, pf.MapDemeaner)
-    assert fit.options.demeaner.backend == "rust"
-
-
 def _run_with_deprecated_kwargs(estimator_name, **kwargs):
     if estimator_name == "feols":
         return pf.feols("Y ~ X1 | f1", data=pf.get_data(), **kwargs)
@@ -127,41 +129,13 @@ def _run_with_deprecated_kwargs(estimator_name, **kwargs):
 _DEPRECATION_ESTIMATORS = ["feols", "fepois", "feglm"]
 
 
-def test_demeaner_backend_cupy_emits_deprecation_warning():
-    from pyfixest.estimation.internals.demeaner_options import (
-        _warn_if_deprecated_demeaner_backend,
-    )
-
-    with pytest.warns(DeprecationWarning, match=r"`cupy` LSMR demeaner backend") as rec:
-        _warn_if_deprecated_demeaner_backend(pf.LsmrDemeaner(backend="cupy"))
-    assert any("torch', device='cuda" in str(r.message) for r in rec)
-    assert any("default within backend" in str(r.message) for r in rec)
-
-
-def test_demeaner_backend_cupy_cuda_emits_gpu_replacement_warning():
-    from pyfixest.estimation.internals.demeaner_options import (
-        _warn_if_deprecated_demeaner_backend,
-    )
-
-    with pytest.warns(DeprecationWarning, match=r"`cupy` LSMR demeaner backend") as rec:
-        _warn_if_deprecated_demeaner_backend(
-            pf.LsmrDemeaner(backend="cupy", device="cuda")
-        )
-    assert any("torch', device='cuda" in str(r.message) for r in rec)
-
-
-def test_demeaner_backend_scipy_emits_deprecation_warning():
-    from pyfixest.estimation.internals.demeaner_options import (
-        _warn_if_deprecated_demeaner_backend,
-    )
-
-    with pytest.warns(
-        DeprecationWarning, match=r"`scipy` LSMR demeaner backend"
-    ) as rec:
-        _warn_if_deprecated_demeaner_backend(
-            pf.LsmrDemeaner(backend="cupy", device="cpu")
-        )
-    assert any("default within backend" in str(r.message) for r in rec)
+@pytest.mark.parametrize("removed_backend", ["cupy", "scipy"])
+def test_lsmr_demeaner_rejects_removed_backends(removed_backend):
+    """Removed LSMR backends fail at construction and name the allowed values."""
+    with pytest.raises(
+        ValueError, match=r"`backend` must be one of \('within', 'torch'\)"
+    ):
+        pf.LsmrDemeaner(backend=removed_backend)  # type: ignore[arg-type]
 
 
 @pytest.mark.parametrize(
@@ -177,9 +151,11 @@ def test_typed_demeaners_reject_tolerances_ge_one(builder, invalid_name):
         builder()
 
 
-@pytest.mark.parametrize("requested", ["auto", "off", "additive", "diagonal"])
+@pytest.mark.parametrize(
+    "requested", ["auto", "off", "adaptive", "additive", "diagonal"]
+)
 def test_lsmr_demeaner_accepts_within_preconditioner_strings(requested):
-    """All four documented string options round-trip through ``LsmrDemeaner``."""
+    """All documented string options round-trip through ``LsmrDemeaner``."""
     demeaner = pf.LsmrDemeaner(preconditioner=requested)
     assert demeaner.backend == "within"
     assert demeaner.preconditioner == requested
@@ -251,18 +227,19 @@ def test_within_preconditioner_reuse_across_estimators(data_fn, fit_fn):
     # the same solve as the original.
     np.testing.assert_allclose(fit_reused.coef(), fit.coef(), rtol=1e-10, atol=1e-10)
     assert isinstance(fit_reused.preconditioner, pf.Preconditioner)
-    assert fit_reused.preconditioner.variant == pre.variant
+    assert fit_reused.preconditioner.config == pre.config
     assert fit_reused.preconditioner.nrows == pre.nrows
 
 
-def test_fixest_multi_shares_preconditioners_by_na_index():
-    data = pf.get_data().copy()
+@pytest.mark.parametrize("estimator", [pf.feols, pf.fepois])
+def test_fixest_multi_shares_preconditioners_by_na_index(estimator):
+    data = pf.get_data(model="Fepois" if estimator is pf.fepois else "Feols").copy()
     data["X3"] = data["X2"] ** 2 + 0.1 * data["X1"]
     complete = data[["Y", "X1", "X2", "X3", "f1", "f2"]].notna().all(axis=1)
     extra_na_index = data.index[complete][0]
     data.loc[extra_na_index, "X3"] = np.nan
 
-    fit = pf.feols(
+    fit = estimator(
         "Y ~ csw(X1, X2, X3) | f1 + f2",
         data=data,
         demeaner=pf.LsmrDemeaner(backend="within"),
@@ -287,15 +264,12 @@ def test_fixest_multi_shares_preconditioners_by_na_index():
     }
 
 
-def test_within_preconditioner_off_yields_no_cached_preconditioner():
+@pytest.mark.parametrize(("data_fn", "fit_fn"), _REUSE_ESTIMATORS)
+def test_within_preconditioner_off_yields_no_cached_preconditioner(data_fn, fit_fn):
     """``preconditioner='off'`` disables Schwarz, so ``fit.preconditioner`` is None."""
-    data = pf.get_data()
-    fit = pf.feols(
-        "Y ~ X1 | f1 + f2",
-        data=data,
-        demeaner=pf.LsmrDemeaner(backend="within", preconditioner="off"),
-    )
+    fit = fit_fn(data_fn(), pf.LsmrDemeaner(backend="within", preconditioner="off"))
     assert fit.preconditioner is None
+    assert not fit._demean_cache.lookup_preconditioner
 
 
 @pytest.mark.parametrize("backend", ["torch"])
@@ -330,7 +304,7 @@ def test_feiv_first_stage_reuses_within_preconditioner():
     # a fresh pyo3 wrapper around the same factorization (identity differs;
     # value semantics match upstream — compare structurally).
     assert isinstance(fit.first_stage.model.preconditioner, pf.Preconditioner)
-    assert fit.first_stage.model.preconditioner.variant == preconditioner.variant
+    assert fit.first_stage.model.preconditioner.config == preconditioner.config
     assert fit.first_stage.model.preconditioner.nrows == preconditioner.nrows
 
 
@@ -415,19 +389,31 @@ def spline_data():
 
 
 @pytest.mark.parametrize(
-    "method,family",
+    "method,family,fixed_effects,separation_check",
     [
-        ("feols", None),
-        ("feglm", "logit"),
-        ("feglm", "probit"),
-        ("feglm", "gaussian"),
+        *[
+            (method, family, fixed_effects, None)
+            for method, family in [
+                ("feols", None),
+                ("feglm", "logit"),
+                ("feglm", "probit"),
+                ("feglm", "gaussian"),
+                ("fepois", None),
+            ]
+            for fixed_effects in ["", " | f1 + f2"]
+        ],
+        # quantreg rejects fixed effects
+        ("quantreg", None, "", None),
+        pytest.param("fepois", None, " | f1 + f2", ["ir"], id="fepois-ir"),
+        pytest.param("feglm", "poisson", " | f1 + f2", ["ir"], id="feglm-poisson-ir"),
     ],
 )
-@pytest.mark.parametrize("fixed_effects", ["", " | f1 + f2"])
-def test_context_capture(spline_data, method, family, fixed_effects):
+def test_context_capture(spline_data, method, family, fixed_effects, separation_check):
     method_kwargs = {"data": spline_data}
     if family:
         method_kwargs["family"] = family
+    if separation_check is not None:
+        method_kwargs["separation_check"] = separation_check
 
     explicit_fit = getattr(pf, method)(
         f"Y ~ X2_0 + 0_X2_1 + 1_X2{fixed_effects}", **method_kwargs
@@ -444,6 +430,11 @@ def test_context_capture(spline_data, method, family, fixed_effects):
     for context_fit in [context_captured_fit, context_captured_fit_map]:
         np.testing.assert_allclose(context_fit.coef(), explicit_fit.coef(), rtol=1e-12)
         np.testing.assert_allclose(context_fit.se(), explicit_fit.se(), rtol=1e-12)
+        assert context_fit.sample_info.n_obs == explicit_fit.sample_info.n_obs
+        np.testing.assert_array_equal(
+            context_fit.sample_info.dropped_row_index,
+            explicit_fit.sample_info.dropped_row_index,
+        )
 
     # FactorEvaluationError for `feols` when context is not set
     if method == "feols":
@@ -451,6 +442,37 @@ def test_context_capture(spline_data, method, family, fixed_effects):
             FactorEvaluationError, match="Unable to evaluate factor `_lspline"
         ):
             pf.feols("Y ~ _lspline(X2,[0,1]) | f1 + f2", data=spline_data)
+
+
+def test_fepois_context_excludes_wrapper_scope(spline_data):
+    # `fepois` delegates to `feglm`; `context=0` must capture the caller's
+    # scope, not `fepois`'s own arguments.
+    with pytest.raises(FactorEvaluationError, match="name 'iwls_tol' is not defined"):
+        pf.fepois("Y ~ I(X1 * iwls_tol)", data=spline_data, context=0)
+
+
+def test_fepois_context_matches_feglm_poisson(spline_data):
+    # A transform local to the caller resolves through `fepois` as through
+    # `feglm(family="poisson")`, for `context=0` and for a positive offset.
+    def _local_double(x):
+        return 2 * x
+
+    def _fit_one_frame_down(estimator, **kwargs):
+        return estimator(
+            "Y ~ _local_double(X1) | f1", data=spline_data, context=1, **kwargs
+        )
+
+    reference = pf.feglm(
+        "Y ~ _local_double(X1) | f1", data=spline_data, family="poisson", context=0
+    )
+    fits = [
+        pf.fepois("Y ~ _local_double(X1) | f1", data=spline_data, context=0),
+        _fit_one_frame_down(pf.fepois),
+        _fit_one_frame_down(pf.feglm, family="poisson"),
+    ]
+    for fit in fits:
+        np.testing.assert_allclose(fit.coef(), reference.coef(), rtol=1e-12)
+        np.testing.assert_allclose(fit.se(), reference.se(), rtol=1e-12)
 
 
 @pytest.mark.parametrize("context", [0, {"_lspline": _lspline}])

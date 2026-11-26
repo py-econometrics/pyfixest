@@ -1,25 +1,29 @@
 from __future__ import annotations
 
-from collections.abc import Sequence
-from dataclasses import dataclass
+from collections.abc import Hashable, Sequence
+from dataclasses import dataclass, replace
 
 import numpy as np
 from numpy.typing import NDArray
+from within import Effect
 
-from pyfixest.core.demean import Preconditioner
-from pyfixest.demeaners import AnyDemeaner
+from pyfixest.core.demean import (
+    Preconditioner,
+    within_preconditioner_name,
+)
+from pyfixest.demeaners import AnyDemeaner, LsmrDemeaner, MapDemeaner
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class DemeanedData:
-    """Cache entry for named, demeaned columns.
+    """Cache entry for demeaned columns and their keys.
 
     Attributes
     ----------
     values : NDArray[np.float64]
-        Demeaned columns, shape ``(n_rows, len(columns))``.
-    columns : tuple[str, ...]
-        Column names, in the insertion order of the columns in ``values``.
+        Demeaned columns, shape ``(n_rows, len(column_keys))``.
+    column_keys : tuple[Hashable, ...]
+        Column keys, in the insertion order of the columns in ``values``.
 
     Notes
     -----
@@ -32,7 +36,7 @@ class DemeanedData:
     """
 
     values: NDArray[np.float64]
-    columns: tuple[str, ...]
+    column_keys: tuple[Hashable, ...]
 
 
 class DemeanCache:
@@ -40,15 +44,17 @@ class DemeanCache:
 
     `Compute once, never forget`:
 
-    - `lookup_demeaned_data`: already-demeaned named arrays from previous fits.
+    - `lookup_demeaned_data`: already-demeaned columns from previous fits.
     - `lookup_preconditioner`: the preconditioner from the first fit on a
        data set / na index combination.
 
     The index for both caches is the frozen set of `na_index` - as all fits
-    operate on the same fixed effects / data structure.
+    operate on the same fixed effects / data structure. One cache serves the
+    models of one estimation call that share a sample split and fixed effects,
+    and so the same observation weights; never share it across those blocks.
 
-    Model classes call :meth:`demean_array` (IWLS) or :meth:`demean_yx`
-    (OLS/IV).
+    OLS/IV models call :meth:`demean_yx`. GLMs call :meth:`demean_array` to
+    recompute each weighted projection while reusing the preconditioner.
     """
 
     def __init__(
@@ -66,49 +72,84 @@ class DemeanCache:
     def seed_preconditioner(
         self, na_index: frozenset[int], used_preconditioner: Preconditioner | None
     ) -> None:
-        """Store the first preconditioner observed for ``na_index``.
+        """Store the preconditioner to reuse for ``na_index``.
 
-        For IWLS (Poisson, GLM) the demeaner is called once per iteration
-        and returns a preconditioner each time; we keep the one from the
-        first call and ignore later ones.
+        The first preconditioner observed is kept, unless a later solve
+        escalates an adaptive preconditioner. Retain that additive Schwarz
+        replacement for subsequent IWLS iterations and sibling models.
         """
-        if (
-            used_preconditioner is not None
-            and na_index not in self.lookup_preconditioner
+        if used_preconditioner is None:
+            return
+        cached = self.lookup_preconditioner.get(na_index)
+        if cached is None or (
+            within_preconditioner_name(cached) == "adaptive"
+            and within_preconditioner_name(used_preconditioner) == "additive"
         ):
             self.lookup_preconditioner[na_index] = used_preconditioner
 
     def demean_array(
         self,
         x: np.ndarray,
-        flist: np.ndarray,
+        flist: np.ndarray | list[Effect],
         weights: np.ndarray | None,
         na_index: frozenset[int],
         demeaner: AnyDemeaner,
     ) -> np.ndarray:
-        """Demean `x`, reusing and seeding the cached preconditioner for `na_index`.
+        """Recompute a projection with current weights and a cached preconditioner.
 
-        Raises `ValueError` if the demeaning algorithm does not converge.
+        Unlike :meth:`demean_yx`, this does not cache demeaned columns. Within
+        a cache block, keep using the first handle or its additive replacement
+        after adaptive escalation, including for an explicitly supplied handle.
         """
-        result, _ = self._run_or_raise(x, flist, weights, na_index, demeaner)
+        cached = self.lookup_preconditioner.get(na_index)
+        if (
+            cached is not None
+            and isinstance(demeaner, LsmrDemeaner)
+            and isinstance(demeaner.preconditioner, Preconditioner)
+        ):
+            # An explicit adaptive handle must not restart the ladder after
+            # an earlier solve has already built the additive preconditioner.
+            demeaner = replace(demeaner, preconditioner=cached)
+        result, _ = self._run_or_raise(
+            x=x,
+            flist=flist,
+            weights=weights,
+            na_index=na_index,
+            demeaner=demeaner,
+        )
         return result
 
     def _run_or_raise(
         self,
         x: np.ndarray,
-        flist: np.ndarray,
+        flist: np.ndarray | list[Effect],
         weights: np.ndarray | None,
         na_index: frozenset[int],
         demeaner: AnyDemeaner,
     ) -> tuple[np.ndarray, Preconditioner | None]:
         cached_preconditioner = self.lookup_preconditioner.get(na_index)
         result, success, used_preconditioner = demeaner.demean(
-            x, flist, weights, cached_preconditioner=cached_preconditioner
+            x=x,
+            flist=flist,
+            weights=weights,
+            cached_preconditioner=cached_preconditioner,
         )
         self.seed_preconditioner(na_index, used_preconditioner)
         if not success:
+            if isinstance(demeaner, MapDemeaner):
+                tolerances = f"fixef_tol={demeaner.fixef_tol:g}"
+            else:
+                tolerances = f"fixef_atol={demeaner.fixef_atol:g}, fixef_btol={demeaner.fixef_btol:g}"
             raise ValueError(
-                f"Demeaning failed after {demeaner.fixef_maxiter} iterations."
+                f"Demeaning with {type(demeaner).__name__}(backend={demeaner.backend!r}) "
+                f"failed to converge with {tolerances} and "
+                f"fixef_maxiter={demeaner.fixef_maxiter}. Check regressor scales and "
+                "fixed-effect structure, raise fixef_maxiter if the solver needs "
+                "more iterations, or select a different demeaner backend, for "
+                'example demeaner=LsmrDemeaner(backend="within") or '
+                'demeaner=MapDemeaner(backend="rust"). See '
+                "https://pyfixest.org/how-to/demeaner-backends.html for the "
+                "available backends."
             )
         return result, used_preconditioner
 
@@ -117,9 +158,9 @@ class DemeanCache:
         Y: NDArray[np.float64],
         X: NDArray[np.float64],
         *,
-        y_names: Sequence[str],
-        x_names: Sequence[str],
-        fe: np.ndarray | None,
+        y_keys: Sequence[Hashable],
+        x_keys: Sequence[Hashable],
+        fe: np.ndarray | list[Effect] | None,
         weights: NDArray[np.float64] | None,
         na_index: frozenset[int],
         demeaner: AnyDemeaner,
@@ -128,10 +169,10 @@ class DemeanCache:
         NDArray[np.float64],
         Preconditioner | None,
     ]:
-        """Demean response and design arrays and cache missing named columns.
+        """Demean response and design arrays and cache missing columns.
 
         New columns are appended to the cache in their requested order. Returned
-        arrays always follow ``y_names`` and ``x_names``, independently of the
+        arrays always follow ``y_keys`` and ``x_keys``, independently of the
         cache's insertion order.
 
         Parameters
@@ -140,14 +181,15 @@ class DemeanCache:
             Response array, shape ``(n_rows, n_responses)``.
         X : NDArray[np.float64]
             Design array, shape ``(n_rows, n_regressors)``.
-        y_names : Sequence[str]
-            Ordered response names corresponding to the columns of ``Y``.
-        x_names : Sequence[str]
-            Ordered regressor names corresponding to the columns of ``X``.
-        fe : np.ndarray or None
-            Encoded fixed-effect identifiers, or ``None`` for no fixed effects.
+        y_keys : Sequence[Hashable]
+            Ordered response keys corresponding to the columns of ``Y``.
+        x_keys : Sequence[Hashable]
+            Ordered regressor keys corresponding to the columns of ``X``.
+        fe : np.ndarray, list[within.Effect], or None
+            Encoded fixed-effect identifiers, complete effects, or ``None`` for
+            no fixed effects. A cache block shares the same effect design.
         weights : NDArray[np.float64] or None
-            Observation weights passed to the within transformation.
+            Observation weights passed to the demeaning.
         na_index : frozenset[int]
             Row-removal identity used to share cached data between model fits.
         demeaner : AnyDemeaner
@@ -166,52 +208,50 @@ class DemeanCache:
         if fe is None:
             return Y_array, X_array, None
 
-        y_names_tuple = tuple(y_names)
-        x_names_tuple = tuple(x_names)
-        yx_names = y_names_tuple + x_names_tuple
+        y_keys_tuple = tuple(y_keys)
+        x_keys_tuple = tuple(x_keys)
+        yx_keys = y_keys_tuple + x_keys_tuple
 
         cached = self.lookup_demeaned_data.get(na_index)
         used_preconditioner: Preconditioner | None = None
         if cached is None:
             YX = np.concatenate((Y_array, X_array), axis=1)
             YX_demeaned, used_preconditioner = self._run_or_raise(
-                YX, fe, weights, na_index, demeaner
+                x=YX, flist=fe, weights=weights, na_index=na_index, demeaner=demeaner
             )
             # Callers get slices of this array; see DemeanedData.
             YX_demeaned.setflags(write=False)
-            cached = DemeanedData(
-                values=YX_demeaned,
-                columns=yx_names,
-            )
+            cached = DemeanedData(values=YX_demeaned, column_keys=yx_keys)
             self.lookup_demeaned_data[na_index] = cached
         else:
-            cached_names = cached.columns
-            cached_name_set = frozenset(cached_names)
+            cached_keys = cached.column_keys
+            cached_key_set = frozenset(cached_keys)
             uncached_positions = tuple(
-                index
-                for index, name in enumerate(yx_names)
-                if name not in cached_name_set
+                index for index, key in enumerate(yx_keys) if key not in cached_key_set
             )
             if uncached_positions:
                 YX = np.concatenate((Y_array, X_array), axis=1)
                 uncached_demeaned, used_preconditioner = self._run_or_raise(
-                    YX[:, uncached_positions], fe, weights, na_index, demeaner
+                    x=YX[:, uncached_positions],
+                    flist=fe,
+                    weights=weights,
+                    na_index=na_index,
+                    demeaner=demeaner,
                 )
-                uncached_names = tuple(yx_names[index] for index in uncached_positions)
+                uncached_keys = tuple(yx_keys[index] for index in uncached_positions)
                 cached_demeaned = np.concatenate(
                     (cached.values, uncached_demeaned), axis=1
                 )
                 cached_demeaned.setflags(write=False)
                 cached = DemeanedData(
                     values=cached_demeaned,
-                    columns=cached_names + uncached_names,
+                    column_keys=cached_keys + uncached_keys,
                 )
                 self.lookup_demeaned_data[na_index] = cached
-            # Every requested column is demeaned and cached at this point.
-            YX_demeaned = self._select_columns(cached, yx_names)
+            YX_demeaned = self._select_columns(cached, yx_keys)
 
-        # ``yx_names`` lists the responses first, so they lead the columns.
-        n_response_columns = len(y_names_tuple)
+        # ``yx_keys`` lists the responses first, so they lead the columns.
+        n_response_columns = len(y_keys_tuple)
         response_demeaned = YX_demeaned[:, :n_response_columns]
         design_demeaned = YX_demeaned[:, n_response_columns:]
         return response_demeaned, design_demeaned, used_preconditioner
@@ -219,12 +259,12 @@ class DemeanCache:
     @staticmethod
     def _select_columns(
         cached: DemeanedData,
-        yx_names: tuple[str, ...],
+        yx_keys: tuple[Hashable, ...],
     ) -> NDArray[np.float64]:
-        cached_position_by_name = {
-            name: position for position, name in enumerate(cached.columns)
+        cached_position_by_key = {
+            key: position for position, key in enumerate(cached.column_keys)
         }
-        positions = tuple(cached_position_by_name[name] for name in yx_names)
+        positions = tuple(cached_position_by_key[key] for key in yx_keys)
         selects_cached_prefix = positions == tuple(range(len(positions)))
         if selects_cached_prefix:
             # Basic slicing gives a view, which inherits the read-only flag.

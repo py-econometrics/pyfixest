@@ -1,3 +1,12 @@
+"""Typed state of a fitted model; see ADR 0001.
+
+Frozen dataclasses prevent field rebinding, not mutation of contained NumPy
+arrays. Mark shared arrays read-only where ownership requires it, and copy only
+at ownership boundaries. A published field keeps its type and domain for the
+fit's lifetime: solver scratch never replaces demeaned data, and observation
+weights stay unchanged after preparation, with working weights held separately.
+"""
+
 from __future__ import annotations
 
 from collections.abc import Mapping
@@ -20,7 +29,6 @@ from pyfixest.estimation.internals.retention import RetentionPolicy
 from pyfixest.utils.utils import Ssc
 
 if TYPE_CHECKING:
-    from pyfixest.estimation.api.utils import _AllSampleSentinel
     from pyfixest.estimation.formula.model_matrix import _ModelSpecMapping
     from pyfixest.estimation.formula.parse import Formula
     from pyfixest.estimation.internals.families import InferenceDist
@@ -28,6 +36,13 @@ if TYPE_CHECKING:
 _VCOV_STRINGS: tuple[str, ...] = get_args(VcovTypeOptions)
 _VCOV_CLUSTER_KEYS = ("CRV1", "CRV3")
 _VCOV_KWARGS_KEYS = ("lag", "time_id", "panel_id")
+_HAC_KWARGS_HINT = {
+    "NW": (
+        "Pass it as vcov_kwargs={'time_id': 'year', 'lag': 2}, adding "
+        "'panel_id' for panel data; 'lag' is required without 'panel_id'."
+    ),
+    "DK": "Pass vcov_kwargs={'time_id': 'year', 'panel_id': 'unit'}, optionally with 'lag'.",
+}
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -106,7 +121,7 @@ class EstimationOptions:
 
     @property
     def fixef_tol(self) -> float:
-        """Stopping tolerance of the demeaning algorithm.
+        """Stopping tolerance of the demeaner.
 
         LSMR takes two tolerances; the backends that expose only one collapse
         them to their maximum, as `LsmrDemeaner` documents.
@@ -124,7 +139,7 @@ class EstimationOptions:
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class GlmEstimationOptions(EstimationOptions):
-    """Estimation options of a GLM fit, including the IRLS options.
+    """Estimation options of a GLM fit, including the IWLS options.
 
     Published as ``fit.options`` by `feglm()` and `fepois()` fits. The family
     itself is not an option and is not carried here.
@@ -132,9 +147,9 @@ class GlmEstimationOptions(EstimationOptions):
     Parameters
     ----------
     maxiter : int
-        Maximum number of IRLS iterations.
+        Maximum number of IWLS iterations.
     tol : float
-        Convergence tolerance of the IRLS iteration.
+        Convergence tolerance of the IWLS iteration.
     separation_check : list[str] or None
         Separation-detection methods run before estimation, or ``None`` when
         the check was skipped.
@@ -194,12 +209,31 @@ class QuantregEstimationOptions(EstimationOptions):
     seed: int | None
 
 
+@dataclass(frozen=True)
+class SampleSplit:
+    """The sample one model of a `split` or `fsplit` estimation is fitted on.
+
+    Parameters
+    ----------
+    var : str
+        Name of the `split` or `fsplit` variable by which the estimation
+        sample was split.
+    value : str, int, float, or None
+        Value of `var` the model was fit on. ``None`` for the full-sample
+        fit of an `fsplit` estimation, which keeps every row where `var`
+        is not missing.
+    """
+
+    var: str
+    value: str | int | float | None
+
+
 @dataclass(frozen=True, slots=True, kw_only=True)
 class ModelDescription:
     """What a fitted model estimates: its formula, estimator, and design names.
 
     Every fitted model publishes one value as ``fit.model``. The formula-time
-    fields are known when the model object is built. The matrix-time fields
+    fields are known when estimation starts. The matrix-time fields
     (`depvar`, `fixed_effects`, `interacted_covariates`, and `model_spec`) are
     only known once the model matrix exists, and are empty (``""``, ``()``,
     and ``None``) until the description is republished with them. The value
@@ -207,9 +241,7 @@ class ModelDescription:
 
     Parameters
     ----------
-    formula : str
-        The formula the model was fitted from.
-    fixest_formula : Formula
+    parsed_formula : Formula
         The parsed formula, with its stages, fixed effects, and instruments.
     method : str
         Name of the estimator: the estimation function that fitted the model
@@ -223,12 +255,9 @@ class ModelDescription:
         Whether a model with instrumental variables was fitted.
     model_name : str
         Key the model is stored under in a multiple-estimation result.
-    sample_split_var : str or None
-        Name of the `split` or `fsplit` variable, ``None`` for an unsplit fit.
-    sample_split_value : str, int, float, the full-sample marker, or None
-        Value of `sample_split_var` this model was fitted on; ``None`` for an
-        unsplit fit. The full-sample fit of an `fsplit` estimation carries a
-        marker that prints as ``all``.
+    sample_split : SampleSplit or None
+        The variable and value by which the estimation sample was split.
+        ``None`` for an unsplit fit.
     inference_dist : InferenceDist
         Reference distribution of the coefficient p-values and confidence
         bounds: Student's t for OLS, IV, quantile, and Gaussian GLM fits, the
@@ -256,18 +285,21 @@ class ModelDescription:
     ```
     """
 
-    formula: str
-    fixest_formula: Formula
+    parsed_formula: Formula
     method: str
     is_iv: bool
     model_name: str
-    sample_split_var: str | None
-    sample_split_value: str | int | float | _AllSampleSentinel | None
+    sample_split: SampleSplit | None
     inference_dist: InferenceDist
     depvar: str = ""
     fixed_effects: tuple[str, ...] = ()
     interacted_covariates: tuple[str, ...] = ()
     model_spec: _ModelSpecMapping | None = field(default=None, repr=False)
+
+    @property
+    def formula(self) -> str:
+        """The expanded formula, preserving quoting, expressions, and intercepts."""
+        return self.parsed_formula.render()
 
     @property
     def has_fixef(self) -> bool:
@@ -352,6 +384,8 @@ class DroppedRowCounts:
         Rows with a missing value in any formula variable.
     infinite : int
         Rows with an infinite value in a materialized column.
+    zero_weight : int
+        Rows with an observation weight of zero.
     singleton : int
         Rows removed as singleton fixed-effect levels (``fixef_rm="singleton"``).
     separation : int
@@ -369,13 +403,20 @@ class DroppedRowCounts:
 
     missing: int = 0
     infinite: int = 0
+    zero_weight: int = 0
     singleton: int = 0
     separation: int = 0
 
     @property
     def total(self) -> int:
         """Number of dropped rows over all stages."""
-        return self.missing + self.infinite + self.singleton + self.separation
+        return (
+            self.missing
+            + self.infinite
+            + self.zero_weight
+            + self.singleton
+            + self.separation
+        )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -420,8 +461,85 @@ class EstimationSample:
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
+class FixedEffectCounts:
+    """Level counts of the absorbed fixed effects in the estimation sample.
+
+    Parameters
+    ----------
+    n_levels_by_fe : tuple[int, ...]
+        Number of levels of each fixed effect after sample filtering, in the
+        order of `ModelDescription.fixed_effects`. A fixed effect left with a
+        single level, e.g. by the GLM separation check, still counts.
+    has_intercept_by_fe : tuple[bool, ...]
+        Whether each fixed effect has level-specific intercepts. Slope-only
+        effects such as `f1[[z]]` have none.
+    n_slopes_by_fe : tuple[int, ...]
+        Number of varying-slope variables of each fixed effect; `f1[z1, z2]`
+        has two.
+
+    Examples
+    --------
+    ```{python}
+    import pyfixest as pf
+
+    fit = pf.feols("Y ~ X1 | f1 + f2", pf.get_data())
+    counts = fit.fixef_counts
+    counts.n_levels_by_fe, counts.n_fixef, counts.n_levels, counts.fixef_dof
+    ```
+    """
+
+    n_levels_by_fe: tuple[int, ...] = ()
+    has_intercept_by_fe: tuple[bool, ...] = ()
+    n_slopes_by_fe: tuple[int, ...] = ()
+
+    def __post_init__(self) -> None:
+        if not (
+            len(self.n_levels_by_fe)
+            == len(self.has_intercept_by_fe)
+            == len(self.n_slopes_by_fe)
+        ):
+            raise ValueError("Fixed-effect counts must describe every fixed effect.")
+
+    @property
+    def n_fixef(self) -> int:
+        """Number of fixed effects with intercepts; ``Y ~ X | f1 + f2[[z]]`` has one."""
+        return sum(self.has_intercept_by_fe)
+
+    @property
+    def n_levels(self) -> int:
+        """Levels summed over the fixed effects with intercepts."""
+        return sum(
+            n_levels
+            for n_levels, has_intercept in zip(
+                self.n_levels_by_fe, self.has_intercept_by_fe, strict=True
+            )
+            if has_intercept
+        )
+
+    @property
+    def n_slope_coefficients(self) -> int:
+        """Number of varying-slope coefficients, one per level and slope."""
+        return sum(
+            n_levels * n_slopes
+            for n_levels, n_slopes in zip(
+                self.n_levels_by_fe, self.n_slopes_by_fe, strict=True
+            )
+        )
+
+    @property
+    def fixef_dof(self) -> int:
+        """Degrees of freedom consumed by the fixed effects.
+
+        Intercepts consume ``sum(n_levels - 1) + 1`` over the effects with
+        intercepts; every varying-slope coefficient consumes one more.
+        """
+        intercept_dof = self.n_levels - self.n_fixef + 1 if self.n_fixef else 0
+        return intercept_dof + self.n_slope_coefficients
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
 class CollinearityCheck:
-    """Outcome of one rank check that removes collinear design columns.
+    """Result of one rank check that removes collinear design columns.
 
     Parameters
     ----------
@@ -499,9 +617,9 @@ class WithinLinearData:
 class WithinIvData(WithinLinearData):
     """Response, regressors, and instruments after demeaning by the fixed effects.
 
-    ``design`` is the full structural regressor matrix, including the
-    endogenous regressors. ``instruments`` is the full instrument matrix,
-    including exogenous regressors that instrument themselves.
+    ``design`` is the design matrix, including the endogenous regressors.
+    ``instruments`` is the instrument matrix, which includes the exogenous
+    regressors.
     Every array is demeaned using the observation weights when supplied, but
     is not multiplied by their square roots. Without fixed effects, the
     arrays retain their original values.
@@ -535,9 +653,9 @@ class WithinIvData(WithinLinearData):
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class GlmWorkingState:
-    """Final GLM IRLS state in within scale.
+    """Final GLM IWLS state in within scale.
 
-    ``working_weights`` are the IRLS weights of the last iteration,
+    ``working_weights`` are the IWLS weights of the last iteration,
     ``W_i = w_i / (g'(mu_i)^2 V(mu_i))``, where ``w_i`` is the user-supplied
     observation weight (one when unweighted). They therefore already contain
     the observation weights, which live separately and unchanged in
@@ -553,7 +671,7 @@ class GlmWorkingState:
         Demeaned working regressors after removing collinear columns,
         shape (n_rows, n_coefficients).
     working_weights : NDArray[np.float64]
-        Final IRLS weights including observation weights, shape (n_rows,).
+        Final IWLS weights including observation weights, shape (n_rows,).
     eta : NDArray[np.float64]
         Linear predictor including any offset, shape (n_rows,).
     mu : NDArray[np.float64]
@@ -611,7 +729,7 @@ class FittedValues:
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class SandwichComponents:
-    """Scores, Hessian, and bread of a fitted model's sandwich covariance.
+    """Components used to compute a sandwich variance-covariance matrix.
 
 
     Parameters
@@ -641,7 +759,7 @@ class SandwichComponents:
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class VcovSpec:
-    """The requested covariance estimator, parsed from the ``vcov`` argument.
+    """The requested variance estimator, parsed from the ``vcov`` argument.
 
     Parameters
     ----------
@@ -694,10 +812,17 @@ class VcovSpec:
         supports the parsed estimator is checked by the model.
 
         Raises ``TypeError`` for input of the wrong type and ``ValueError`` for
-        unknown or incomplete values. ``vcov_kwargs`` is validated whenever it
-        is given but only read by ``"NW"`` and ``"DK"``.
+        unknown or incomplete values. ``vcov_kwargs`` is only accepted with
+        ``vcov="NW"`` or ``vcov="DK"``; other estimators reject it.
         """
         lag, time_id, panel_id = _parse_vcov_kwargs(vcov_kwargs)
+
+        is_hac = isinstance(vcov, str) and vcov in ("NW", "DK")
+        if vcov_kwargs is not None and not is_hac:
+            raise ValueError(
+                "vcov_kwargs is only supported with vcov='NW' or vcov='DK'; "
+                f"got vcov={vcov!r}."
+            )
 
         if isinstance(vcov, dict):
             if len(vcov) != 1 or next(iter(vcov)) not in _VCOV_CLUSTER_KEYS:
@@ -710,9 +835,17 @@ class VcovSpec:
                     f"The cluster variable in a vcov dict must be a string such as 'f1' or 'f1+f2'; got {cluster_input!r}."
                 )
             clustervar = tuple(x.replace(" ", "") for x in cluster_input.split("+"))
-            if len(clustervar) > 2:
+            if "" in clustervar:
                 raise ValueError(
-                    f"At most two-way clustering is supported; got {len(clustervar)} cluster variables in {cluster_input!r}."
+                    f"vcov={vcov!r} contains an empty clustering term. "
+                    "Pass a column name, such as vcov={'CRV1': 'cluster'}, "
+                    "or join column names with '+'."
+                )
+            repeated = sorted({x for x in clustervar if clustervar.count(x) > 1})
+            if repeated:
+                raise ValueError(
+                    f"vcov={vcov!r} repeats the clustering columns {repeated!r}. "
+                    "Name each clustering column once, as in vcov={'CRV1': 'f1+f2'}."
                 )
             if any("^" in x for x in clustervar):
                 raise ValueError(
@@ -726,13 +859,23 @@ class VcovSpec:
                 f"vcov must be a string or a dict such as {{'CRV1': 'f1'}}; got {type(vcov).__name__}."
             )
         if vcov not in _VCOV_STRINGS:
-            raise ValueError(f"vcov must be one of {_VCOV_STRINGS}; got {vcov!r}.")
+            raise ValueError(
+                f"vcov must be one of {_VCOV_STRINGS}; got {vcov!r}. "
+                "Cluster-robust inference is requested with a dict such as "
+                "vcov={'CRV1': 'cluster_var'}, or {'CRV1': 'a + b'} for multiway clustering."
+            )
 
         if vcov in ("NW", "DK"):
             if time_id is None:
-                raise ValueError("Missing required 'time_id' for NW/DK vcov")
+                raise ValueError(
+                    f"Missing required 'time_id' for vcov={vcov!r}. "
+                    + _HAC_KWARGS_HINT[vcov]
+                )
             if vcov == "DK" and panel_id is None:
-                raise ValueError("Missing required 'panel_id' for DK vcov")
+                raise ValueError(
+                    "Missing required 'panel_id' for vcov='DK'. "
+                    + _HAC_KWARGS_HINT[vcov]
+                )
             return cls(
                 vcov_type="HAC",
                 vcov_type_detail=vcov,
@@ -787,7 +930,7 @@ class VarianceCovariance:
     Parameters
     ----------
     vcov : NDArray[np.float64]
-        Small-sample-adjusted covariance matrix, shape (n_coefficients,
+        Small-sample-adjusted variance-covariance matrix, shape (n_coefficients,
         n_coefficients).
     meat : NDArray[np.float64] or None
         Adjusted meat of the sandwich, shape (n_coefficients,
@@ -796,8 +939,8 @@ class VarianceCovariance:
         meats enter with their signs and adjustment factors. ``None`` where
         no sandwich exists: ``"iid"``, ``"CRV3"``, and quantile regression.
     ssc : NDArray[np.float64]
-        Small-sample adjustment factors. Length one, or one entry per cluster
-        dimension for CRV inference: three for two-way clustering.
+        Adjustment factors. Length one, or one entry per cluster
+        combination for CRV inference: ``2**n_clusters - 1`` entries.
     df_k : int
         Number of parameters counted by the ``k_adj`` adjustment.
     df_t : int or float
@@ -842,9 +985,9 @@ class FirstStageDiagnostics:
     Parameters
     ----------
     f_stat : float
-        Wald F statistic of the joint null that every excluded instrument has
+        Wald F statistic of the joint null that every instrument has
         a zero first-stage coefficient. It inherits the first stage's
-        covariance estimator, so it is heteroskedasticity- or cluster-robust
+        variance estimator, so it is heteroskedasticity- or cluster-robust
         whenever the second stage is.
     p_value : float
         P-value of `f_stat`.
@@ -874,8 +1017,8 @@ class FirstStage:
     """First-stage regression retained by a fitted 2SLS model.
 
     The first stage regresses the endogenous regressor on the exogenous
-    regressors and the excluded instruments, on the second stage's retained
-    rows and with its fixed effects, weights, covariance estimator, and
+    regressors and the instruments, on the second stage's retained
+    rows and with its fixed effects, weights, variance estimator, and
     small-sample correction.
 
     Parameters
@@ -890,7 +1033,7 @@ class FirstStage:
         The fitted first-stage model. It follows the second stage's
         `store_data` and `lean` policy, so it drops the same state.
     instruments : tuple[str, ...]
-        Names of the excluded instruments, in first-stage design order.
+        Names of the instruments, in first-stage design order.
     diagnostics : FirstStageDiagnostics
         Instrument-strength statistics of that first stage.
 
@@ -922,7 +1065,7 @@ class WaldTest:
 
     Mirrors the return value of R `fixest`'s `wald()`: `stat` is the statistic
     of the reference distribution actually used, `df1` and `df2` are its
-    degrees of freedom, and `vcov_type` names the covariance estimator the
+    degrees of freedom, and `vcov_type` names the variance estimator the
     quadratic form was built with.
 
     Parameters
@@ -943,7 +1086,7 @@ class WaldTest:
         every coefficient is zero; any other restriction falls back to
         ``"chi2"``.
     vcov_type : str
-        Covariance estimator the test was computed with, as
+        Variance estimator the test was computed with, as
         `VarianceCovariance.vcov_type_detail`.
     wald_statistic : float
         Wald quadratic form W = (R @ beta - q)' (R V R')^-1 (R @ beta - q).
@@ -983,12 +1126,15 @@ class WaldTest:
 class Capabilities:
     """Inference and post-estimation features a fitted model supports.
 
-    Each model class publishes one value in its constructor, so a method can
-    reject an unsupported estimator before it reads any estimation state
-    rather than reinterpreting another estimator's arrays.
+    Each model class declares one value, so a method can reject an
+    unsupported estimator before it reads any estimation state rather than
+    reinterpreting another estimator's arrays.
 
     Parameters
     ----------
+    covariance_update : bool
+        Whether post-estimation ``vcov()`` updates are available. ``did2s()``
+        fits require refitting with the desired cluster variable instead.
     crv3_inference : bool
         Whether ``vcov()`` accepts ``"CRV3"``. The jackknife refits the model
         on leave-one-cluster-out samples, so it is restricted to estimators
@@ -1007,6 +1153,10 @@ class Capabilities:
     prediction : bool
         Whether ``predict()`` is available. IV and ``did2s()`` fits do not
         support it.
+    prediction_inference : bool
+        Whether ``predict(se_fit=True)`` and ``predict(interval="prediction")``
+        are available. Only OLS fits support them, additionally requiring no
+        weights or fixed effects.
     fixed_effect_recovery : bool
         Whether the model class can recover fixed-effect estimates through
         ``fixef()``. IV, ``quantreg()``, and ``did2s()`` fits do not support
@@ -1024,6 +1174,13 @@ class Capabilities:
         Whether ``bootstrap_bayesian()`` and ``bootstrap_pairs()`` can reweight
         the fit. ``quantreg()``, ``did2s()``, and ``event_study()`` fits do not
         support them.
+    anytime_valid_inference : bool
+        Whether ``evalue()``, ``pvalue_savi()``, and
+        ``confint(inference_type="savi")``, safe anytime-valid inference, are
+        available. Only ``feols()`` fits without instruments support it;
+        ``did2s()`` and ``event_study()`` fits do not. SAVI additionally
+        requires unweighted estimation, a model without fixed effects, and an
+        iid or heteroskedasticity-robust variance estimator.
 
     Examples
     --------
@@ -1038,6 +1195,7 @@ class Capabilities:
     ```
     """
 
+    covariance_update: bool
     crv3_inference: bool
     hac_inference: bool
     multiway_clustering: bool
@@ -1045,10 +1203,12 @@ class Capabilities:
     cluster_causal_variance: bool
     decomposition: bool
     prediction: bool
+    prediction_inference: bool
     fixed_effect_recovery: bool
     randomization_inference: bool
     sherman_morrison_update: bool
     weighting_bootstrap: bool
+    anytime_valid_inference: bool
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -1098,7 +1258,7 @@ class CoefficientTable:
     estimate : NDArray[np.float64]
         Coefficient estimates, shape (n_coefficients,).
     se : NDArray[np.float64]
-        Standard errors, the square root of the covariance diagonal.
+        Square roots of the diagonal entries in the variance-covariance matrix.
     tstat : NDArray[np.float64]
         ``estimate / se``.
     pvalue : NDArray[np.float64]

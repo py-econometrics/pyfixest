@@ -86,7 +86,7 @@ def iplot(
     Parameters
     ----------
     models : Feols, Fepois, Feiv, FixestMulti, or list
-        A fitted model object, or a list of Feols, Fepois, and Feiv models.
+        A fitted model, or a list of Feols, Fepois, and Feiv models.
     figsize : tuple or None, optional
         The size of the figure. If None, the default size is used.
     alpha : float
@@ -186,7 +186,8 @@ def iplot(
     )
     if joint not in [False, None] and len(models) > 1:
         raise ValueError(
-            "The 'joint' parameter is only available for a single model, i.e. objects of type FixestMulti are not supported."
+            "The 'joint' parameter is only available for a single model. "
+            "Pass one fitted model for simultaneous intervals or set joint=False."
         )
 
     df_all: list[pd.DataFrame] = []
@@ -204,8 +205,9 @@ def iplot(
     for x, fxst in enumerate(list(models)):
         if not fxst.model.interacted_covariates:
             raise ValueError(
-                f"The {x} th estimated model did not have ivars / 'i()' model syntax."
-                "In consequence, the '.iplot()' method is not supported."
+                f"Model {x + 1} cannot be plotted with `iplot` because it does not "
+                f"use the `i` syntax: {fxst.model.formula!r}. Use coefplot() for ordinary "
+                "regressors. See https://pyfixest.org/tutorials/formula-syntax.html"
             )
         all_icovars += fxst.model.interacted_covariates
 
@@ -214,7 +216,6 @@ def iplot(
         )
         df_all.append(df_model)
 
-    # drop duplicates
     all_icovars = list(set(all_icovars))
 
     df = pd.concat(df_all, axis=0)
@@ -226,7 +227,6 @@ def iplot(
     # keep only coefficients interacted via the i() syntax
     df = df[df["Coefficient"].isin(all_icovars)].reset_index()
 
-    # check that labels match the coef names
     if labels is not None:
         _check_label_keys_in_covars(
             label_keys=list(labels.keys()),
@@ -274,7 +274,7 @@ def coefplot(
     Parameters
     ----------
     models : Feols, Fepois, Feiv, FixestMulti, or list
-        A fitted model object, or a list of Feols, Fepois, and Feiv models.
+        A fitted model, or a list of Feols, Fepois, and Feiv models.
     figsize : tuple or None, optional
         The size of the figure. If None, the default size is used.
     alpha : float
@@ -365,7 +365,8 @@ def coefplot(
     )
     if joint not in [False, None] and len(models) > 1:
         raise ValueError(
-            "The 'joint' parameter is only available for a single model, i.e. objects of type FixestMulti are not supported."
+            "The 'joint' parameter is only available for a single model. "
+            "Pass one fitted model for simultaneous intervals or set joint=False."
         )
 
     if keep is None:
@@ -391,7 +392,6 @@ def coefplot(
         idxs = df.index
     df = df.loc[idxs, :].reset_index()
 
-    # check that labels match the coef names
     if labels is not None:
         _check_label_keys_in_covars(
             label_keys=list(labels.keys()),
@@ -426,7 +426,7 @@ def qplot(
     Parameters
     ----------
     models : Feols, Fepois, Feiv, FixestMulti, or list
-        A fitted model object, or a list of Feols, Fepois, and Feiv models.
+        A fitted model, or a list of Feols, Fepois, and Feiv models.
     figsize : tuple or None, optional
         The size of the figure. If None, the default size is (10, 6).
     rename_models : dict, optional
@@ -472,7 +472,8 @@ def qplot(
     for model in models:
         if not isinstance(model, Quantreg):
             raise TypeError(
-                "The 'qplot' function is only supported for objects of type Quantreg."
+                f"qplot() needs quantreg() fits; got {type(model).__name__}. "
+                "Fit the desired quantiles with quantreg()."
             )
 
         df = model.tidy()
@@ -481,7 +482,7 @@ def qplot(
 
         df_all = pd.concat([df_all, df], axis=0)
 
-    df_all.reset_index(inplace=True)
+    df_all = df_all.reset_index()
 
     return _qplot(
         data=df_all,
@@ -575,8 +576,7 @@ def _coefplot_lets_plot(
 
     LetsPlot.setup_html()
 
-    df.reset_index(inplace=True)
-    df.rename(columns={"fml": "Model"}, inplace=True)
+    df = df.reset_index().rename(columns={"fml": "Model"})
     ub, lb = 1 - alpha / 2, alpha / 2
 
     labels_dict = {} if labels is None else labels
@@ -698,14 +698,12 @@ def _coefplot_matplotlib(
     else:
         f = cast(plt.Figure, ax.get_figure())
 
-    # Check if we have multiple models
     models = df["fml"].unique()
     is_multi_model = len(models) > 1
 
     colors = plt.get_cmap("jet")(np.linspace(0, 1, len(models)))
     color_dict = dict(zip(models, colors, strict=False))
 
-    # Calculate the positions for dodging
     unique_coefficients = df["Coefficient"].unique()
     if is_multi_model:
         coef_positions = {coef: i for i, coef in enumerate(unique_coefficients)}
@@ -736,7 +734,6 @@ def _coefplot_matplotlib(
             ax.errorbar(
                 y=group["Estimate"],
                 x=x_pos,
-                # yerr=group["Std. Error"] * critval,
                 yerr=err,
                 fmt="o",
                 capsize=5,
@@ -811,7 +808,7 @@ def _qplot(
     k = len(coeffs)
 
     if nrow is not None:
-        assert nrow is not None  # for mypy, do people really do this?
+        assert nrow is not None
         rows, cols = nrow, math.ceil(k / nrow)
     else:
         assert ncol is not None
@@ -855,7 +852,7 @@ def _get_model_df(
     rename_models: dict[str, str] | None = None,
 ) -> pd.DataFrame:
     """
-    Get a tidy model frame as input to the _coefplot function.
+    Prepare a coefficient table for `_coefplot`.
 
     Parameters
     ----------
@@ -876,12 +873,12 @@ def _get_model_df(
     Returns
     -------
     pd.DataFrame
-        A tidy model frame.
+        The coefficient table prepared for plotting.
     """
     if rename_models is None:
         rename_models = {}
 
-    df_model = fxst.tidy(alpha=alpha).reset_index()  # Coefficient -> simple column
+    df_model = fxst.tidy(alpha=alpha).reset_index()
 
     df_model["fml"] = fxst._model_name_plot
     df_model["fml"] = df_model["fml"].apply(lambda x: rename_models.get(x, x))
@@ -889,8 +886,7 @@ def _get_model_df(
     if joint in ["both", True]:
         lb, ub = f"{alpha / 2 * 100:.1f}%", f"{(1 - alpha / 2) * 100:.1f}%"
         df_joint = fxst.confint(inference_type="simult", alpha=alpha, seed=seed)
-        df_joint.reset_index(inplace=True)
-        df_joint = df_joint.rename(columns={"index": "Coefficient"})
+        df_joint = df_joint.reset_index().rename(columns={"index": "Coefficient"})
         df_joint_full = (
             df_model.copy()
             .drop([lb, ub], axis=1)

@@ -24,24 +24,22 @@ DemeanFn = Callable[
 
 @dataclass(frozen=True, slots=True)
 class GlmFit:
-    """Result of a GLM IRLS fit on prepared arrays.
+    """Result of a GLM IWLS fit on prepared arrays.
 
     Attributes
     ----------
     beta : np.ndarray
         Coefficient estimates, shape (k,).
     working_state : GlmWorkingState
-        Final within-scale IRLS inputs, weights, fitted values, and residuals.
+        Final within-scale IWLS inputs, weights, fitted values, and residuals.
         Square-root-weighted solver arrays are deliberately not retained.
     sandwich : SandwichComponents
-        IRLS scores W X * e, the Hessian X' W X, and its inverse, with W the
+        IWLS scores W X * e, the Hessian X' W X, and its inverse, with W the
         final working weights.
     X : np.ndarray
         The (un-demeaned) design matrix with collinear columns dropped, shape (N, k).
-    deviance : float
-        Final deviance.
     converged : bool
-        Whether the IRLS loop converged within ``maxiter`` iterations.
+        Whether the IWLS loop converged within ``maxiter`` iterations.
     n_iter : int
         Number of completed iterations.
     collinearity : CollinearityCheck
@@ -53,7 +51,6 @@ class GlmFit:
     working_state: GlmWorkingState
     sandwich: SandwichComponents
     X: np.ndarray
-    deviance: float
     converged: bool
     n_iter: int
     collinearity: CollinearityCheck
@@ -73,12 +70,11 @@ def _check_convergence(
     return rel_dev_change < tol
 
 
-def _raise_non_convergence(maxiter: int) -> None:
+def _raise_non_convergence(*, maxiter: int, tol: float) -> None:
     raise NonConvergenceError(
-        f"""
-        The IRLS algorithm did not converge with {maxiter}
-        iterations. Try to increase the maximum number of iterations.
-        """
+        f"The IWLS solver did not converge within iwls_maxiter={maxiter} before "
+        f"meeting iwls_tol={tol:g}. Check for separation or extreme regressor "
+        "scales and increase iwls_maxiter if more iterations are needed."
     )
 
 
@@ -93,6 +89,8 @@ def _step_halving(
     tol: float,
     weights: np.ndarray | None,
     step_halving_tol: float = 1e-12,
+    *,
+    iteration: int,
 ) -> tuple[np.ndarray, np.ndarray, float, bool]:
     if deviance_new < deviance:
         return eta_new, mu_new, deviance_new, False
@@ -110,7 +108,9 @@ def _step_halving(
         return eta_new, mu_new, deviance_new, False
 
     raise RuntimeError(
-        f"Step-halving failed. Deviance: {deviance_new:.6f} vs {deviance:.6f}"
+        f"Step-halving failed for IWLS at iteration {iteration}. The new deviance "
+        f"({deviance_new:.6g}) did not improve on {deviance:.6g}. "
+        "Check for separation, extreme regressor scales, or extreme weights."
     )
 
 
@@ -160,7 +160,7 @@ def fit_glm_irls(
         Additive offset on the link scale, shape (N,) or (N, 1). `None`
         (default) is equivalent to a zero offset.
     weights : np.ndarray, optional
-        User-supplied regression weights, shape (N,) or (N, 1). `None`
+        User-supplied observation weights, shape (N,) or (N, 1). `None`
         (default) is equivalent to unit weights.
     solver, maxiter, tol, fixef_tol : see Feglm docs.
     """
@@ -188,7 +188,6 @@ def fit_glm_irls(
     converged = False
     step_halved_prev = False
 
-    # Buffers populated each iteration; used after the loop.
     beta_final: np.ndarray
     z_tilde_final: np.ndarray
     X_tilde_final: np.ndarray
@@ -268,6 +267,7 @@ def fit_glm_irls(
                 deviance=deviance,
                 deviance_new=deviance_new,
                 tol=tol,
+                iteration=r + 1,
                 weights=weights,
             )
 
@@ -295,7 +295,7 @@ def fit_glm_irls(
                 is_gaussian=family.name == "gaussian",
             )
         if not converged:
-            _raise_non_convergence(maxiter)
+            _raise_non_convergence(maxiter=maxiter, tol=tol)
 
     working_residuals = (z_tilde_final - X_tilde_final @ beta_final).flatten()
     working_weights = working_weights_final.flatten()
@@ -320,7 +320,6 @@ def fit_glm_irls(
         working_state=working_state,
         sandwich=sandwich,
         X=X_eff,
-        deviance=deviance,
         converged=converged,
         n_iter=r,
         collinearity=collinearity,

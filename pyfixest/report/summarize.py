@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from numbers import Real
 from typing import TYPE_CHECKING
 
 import maketables
@@ -38,7 +39,10 @@ def _get_estimation_method_name(fxst: Feols) -> str:
         return f"quantreg: q = {fxst.options.quantile}"  # type: ignore
     if method in _METHOD_DISPLAY_NAMES:
         return _METHOD_DISPLAY_NAMES[method]
-    raise ValueError(f"Unknown estimation method: {method}")
+    raise ValueError(
+        f"summary() does not support {method!r} fits yet; please report this "
+        "pyfixest bug."
+    )
 
 
 def etable(
@@ -74,7 +78,7 @@ def etable(
     Parameters
     ----------
     models : Feols, Fepois, Feiv, FixestMulti, or list
-        A fitted model object, or a list of Feols, Fepois, and Feiv models.
+        A fitted model, or a list of Feols, Fepois, and Feiv models.
         The models to be summarized in the table.
     type : str, optional
         Type of output. Either "df" for pandas DataFrame, "md" for markdown,
@@ -211,51 +215,66 @@ def etable(
     if signif_code is None:
         signif_code = [0.001, 0.01, 0.05]
 
-    assert isinstance(signif_code, list) and len(signif_code) == 3, (
-        "signif_code must be a list of length 3"
-    )
-    if signif_code:
-        assert all([0 < i < 1 for i in signif_code]), (
-            "All values of signif_code must be between 0 and 1"
+    if not isinstance(signif_code, list):
+        raise TypeError(
+            f"signif_code must be a list of length 3; got {signif_code!r}. "
+            "For example, pass [0.001, 0.01, 0.05]."
         )
-    if signif_code:
-        assert signif_code[0] < signif_code[1] < signif_code[2], (
-            "signif_code must be in increasing order"
+    if len(signif_code) != 3:
+        raise ValueError(
+            f"signif_code must be a list of length 3; got {len(signif_code)} entries. "
+            "For example, pass [0.001, 0.01, 0.05]."
+        )
+    for index, threshold in enumerate(signif_code):
+        if not isinstance(threshold, Real):
+            raise TypeError(f"signif_code[{index}] must be numeric; got {threshold!r}.")
+        if not 0 < threshold < 1:
+            raise ValueError(
+                f"All values of signif_code must be between 0 and 1, exclusive; "
+                f"got signif_code[{index}]={threshold!r}."
+            )
+    if not signif_code[0] < signif_code[1] < signif_code[2]:
+        raise ValueError(
+            f"signif_code must be in increasing order; got {signif_code!r}. "
+            "For example, pass [0.001, 0.01, 0.05]."
         )
 
-    assert type in [
-        "df",
-        "md",
-        "html",
-        "gt",
-        "tex",
-        "typst",
-        "docx",
-    ], "type must be either 'df', 'md', 'html', 'gt', 'tex', 'typst' or 'docx'"
+    formats = ("df", "md", "html", "gt", "tex", "typst", "docx")
+    if type not in formats:
+        raise ValueError(f"etable() type must be one of {formats!r}; got {type!r}.")
 
     models_list = _post_processing_input_checks(models)
+    n_models = len(models_list)
 
-    if model_heads is not None:
-        assert len(model_heads) == len(models_list), (
-            "model_heads must have the same length as models"
+    if model_heads is not None and len(model_heads) != n_models:
+        raise ValueError(
+            f"model_heads must have the same length as models. Got {len(model_heads)} "
+            f"headings for {n_models} fitted models. Pass one heading per fitted model."
         )
 
-    assert head_order in [
-        "dh",
-        "hd",
-        "d",
-        "h",
-        "",
-    ], "head_order must be one of 'd', 'h', 'dh', 'hd', ''"
+    if head_order not in ("dh", "hd", "d", "h", ""):
+        raise ValueError(
+            f"head_order must be one of 'd', 'h', 'dh', 'hd', ''; got {head_order!r}. "
+            "See https://pyfixest.org/tutorials/regression-tables.html#custom-model-headlines"
+        )
 
     if custom_model_stats is not None:
-        assert isinstance(custom_model_stats, dict), "custom_model_stats must be a dict"
+        if not isinstance(custom_model_stats, dict):
+            raise TypeError("custom_model_stats must map statistic names to lists.")
         for stat, values in custom_model_stats.items():
-            assert isinstance(stat, str), "custom_model_stats keys must be strings"
-            assert isinstance(values, list), "custom_model_stats values must be lists"
-            assert len(values) == len(models_list), (
-                "lists in custom_model_stats values must have the same length as models"
-            )
+            if not isinstance(stat, str):
+                raise TypeError(
+                    f"custom_model_stats keys must be strings; got {stat!r}."
+                )
+            if not isinstance(values, list):
+                raise TypeError(
+                    f"custom_model_stats[{stat!r}] must be a list with one value per model."
+                )
+            if len(values) != n_models:
+                raise ValueError(
+                    f"custom_model_stats[{stat!r}] has {len(values)} values for "
+                    f"{n_models} fitted models. Pass one value per fitted model."
+                )
 
     table = maketables.ETable(
         models=models_list,
@@ -319,7 +338,7 @@ def summary(
     inference_type: InferenceType = "regular",
 ) -> None:
     """
-    Print a summary of estimation results for each estimated model.
+    Print a summary for each fitted model.
 
     For each model, this method prints a header indicating the fixed-effects and the
     dependent variable, followed by a table of coefficient estimates with standard
@@ -328,7 +347,7 @@ def summary(
     Parameters
     ----------
     models : Feols, Fepois, Feiv, FixestMulti, or list
-        A fitted model object, or a list of Feols, Fepois, and Feiv models.
+        A fitted model, or a list of Feols, Fepois, and Feiv models.
     digits : int, optional
         The number of decimal places to round the summary statistics to. Default is 3.
     inference_type : {"regular"}, optional
@@ -368,13 +387,13 @@ def summary(
         if fxst.model.has_fixef:
             depvar_fixef += f", Fixed effects: {fxst.model.fixef}"
         print(depvar_fixef)
-        split_var = fxst.model.sample_split_var
-        split_value = fxst.model.sample_split_value
-        if split_var is None:
+        sample_split = fxst.model.sample_split
+        if sample_split is None:
             # An unsplit fit reports the full sample, with no split variable.
             print("sample: None = all")
-        elif split_value != "all":
-            print(f"sample: {split_var} = {split_value}")
+        else:
+            sample = "all" if sample_split.value is None else sample_split.value
+            print(f"sample: {sample_split.var} = {sample}")
         print("Inference: ", fxst.variance_covariance.spec.vcov_type_detail)
         print("Observations: ", fxst.sample_info.n_obs)
         print("")

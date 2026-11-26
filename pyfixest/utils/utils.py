@@ -27,7 +27,7 @@ class Ssc:
     k_adj : bool, default True
         Apply the ``(N - 1) / (N - k)`` adjustment (``N / (N - k)`` for
         heteroskedasticity-robust estimators).
-    k_fixef : {"none", "full", "nonnested"}, default "nonnested"
+    k_fixef : {"nonnested", "full", "none"}, default "nonnested"
         Which fixed-effect parameters count toward ``k``.
     G_adj : bool, default True
         Apply the ``G / (G - 1)`` cluster adjustment.
@@ -87,13 +87,16 @@ class DegreesOfFreedomCounts:
     k : int
         Number of estimated coefficients, excluding fixed effects.
     k_fe : int
-        Number of fixed-effect levels across all fixed effects.
+        Number of levels across the fixed effects with intercepts.
     n_fe : int
-        Number of fixed effects; ``Y ~ X | f1 + f2`` has two.
+        Number of fixed effects with intercepts; ``Y ~ X | f1 + f2`` has two.
     k_fe_nested : int
         Fixed-effect levels nested within the cluster variables.
     n_fe_fully_nested : int
         Fixed effects fully nested within the cluster variables.
+    k_slopes : int
+        Number of varying-slope coefficients. As in fixest, they count under
+        every ``k_fixef`` option, including ``"none"``.
     G : int or float
         Number of clusters; the number of time periods for HAC and ``N``
         for heteroskedasticity-robust inference.
@@ -105,6 +108,7 @@ class DegreesOfFreedomCounts:
     n_fe: int
     k_fe_nested: int = 0
     n_fe_fully_nested: int = 0
+    k_slopes: int = 0
     G: int | float
 
 
@@ -115,7 +119,7 @@ class SmallSampleCorrection:
     Parameters
     ----------
     adj : float
-        Factor that multiplies the covariance matrix.
+        Adjustment factor that multiplies the variance-covariance matrix.
     df_k : int
         Parameters counted by the ``k_adj`` adjustment.
     df_t : int or float
@@ -135,70 +139,75 @@ def ssc(
     **kwargs: Any,
 ) -> Ssc:
     """
-    Set the small sample correction factor applied in `get_ssc()`.
+    Choose a small-sample correction for inference.
 
     Parameters
     ----------
     k_adj : bool, default True
-        If True, applies a small sample correction of (N-1) / (N-k) where N
-        is the number of observations and k is the number of estimated
-        coefficients excluding any fixed effects projected out by either
-        `feols()` or `fepois()`.
-    k_fixef : str, default "none"
-        Equal to 'none': the fixed effects parameters are discarded when
-        calculating k in (N-1) / (N-k).
+        If True, multiply the variance-covariance matrix by
+        `(N - 1) / (N - df_k)`, or by `N / (N - df_k)` for
+        heteroskedasticity-robust errors. `N` is the number of observations
+        (the sum of the weights under frequency weights). `df_k` counts the
+        estimated coefficients plus the fixed-effect parameters described
+        under `k_fixef`.
+    k_fixef : {"nonnested", "full", "none"}, default "nonnested"
+        Which fixed-effect parameters count toward `df_k`. "none" leaves out
+        the fixed-effect levels, "full" counts them, and "nonnested" reduces
+        the count for fixed effects nested in a cluster variable. See Details.
     G_adj : bool, default True
-        If True, a cluster correction G/(G-1) is performed, with G the number
-        of clusters. This argument is only relevant for clustered errors.
-    G_df : str, default "conventional"
-        Controls how "G" is computed for multiway clustering if G_adj = True.
-        Note that the covariance matrix in the multiway clustering case is of
-        the form V = V_1 + V_2 - V_12. If "conventional", then each summand G_i
-        is multiplied with a small sample adjustment G_i / (G_i - 1). If "min",
-        all summands are multiplied with the same value, min(G) / (min(G) - 1).
-        This argument is only relevant for clustered errors.
+        If True, multiply cluster-robust and HAC variance-covariance matrices
+        by `G / (G - 1)`. `G` is the number of clusters, or the number of time
+        periods for HAC errors. It has no effect on iid or
+        heteroskedasticity-robust errors.
+    G_df : {"min", "conventional"}, default "min"
+        Which `G` the `G_adj` factor uses under multiway clustering. "min"
+        uses the smallest cluster count for every term, "conventional" uses
+        each term's own count. It does not change the standard errors under
+        one-way clustering or with `G_adj=False`.
+    **kwargs : Any
+        Accepts only the deprecated names `adj` (now `k_adj`), `fixef_k` (now
+        `k_fixef`), `cluster_adj` (now `G_adj`) and `cluster_df` (now `G_df`).
+        Each takes the same values as its replacement and emits a
+        `DeprecationWarning`. Any other keyword raises a `ValueError`.
 
     Details
     -------
-    The small sample correction choices mimic fixest's behavior. For details, see
+    The small-sample correction choices mimic fixest's behavior. For details, see
     https://cran.r-project.org/web/packages/fixest/vignettes/standard_errors.html.
 
-    In general, if k_adj = True, we multiply the variance covariance matrix V with a
-    small sample correction factor of (N-1) / (N-k), where N is the number of
-    observations and k is the number of estimated coefficients.
+    The variance-covariance matrix is multiplied by the product of the `k_adj`
+    and `G_adj` factors. A factor that is turned off or does not apply equals
+    one.
 
-    If k_fixef = "none", the fixed effects parameters are discarded when
-    calculating k. This is the default behavior and currently the only
-    option. Note that it is not r-fixest's default behavior.
+    `df_k` is the number of estimated coefficients, excluding fixed effects,
+    plus the following fixed-effect parameters:
 
-    Hence if k_adj = True, the covariance matrix is computed as
-    V = V x (N-1) / (N-k) for iid and heteroskedastic errors.
+    - `"full"`: the number of levels summed over all fixed effects, minus one
+      for each fixed effect after the first.
+    - `"nonnested"`: the same count, but with cluster-robust errors a fixed
+      effect nested in a cluster variable enters the sum as one level. A fixed
+      effect is nested if, within each of its levels, all observations belong
+      to one cluster, as when it is itself the cluster variable. For all other
+      errors, `"nonnested"` equals `"full"`.
+    - `"none"`: no fixed-effect levels.
 
-    If k_adj = False, no small sample correction is applied of the type
-    above is applied.
+    Varying-slope coefficients, one per level and slope, count under all three
+    options. A fixed effect with slopes only, such as `f1[[X2]]`, adds no
+    levels to the sum.
 
-    If G_adj = True, a cluster correction of G/(G-1) is performed,
-    with G the number of clusters.
+    Under two-way clustering, the variance-covariance matrix combines the
+    matrices clustered by the first variable, the second variable and their
+    intersection, `V = V_1 + V_2 - V_12`. With `G_adj=True` and
+    `G_df="conventional"`, each term `V_i` is multiplied by `G_i / (G_i - 1)`,
+    where `G_i` is its own cluster count. With `G_df="min"`, every term is
+    multiplied by `min(G) / (min(G) - 1)`. Clustering on more variables
+    follows the same pattern.
 
-    If k_adj = True and G_adj = True, V = V x (N - 1) / N - k) x G/(G-1)
-    for cluster robust errors where G is the number of clusters.
-
-    If k_adj = False and G_adj = True, V = V x G/(G-1) for cluster robust
-    errors, i.e. we drop the (N-1) / (N-k) factor. And if G_adj = False,
-    no cluster correction is applied.
-
-    Things are slightly more complicated for multiway clustering. In this
-    case, we compute the variance covariance matrix as V = V1 + V2 - V_12.
-
-    If G_adj = True and G_df = "conventional", then
-    V += [V x G_i / (G_i - 1) for i in [1, 2, 12]], i.e. each separate
-    covariance matrix G_i is multiplied with a small sample adjustment
-    G_i / (G_i - 1) corresponding to the number of clusters in the
-    respective covariance matrix. This is the default behavior
-    for clustered errors.
-
-    If G_df = "min", then
-    V += [V x min(G) / (min(G) - 1) for i in [1, 2, 12]].
+    The degrees of freedom of the t reference distribution are `N - df_k` for
+    iid and heteroskedasticity-robust errors, so `k_fixef` affects them even
+    with `k_adj=False`. They are `G - 1` for cluster-robust and HAC errors,
+    with the smallest `G` under multiway clustering for either `G_df`.
+    Poisson, logit and probit models use the normal distribution instead.
 
     Returns
     -------
@@ -222,7 +231,7 @@ def ssc(
     ```
 
     Defaults follow `fixest`. See
-    [On Small Sample Corrections](/explanation/ssc.qmd) for details.
+    [Small-sample corrections](/explanation/ssc.qmd) for details.
     """
     deprecated_mapping = {
         "adj": "k_adj",
@@ -231,6 +240,12 @@ def ssc(
         "cluster_adj": "G_adj",
     }
 
+    unknown = set(kwargs) - set(deprecated_mapping)
+    if unknown:
+        raise ValueError(
+            f"ssc accepts the keys k_adj, k_fixef, G_adj, and G_df; got {sorted(unknown)}."
+        )
+
     for old_name, new_name in deprecated_mapping.items():
         if old_name in kwargs:
             warnings.warn(
@@ -238,7 +253,6 @@ def ssc(
                 DeprecationWarning,
                 stacklevel=2,
             )
-            # Update parameter values if new name not already provided
             if new_name == "k_adj" and "k_adj" not in kwargs:
                 k_adj = kwargs[old_name]
             elif new_name == "k_fixef" and "k_fixef" not in kwargs:
@@ -258,7 +272,7 @@ def get_ssc(
     vcov_type: str,
 ) -> SmallSampleCorrection:
     """
-    Compute the small sample adjustment factor and the degrees of freedom.
+    Compute the adjustment factor and the degrees of freedom.
 
     Parameters
     ----------
@@ -267,12 +281,12 @@ def get_ssc(
     counts : DegreesOfFreedomCounts
         Observation, coefficient, fixed-effect, and cluster counts.
     vcov_type : str
-        The type of covariance matrix: "iid", "hetero", "HAC", or "CRV".
+        The variance estimator: "iid", "hetero", "HAC", or "CRV".
 
     Returns
     -------
     SmallSampleCorrection
-        The factor `adj` that multiplies the covariance matrix, the parameter
+        The factor `adj` that multiplies the variance-covariance matrix, the parameter
         count `df_k` it used, and the degrees of freedom `df_t` of the t
         distribution.
 
@@ -291,7 +305,7 @@ def get_ssc(
     ```
 
     Configure the behaviour with [ssc()](/reference/utils.utils.ssc.qmd). See
-    [On Small Sample Corrections](/explanation/ssc.qmd) for the formulas.
+    [Small-sample corrections](/explanation/ssc.qmd) for the formulas.
     """
     N, k, k_fe, n_fe = counts.N, counts.k, counts.k_fe, counts.n_fe
     k_fe_nested, n_fe_fully_nested = counts.k_fe_nested, counts.n_fe_fully_nested
@@ -312,21 +326,24 @@ def get_ssc(
         if n_fe == 0:
             df_k = k
         elif k_fe_nested == 0:
-            # no nested fe, so just add all fixed effects
             df_k = k + k_fe_adj
         else:
-            # subtract nested fixed effects and add one for each fully nested
-            # subtracted fixed effect back
             df_k = k + k_fe_adj - k_fe_nested + n_fe_fully_nested
     else:
-        # "full": add all fixed effects
         df_k = k + k_fe_adj if n_fe > 0 else k
+    df_k += counts.k_slopes
 
     if ssc_options.k_adj:
         adj_value = (N - 1) / (N - df_k) if vcov_type != "hetero" else N / (N - df_k)
 
     # G_adj applied with G = N for hetero but not for iid
     if vcov_type in ["CRV", "HAC"] and ssc_options.G_adj:
+        if G < 2:
+            unit = "clusters" if vcov_type == "CRV" else "time periods"
+            raise ValueError(
+                f"The {vcov_type} small-sample correction requires at least two "
+                f"{unit}; got {G}. Check the identifiers on the estimation sample."
+            )
         G_adj_value = G / (G - 1)
 
     df_t = N - df_k if vcov_type in ["iid", "hetero", "HAC-TS"] else G - 1
@@ -370,9 +387,9 @@ def get_data(N=1000, seed=1234, beta_type="1", error_type="1", model="Feols"):
     data.head()
     ```
 
-    The data set contains a continuous outcome `Y`, covariates `X1` and `X2`,
-    fixed effects `f1`, `f2` and `f3`, an instrument `Z1`, and some missing
-    values. Set `model="Fepois"` for a count outcome.
+    The data contain a continuous dependent variable `Y`, regressors `X1`
+    and `X2`, fixed effects `f1`, `f2`, and `f3`, an instrument `Z1`, and
+    some missing values. Set `model="Fepois"` to generate counts for `Y`.
 
     ```{python}
     pf.get_data(model="Fepois")["Y"].head()
@@ -384,17 +401,14 @@ def get_data(N=1000, seed=1234, beta_type="1", error_type="1", model="Feols"):
         "int64"
     )
 
-    # create the covariates
     X = rng.normal(0, 3, N * 5).reshape((N, 5))
     X[:, 0] = rng.choice(range(3), N, True)
-    # X = pd.DataFrame(X)
     X[:, 2] = rng.choice(list(range(fe_dims[0])), N, True)
     X[:, 3] = rng.choice(list(range(fe_dims[1])), N, True)
     X[:, 4] = rng.choice(list(range(fe_dims[2])), N, True)
 
     X = pd.DataFrame(X)
     X.columns = ["X1", "X2", "f1", "f2", "f3"]
-    # X1, X2, X3 as pd.Categorical
     X["f1"] = X["f1"].astype("category")
     X["f2"] = X["f2"].astype("category")
     X["f3"] = X["f3"].astype("category")
@@ -404,7 +418,6 @@ def get_data(N=1000, seed=1234, beta_type="1", error_type="1", model="Feols"):
 
     k = mm.shape[1]
 
-    # create the coefficients
     if beta_type == "1":
         beta = rng.normal(0, 1, k).reshape(k, 1)
     elif beta_type == "2":
@@ -414,7 +427,6 @@ def get_data(N=1000, seed=1234, beta_type="1", error_type="1", model="Feols"):
     else:
         raise ValueError("beta_type needs to be '1', '2' or '3'.")
 
-    # create the error term
     if error_type == "1":
         u = rng.normal(0, 1, N).reshape(N, 1)
     elif error_type == "2":
@@ -424,7 +436,6 @@ def get_data(N=1000, seed=1234, beta_type="1", error_type="1", model="Feols"):
     else:
         raise ValueError("error_type needs to be '1', '2' or '3'.")
 
-    # create the depvar and cluster variable
     if model == "Feols":
         Y = (1 + mm.to_numpy() @ beta + u).flatten()
         Y2 = Y + rng.normal(0, 5, N)
@@ -445,26 +456,21 @@ def get_data(N=1000, seed=1234, beta_type="1", error_type="1", model="Feols"):
 
     df = pd.concat([Y, Y2, X, cluster], axis=1)
 
-    # add some NaN values
     df.loc[0, "Y"] = np.nan
     df.loc[1, "X1"] = np.nan
     df.loc[2, "f1"] = np.nan
 
-    # compute some instruments
     df["Z1"] = df["X1"] + rng.normal(0, 1, N)
     df["Z2"] = df["X2"] + rng.normal(0, 1, N)
 
-    # change all variables in the data frame to float
     for col in df.columns:
         df[col] = df[col].astype("float64")
 
     df[df == "nan"] = np.nan
 
     df["weights"] = rng.uniform(0, 1, N)
-    # df["weights"].iloc[]
 
     if model == "Fepois":
-        # add separation
         idx = np.array([10, 11, 12])
         df.loc[idx[0], "f1"] = np.max(df["f1"]) + 1
         df.loc[idx[1], "f2"] = np.max(df["f2"]) + 1
@@ -485,7 +491,7 @@ def simultaneous_crit_val(
     Parameters
     ----------
     C: numpy.ndarray
-        Covariance matrix. Symmetric, and contains as many rows/columns
+        Variance-covariance matrix. Symmetric, and contains as many rows/columns
         as parameters of interest.
     S: int
         Number of replications

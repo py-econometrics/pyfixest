@@ -11,7 +11,7 @@ from pyfixest.demeaners import AnyDemeaner
 from pyfixest.errors import NonConvergenceError
 from pyfixest.estimation.internals.demean_ import DemeanCache
 from pyfixest.estimation.internals.families import GlmFamily
-from pyfixest.estimation.internals.fit_ import fit_iv, fit_ols
+from pyfixest.estimation.internals.fit_ import fit_iv, fit_ols, project_onto_design
 from pyfixest.estimation.internals.fit_glm_ import fit_glm_irls
 from pyfixest.estimation.internals.literals import (
     SolverOptions,
@@ -97,7 +97,9 @@ def _validate_weighting_bootstrap_inputs(
     """Validate arguments for an individual fitted-result bootstrap."""
     if isinstance(reps, bool) or not isinstance(reps, (int, np.integer)) or reps < 2:
         raise ValueError("`reps` must be an integer greater than or equal to 2.")
-    _validate_literal_argument(weight_distribution, WeightingBootstrapDistribution)
+    _validate_literal_argument(
+        weight_distribution, WeightingBootstrapDistribution, name="weight_distribution"
+    )
     if (
         isinstance(dirichlet_alpha, bool)
         or not isinstance(dirichlet_alpha, Real)
@@ -292,20 +294,24 @@ def _fit_bootstrap_draw(
         active_rows=active_rows,
         active_weights=active_weights,
     )
-    sqrt_weights = np.sqrt(active_weights)
-    Yw = Y * sqrt_weights[:, None]
-    Xw = X * sqrt_weights[:, None]
+    sqrt_weights = np.sqrt(active_weights)[:, None]
+    Xw = X * sqrt_weights
     _check_full_column_rank(Xw, "the regressor matrix")
 
     if inputs.estimator == "ols":
-        beta = fit_ols(X=Xw, Y=Yw, solver=inputs.solver).beta
+        beta = fit_ols(X=X, Y=Y, weights=active_weights, solver=inputs.solver).beta
     else:
         assert Z is not None
-        Zw = Z * sqrt_weights[:, None]
+        Zw = Z * sqrt_weights
         _check_full_column_rank(Zw, "the instrument matrix")
         if np.linalg.matrix_rank(Zw.T @ Xw) < Xw.shape[1]:
             raise ValueError("The draw does not identify every IV coefficient.")
-        beta = fit_iv(X=Xw, Z=Zw, Y=Yw, solver=inputs.solver).beta
+        X_hat = project_onto_design(
+            response=X, design=Z, sqrt_weights=sqrt_weights, solver=inputs.solver
+        )
+        beta = fit_iv(
+            X=X, X_hat=X_hat, Y=Y, weights=active_weights, solver=inputs.solver
+        ).beta
 
     _check_finite(beta)
     return beta

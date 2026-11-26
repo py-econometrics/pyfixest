@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
+import numpy as np
 import pytest
 
 import pyfixest as pf
 from pyfixest.demeaners import MapDemeaner
-from pyfixest.estimation.api.utils import _ALL_SAMPLE
 from pyfixest.estimation.config import EstimationConfig, QuantileProcess
 from pyfixest.estimation.formula.parse import Formula
 from pyfixest.estimation.internals.literals import EstimationMethod
@@ -14,6 +14,7 @@ from pyfixest.estimation.internals.model_state import (
     EstimationOptions,
     GlmEstimationOptions,
     QuantregEstimationOptions,
+    SampleSplit,
     VcovSpec,
 )
 from pyfixest.estimation.models.fegaussian_ import Fegaussian
@@ -28,6 +29,7 @@ from pyfixest.estimation.plan_ import (
     build_all_splits,
     expand_specs,
     fit_one,
+    plan_formulas,
 )
 from pyfixest.estimation.quantreg.quantreg_ import Quantreg
 from pyfixest.estimation.quantreg.QuantregMulti import QuantregMulti
@@ -55,7 +57,7 @@ def _config(method: EstimationMethod, fml: str, data, **overrides) -> Estimation
     base = dict(
         method=method,
         data=data,
-        fml=fml,
+        formulas=tuple(Formula.parse(fml)),
         options=EstimationOptions(**_SHARED_OPTIONS),
         vcov=VcovSpec.from_user_input("iid"),
     )
@@ -63,12 +65,8 @@ def _config(method: EstimationMethod, fml: str, data, **overrides) -> Estimation
     return EstimationConfig(**base)
 
 
-def _parse(fml: str):
-    return Formula.parse_to_dict(fml)
-
-
 def _is_iv(formula_dict) -> bool:
-    return any(f.first_stage is not None for fs in formula_dict.values() for f in fs)
+    return any(f.is_instrumental_variable for fs in formula_dict.values() for f in fs)
 
 
 # ---------------------------------------------------------------------------
@@ -127,21 +125,56 @@ def test_quantile_process_needs_a_method_that_fits_one():
 def test_build_all_splits_full_only():
     data = pf.get_data()
     splits = build_all_splits(run_full=True, run_split=False, splitvar=None, data=data)
-    assert splits == [_ALL_SAMPLE]
+    assert splits == [None]
 
 
 def test_build_all_splits_split_only():
     data = pf.get_data()
     splits = build_all_splits(run_full=False, run_split=True, splitvar="f1", data=data)
     expected = sorted(data["f1"].dropna().unique().tolist())
-    assert splits == expected
+    assert splits == [SampleSplit(var="f1", value=value) for value in expected]
 
 
 def test_build_all_splits_full_plus_split_puts_full_first():
     data = pf.get_data()
     splits = build_all_splits(run_full=True, run_split=True, splitvar="f1", data=data)
-    assert splits[0] is _ALL_SAMPLE
-    assert splits[1:] == sorted(data["f1"].dropna().unique().tolist())
+    assert splits[0] == SampleSplit(var="f1", value=None)
+    assert [split.value for split in splits[1:]] == sorted(
+        data["f1"].dropna().unique().tolist()
+    )
+
+
+# ---------------------------------------------------------------------------
+# Formula grouping
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "fml, expected_groups",
+    [
+        ("Y ~ X1", {None: ["Y"]}),
+        ("Y ~ X1 | f1", {"f1": ["Y"]}),
+        ("Y ~ X1 | sw(f1, f2)", {"f1": ["Y"], "f2": ["Y"]}),
+        (
+            "Y ~ X1 | csw0(f1, f2)",
+            {None: ["Y"], "f1": ["Y"], "f1 + f2": ["Y"]},
+        ),
+        ("Y + Y2 ~ X1 | sw(f1, f2)", {"f1": ["Y", "Y2"], "f2": ["Y", "Y2"]}),
+    ],
+)
+def test_plan_formulas_groups_by_fixed_effects(fml, expected_groups):
+    """The planner preserves FE group order and parsed formula order within groups."""
+    config = _config("feols", fml, pf.get_data())
+    formula_dict = plan_formulas(config=config).formula_dict
+
+    assert list(formula_dict) == list(expected_groups)
+    assert {
+        key: [str(formula.dependent) for formula in formulas]
+        for key, formulas in formula_dict.items()
+    } == expected_groups
+    for key, formulas in formula_dict.items():
+        for formula in formulas:
+            assert formula.fixed_effects_key == key
 
 
 # ---------------------------------------------------------------------------
@@ -152,32 +185,30 @@ def test_build_all_splits_full_plus_split_puts_full_first():
 def test_single_formula_emits_one_spec():
     data = pf.get_data()
     cfg = _config("feols", "Y ~ X1 + X2 | f1", data)
-    fd = _parse(cfg.fml)
+    fd = plan_formulas(cfg).formula_dict
     specs = expand_specs(
         config=cfg,
         formula_dict=fd,
         data=data,
-        splits=[_ALL_SAMPLE],
+        splits=[None],
         is_iv=False,
-        splitvar=None,
     )
     assert len(specs) == 1
     assert specs[0].method == "feols"
     assert specs[0].model_cls is Feols
-    assert specs[0].cache_key == (_ALL_SAMPLE, "f1")
+    assert specs[0].cache_key == (None, "f1")
 
 
 def test_csw_emits_one_spec_per_fixef_step():
     data = pf.get_data()
     cfg = _config("feols", "Y ~ X1 | csw(f1, f2)", data)
-    fd = _parse(cfg.fml)
+    fd = plan_formulas(cfg).formula_dict
     specs = expand_specs(
         config=cfg,
         formula_dict=fd,
         data=data,
-        splits=[_ALL_SAMPLE],
+        splits=[None],
         is_iv=False,
-        splitvar=None,
     )
     # csw(f1, f2) → two fixef keys: "f1" then "f1+f2"
     assert len(specs) == 2
@@ -192,14 +223,13 @@ def test_cache_keys_are_contiguous_blocks():
     """
     data = pf.get_data()
     cfg = _config("feols", "Y + Y2 ~ X1 | csw(f1, f2)", data)
-    fd = _parse(cfg.fml)
+    fd = plan_formulas(cfg).formula_dict
     specs = expand_specs(
         config=cfg,
         formula_dict=fd,
         data=data,
-        splits=[_ALL_SAMPLE],
+        splits=[None],
         is_iv=False,
-        splitvar=None,
     )
     seen: list = []
     for spec in specs:
@@ -219,7 +249,7 @@ def test_split_expansion_walks_full_then_each_split_value():
         data,
         fsplit="f2",
     )
-    fd = _parse(cfg.fml)
+    fd = plan_formulas(cfg).formula_dict
     splits = build_all_splits(run_full=True, run_split=True, splitvar="f2", data=data)
     specs = expand_specs(
         config=cfg,
@@ -227,25 +257,23 @@ def test_split_expansion_walks_full_then_each_split_value():
         data=data,
         splits=splits,
         is_iv=False,
-        splitvar="f2",
     )
     assert len(specs) == len(splits)
-    assert [s.sample_split_value for s in specs] == splits
+    assert [s.sample_split for s in specs] == splits
 
 
 def test_iv_formula_resolves_each_spec_to_feiv():
     data = pf.get_data()
     cfg = _config("feols", "Y ~ X2 | f1 | X1 ~ Z1", data)
-    fd = _parse(cfg.fml)
+    fd = plan_formulas(cfg).formula_dict
     is_iv = _is_iv(fd)
     assert is_iv
     specs = expand_specs(
         config=cfg,
         formula_dict=fd,
         data=data,
-        splits=[_ALL_SAMPLE],
+        splits=[None],
         is_iv=is_iv,
-        splitvar=None,
     )
     assert all(s.model_cls is Feiv for s in specs)
 
@@ -375,14 +403,13 @@ def test_options_object_is_shared_across_multiple_estimation():
     """
     data = pf.get_data()
     cfg = _config("feols", "Y + Y2 ~ csw(X1, X2) | f1", data)
-    fd = _parse(cfg.fml)
+    fd = plan_formulas(cfg).formula_dict
     specs = expand_specs(
         config=cfg,
         formula_dict=fd,
         data=data,
-        splits=[_ALL_SAMPLE],
+        splits=[None],
         is_iv=False,
-        splitvar=None,
     )
     assert len(specs) > 1
     assert all(spec.options is cfg.options for spec in specs)
@@ -403,11 +430,10 @@ def test_quantile_process_is_handed_to_every_spec():
     cfg = _config("quantreg", "Y ~ X1", data, options=options, quantile_process=process)
     specs = expand_specs(
         config=cfg,
-        formula_dict=_parse(cfg.fml),
+        formula_dict=plan_formulas(cfg).formula_dict,
         data=data,
-        splits=[_ALL_SAMPLE],
+        splits=[None],
         is_iv=False,
-        splitvar=None,
     )
     assert [spec.quantile_process for spec in specs] == [process]
     assert specs[0].model_cls is QuantregMulti
@@ -435,11 +461,10 @@ def test_options_must_match_the_model_class():
     with pytest.raises(TypeError, match="GlmEstimationOptions"):
         expand_specs(
             config=cfg,
-            formula_dict=_parse(cfg.fml),
+            formula_dict=plan_formulas(cfg).formula_dict,
             data=data,
-            splits=[_ALL_SAMPLE],
+            splits=[None],
             is_iv=False,
-            splitvar=None,
         )
 
 
@@ -475,6 +500,9 @@ def test_fit_one_uses_the_structural_lifecycle_contract():
         def get_fit(self):
             self.events.append("fit")
 
+        def _publish_fit_statistics(self):
+            self.events.append("fit statistics")
+
         def _check_vcov_support(self, spec):
             assert spec == iid
             self.events.append("check vcov")
@@ -496,7 +524,7 @@ def test_fit_one_uses_the_structural_lifecycle_contract():
             return ()
 
     iid = VcovSpec.from_user_input("iid")
-    formula = Formula.parse_to_dict("Y ~ X1")[None][0]
+    formula = Formula.parse("Y ~ X1")[0]
     spec = ModelSpec(
         method="quantreg",
         model_cls=StubModel,
@@ -504,8 +532,7 @@ def test_fit_one_uses_the_structural_lifecycle_contract():
         fixef_key=None,
         data=pf.get_data(),
         options=EstimationOptions(**_SHARED_OPTIONS),
-        sample_split_value=_ALL_SAMPLE,
-        sample_split_var=None,
+        sample_split=None,
     )
 
     fit_one(
@@ -520,6 +547,7 @@ def test_fit_one_uses_the_structural_lifecycle_contract():
         "validate",
         "check vcov",
         "fit",
+        "fit statistics",
         "vcov",
         "inference",
         "finalize",
@@ -554,3 +582,170 @@ def test_quantreg_multi_prepares_children_in_lifecycle_hook():
         "drop_multicol_vars",
     ]
     assert fit._X_is_empty is False
+
+
+@pytest.mark.parametrize("weights", [None, "weights"])
+def test_distinct_structures_with_same_display_survive(weights):
+    """#1776: model identity and demean-cache scopes use parsed semantics."""
+    data = pf.get_data(N=400, seed=123).dropna()
+    references = ["Y ~ {X1 + X2} | f1", "Y ~ X1 + X2 | f1"]
+    multi = pf.feols(
+        "Y ~ sw({X1 + X2}, X1 + X2) | f1",
+        data=data,
+        weights=weights,
+        fixef_rm="none",
+    )
+    fits = multi.to_list()
+    assert list(multi.all_fitted_models) == [fit.model.model_name for fit in fits]
+    assert all(multi.all_fitted_models[fit.model.model_name] is fit for fit in fits)
+    assert len(fits) == len(references)
+    for fit, reference_formula in zip(fits, references, strict=True):
+        reference = pf.feols(
+            reference_formula, data=data, weights=weights, fixef_rm="none"
+        )
+        assert list(fit.coef().index) == list(reference.coef().index)
+        np.testing.assert_allclose(
+            fit.coef(), reference.coef(), rtol=1e-10, err_msg="stepwise coefficients"
+        )
+        np.testing.assert_allclose(
+            fit.se(), reference.se(), rtol=1e-10, err_msg="stepwise standard errors"
+        )
+
+
+@pytest.mark.parametrize(
+    "first_term, second_term",
+    [
+        pytest.param("`X1 ** 2`", "{X1 ** 2}", id="literal_vs_expression"),
+        pytest.param("i(f3, X2)", "i(f3, np.exp(X2 / 5))", id="transformed_i"),
+        pytest.param("i(f3, log(X2 + 10))", "i(f3, log(X2 + 20))", id="shifted_log_i"),
+    ],
+)
+@pytest.mark.parametrize("reverse_order", [False, True], ids=["forward", "reversed"])
+def test_demean_cache_distinguishes_colliding_columns(
+    first_term, second_term, reverse_order
+):
+    """Sharing a demeaning cache must not change either model's results.
+
+    Here, "colliding" means equal encoded column names but different values,
+    e.g. a literal ``X1 ** 2`` column versus the evaluated square of ``X1``.
+    Each model in ``sw(...)`` must match its own separate fit in coefficients,
+    standard errors, and predictions, whichever model populates the cache first.
+    """
+    data = pf.get_data(N=1000, seed=7).dropna().reset_index(drop=True)
+    # The literal column must differ from the calculated square.
+    data["X1 ** 2"] = 3 * np.sin(data.X1)
+    if reverse_order:
+        first_term, second_term = second_term, first_term
+
+    # Separate calls cannot reuse each other's demeaned columns.
+    first_alone = pf.feols(f"Y ~ {first_term} | f1", data=data, fixef_rm="none")
+    second_alone = pf.feols(f"Y ~ {second_term} | f1", data=data, fixef_rm="none")
+
+    # These models share a cache because they use the same fixed effects.
+    stepwise_fits = pf.feols(
+        f"Y ~ sw({first_term}, {second_term}) | f1", data=data, fixef_rm="none"
+    ).to_list()
+
+    for separate_fit, stepwise_fit in zip(
+        (first_alone, second_alone), stepwise_fits, strict=True
+    ):
+        np.testing.assert_allclose(
+            stepwise_fit.coef(), separate_fit.coef(), rtol=1e-10, atol=1e-10
+        )
+        np.testing.assert_allclose(
+            stepwise_fit.se(), separate_fit.se(), rtol=1e-10, atol=1e-10
+        )
+        np.testing.assert_allclose(
+            stepwise_fit.predict(), separate_fit.predict(), rtol=1e-10, atol=1e-10
+        )
+
+
+def test_full_sample_and_group_named_all_have_distinct_identity():
+    data = pf.get_data(N=300).dropna()
+    data["group"] = np.resize(["all", "'all'", "rest"], len(data))
+    multi = pf.feols("Y ~ X1 | f1", data=data, fsplit="group")
+    fits = multi.to_list()
+    assert [fit.model.sample_split.value for fit in fits] == [
+        None,
+        "'all'",
+        "all",
+        "rest",
+    ]
+    assert all(multi.all_fitted_models[fit.model.model_name] is fit for fit in fits)
+
+
+@pytest.mark.parametrize("fml", ["Y ~ sw(X1, X2)", "Y ~ sw(X1, X2) | f1"])
+@pytest.mark.parametrize("split", [False, True])
+def test_multiple_models_support_name_lookup(fml, split):
+    data = pf.get_data(N=200, seed=17).dropna()
+    data["group"] = data.f1 % 2
+    multi = pf.feols(fml, data=data, fsplit="group" if split else None)
+    models = multi.to_list()
+    assert list(multi.all_fitted_models) == [fit.model.model_name for fit in models]
+    for fit in models:
+        assert multi.all_fitted_models[fit.model.model_name] is fit
+        reference = pf.feols(fit.model.formula, data=data)
+        suffix = ""
+        if fit.model.sample_split is not None:
+            value = fit.model.sample_split.value
+            suffix = f" (Sample: group = {'all' if value is None else value})"
+        assert fit.model.model_name == reference.model.model_name + suffix
+
+
+def test_quantile_models_support_name_lookup():
+    multi = pf.quantreg(
+        "Y ~ X1",
+        pf.get_data(N=100, seed=17).dropna(),
+        quantile=[0.25, 0.75],
+        method="pfn",
+        seed=7,
+    )
+    models = multi.to_list()
+    assert len(models) == 2
+    assert list(multi.all_fitted_models) == [fit.model.model_name for fit in models]
+    for fit in models:
+        assert multi.all_fitted_models[fit.model.model_name] is fit
+        assert fit.model.model_name.endswith(f"(q = {fit.options.quantile})")
+
+
+def test_expanded_models_have_unambiguous_string_keys():
+    data = pf.get_data(N=200, seed=17).dropna()
+    names = ["Y ~ {X1 + X2} | f1", "Y ~ X1 + X2 | f1"]
+    multi = pf.feols("Y ~ sw({X1 + X2}, X1 + X2) | f1", data=data, fixef_rm="none")
+    assert list(multi.all_fitted_models) == names
+    for fit, name in zip(multi.to_list(), names, strict=True):
+        assert fit.model.model_name == name
+        assert multi.all_fitted_models[name] is fit
+
+
+@pytest.mark.parametrize(
+    "estimator, fml, preserved",
+    [
+        (pf.feols, "Y ~ X1 - 1", "0 + X1"),
+        (pf.fepois, "Y ~ X1 - 1", "0 + X1"),
+        (pf.feglm, "Y ~ X1 - 1", "0 + X1"),
+        (pf.quantreg, "Y ~ X1 - 1", "0 + X1"),
+        (pf.feols, "Y ~ {X1 + X2}", "{X1 + X2}"),
+        (pf.feols, "`out come` ~ `X1 + X2`", "`out come` ~ 1 + `X1 + X2`"),
+        (pf.feols, "Y ~ X1 - 1 | X2 ~ Z1 - 1", "0 + X1 + [X2 ~ Z1]"),
+        (pf.feols, "Y ~ {X1 + X1 ** 2} | f1 | X2 ~ {Z1 + Z2}", "{Z1 + Z2}"),
+    ],
+)
+def test_public_formula_roundtrip_preserves_estimation(estimator, fml, preserved):
+    """#1735/#1759: a public formula must replay the expanded specification."""
+    data = pf.get_data(N=400, seed=8123).dropna()
+    data["out come"] = data.Y
+    data["X1 + X2"] = data.X1
+    options = {"fixef_rm": "none"}
+    if estimator is pf.quantreg:
+        options = {}
+    elif estimator is pf.fepois:
+        data["Y"] = np.round(np.abs(data.Y))
+    elif estimator is pf.feglm:
+        options["family"] = "gaussian"
+    fit = estimator(fml, data=data, **options)
+    assert preserved in fit.model.formula
+    replay = estimator(fit.model.formula, data=data, **options)
+    assert list(replay.coef().index) == list(fit.coef().index)
+    np.testing.assert_allclose(replay.coef(), fit.coef(), rtol=1e-10, atol=1e-10)
+    np.testing.assert_allclose(replay.se(), fit.se(), rtol=1e-10, atol=1e-10)

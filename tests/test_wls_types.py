@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from operator import attrgetter
 
 import numpy as np
@@ -52,7 +54,7 @@ def _frequency_weight_data() -> tuple[pd.DataFrame, pd.DataFrame]:
             "x": x,
             "d": d,
             "z": z,
-            "fe": fe,
+            "fe": pd.Series(fe, dtype="string"),
             "cluster": cluster,
             "count": rng.integers(1, 5, size=n_rows),
         }
@@ -219,7 +221,7 @@ def test_fweights_glm_sample_sizes_after_separation():
         {
             "y": [0, 0, 0, 0, 1, 0, 1, 0, 1, 1, 1, 0],
             "x": [-1.2, -0.4, 0.7, -1.1, -0.2, 0.9, -0.8, 0.1, 1.2, -0.9, 0.4, 1.4],
-            "fe": np.repeat(list("abcd"), 3),
+            "fe": pd.Series(np.repeat(list("abcd"), 3), dtype="string"),
             "count": [1, 3, 2, 2, 1, 4, 1, 2, 3, 3, 2, 1],
         }
     )
@@ -255,6 +257,19 @@ def test_fweights_glm_sample_sizes_after_separation():
         fit_expanded.variance_covariance.vcov,
         atol=1e-10,
     )
+
+
+@pytest.mark.parametrize("weights_name", ["my w", "w-x", "w+1"])
+def test_weights_column_names_are_literal(weights_name):
+    data = pf.get_data()
+    data[weights_name] = data["weights"]
+
+    reference = pf.feols("Y ~ X1", data=data, weights="weights")
+    fit = pf.feols("Y ~ X1", data=data, weights=weights_name)
+
+    # Renaming the same weight values must leave results exactly unchanged.
+    pd.testing.assert_series_equal(fit.coef(), reference.coef(), check_exact=True)
+    pd.testing.assert_series_equal(fit.se(), reference.se(), check_exact=True)
 
 
 def test_aweights():

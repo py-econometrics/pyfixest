@@ -7,7 +7,9 @@ HeteroVcovTypeOptions = Literal["hetero", "HC1", "HC2", "HC3"]
 HacVcovTypeOptions = Literal["NW", "DK"]
 WeightsTypeOptions = Literal["aweights", "fweights"]
 FixedRmOptions = Literal["singleton", "none"]
-DropStageOptions = Literal["missing", "infinite", "singleton", "separation"]
+DropStageOptions = Literal[
+    "missing", "infinite", "zero_weight", "singleton", "separation"
+]
 FamilyOptions = Literal["logit", "probit", "gaussian", "poisson"]
 # Internal dispatch key for the model registry, not a user option; kept here so
 # config.py and plan_.py can share it without an import cycle.
@@ -34,7 +36,7 @@ WeightingBootstrapEstimator = Literal["ols", "iv", "glm"]
 InferenceType = Literal["regular", "simult", "savi"]
 
 
-def _validate_literal_argument(arg: Any, literal: Any) -> None:
+def _validate_literal_argument(arg: Any, literal: Any, *, name: str) -> None:
     """
     Validate if the given argument matches one of the allowed literal types.
 
@@ -48,6 +50,8 @@ def _validate_literal_argument(arg: Any, literal: Any) -> None:
         The argument to validate.
     literal : Any
         A Literal type that defines the allowed values for `arg`.
+    name : str
+        Public keyword for the rejected option.
 
     Raises
     ------
@@ -64,7 +68,7 @@ def _validate_literal_argument(arg: Any, literal: Any) -> None:
         )
 
     if arg not in valid_types:
-        raise ValueError(f"Invalid argument. Expecting one of {valid_types}. Got {arg}")
+        raise ValueError(f"{name} must be one of {valid_types}; got {arg!r}.")
 
 
 KFixefOptions = Literal["none", "full", "nonnested"]

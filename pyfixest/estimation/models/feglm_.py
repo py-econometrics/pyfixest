@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 from dataclasses import replace
-from typing import Any, cast
+from typing import Any, ClassVar, cast
 
 import numpy as np
 import pandas as pd
+from within import Effect
 
 from pyfixest.core.demean import Preconditioner
 from pyfixest.estimation.formula.model_matrix import ModelMatrix
@@ -15,9 +16,11 @@ from pyfixest.estimation.internals.fit_glm_ import fit_glm_irls
 from pyfixest.estimation.internals.fit_statistics import FitStatistics
 from pyfixest.estimation.internals.literals import HeteroVcovTypeOptions
 from pyfixest.estimation.internals.model_state import (
+    Capabilities,
     FittedValues,
     GlmEstimationOptions,
     ModelDescription,
+    SampleSplit,
 )
 from pyfixest.estimation.internals.retention import require_retained
 from pyfixest.estimation.internals.separation import check_for_separation
@@ -29,6 +32,7 @@ from pyfixest.estimation.models.feols_ import (
     PredictionType,
 )
 from pyfixest.utils.dev_utils import DataFrameType
+from pyfixest.utils.utils import DegreesOfFreedomCounts
 
 
 class Feglm(Feols):
@@ -38,8 +42,8 @@ class Feglm(Feols):
     Returned by [feglm()](/reference/estimation.api.feglm.feglm.qmd). Fixed
     effects are handled via iteratively reweighted least squares with demeaning,
     following Stammann (2018),
-    [arXiv:1707.01815](https://arxiv.org/pdf/1707.01815). The family is set with
-    the `family` argument and implemented by a subclass. `poisson` dispatches to
+    [arXiv:1707.01815](https://arxiv.org/pdf/1707.01815). The `family` argument
+    selects a subclass that declares its `GlmFamily`. `poisson` dispatches to
     [Fepois](/reference/estimation.models.fepois_.Fepois.qmd).
 
     Examples
@@ -57,8 +61,30 @@ class Feglm(Feols):
     """
 
     options: GlmEstimationOptions
+    _n_fe_after_separation: int | None = None
     # Iterative IRLS fit: no single least-squares solve to shortcut.
     _closed_form_ols = False
+    # Link, variance, deviance, and method name; each subclass declares one.
+    _family: ClassVar[GlmFamily]
+
+    # No CRV3: the inherited slow jackknife refits with the linear/Poisson
+    # APIs and cannot yet preserve a generic GLM family's estimation contract.
+    _declared_capabilities: ClassVar[Capabilities] = Capabilities(
+        covariance_update=True,
+        crv3_inference=False,
+        hac_inference=True,
+        multiway_clustering=True,
+        wildboottest=False,
+        cluster_causal_variance=False,
+        decomposition=False,
+        prediction=True,
+        prediction_inference=False,
+        fixed_effect_recovery=True,
+        randomization_inference=False,
+        sherman_morrison_update=False,
+        weighting_bootstrap=True,
+        anytime_valid_inference=False,
+    )
 
     def __init__(
         self,
@@ -66,49 +92,29 @@ class Feglm(Feols):
         data: pd.DataFrame,
         *,
         options: GlmEstimationOptions,
-        family: GlmFamily,
         lookup_demeaned_data: dict[frozenset[int], DemeanedData],
         lookup_preconditioner: dict[frozenset[int], Preconditioner] | None = None,
-        sample_split_var: str | None = None,
-        sample_split_value: str | int | None = None,
+        sample_split: SampleSplit | None = None,
     ) -> None:
-        # `_describe_model()`, called by the base constructor, names the
-        # family's inference distribution.
-        self._family = family
         super().__init__(
             FixestFormula=FixestFormula,
             data=data,
             options=options,
             lookup_demeaned_data=lookup_demeaned_data,
             lookup_preconditioner=lookup_preconditioner,
-            sample_split_var=sample_split_var,
-            sample_split_value=sample_split_value,
+            sample_split=sample_split,
         )
 
         _glm_input_checks(
-            drop_singletons=options.drop_singletons,
             tol=options.tol,
             maxiter=options.maxiter,
         )
 
-        # The inherited slow jackknife refits with the linear/Poisson APIs and
-        # cannot yet preserve a generic GLM family's estimation contract.
-        self.capabilities = replace(
-            self.capabilities,
-            crv3_inference=False,
-            hac_inference=True,
-            wildboottest=False,
-            cluster_causal_variance=False,
-            decomposition=False,
-            randomization_inference=False,
-            sherman_morrison_update=False,
-        )
-
     def _describe_model(self, **kwargs: Any) -> ModelDescription:
-        """Describe a GLM fit and the inference distribution of its family."""
+        """Describe a GLM fit by its family's method and inference distribution."""
         return replace(
             super()._describe_model(**kwargs),
-            method="feglm",
+            method=self._family.method,
             inference_dist=self._family.inference_dist,
         )
 
@@ -116,42 +122,62 @@ class Feglm(Feols):
         "Prepare model inputs for estimation."
         model_matrix = super().prepare_model_matrix()
 
-        # check for separation
         na_separation: list[int] = []
         if (
-            model_matrix.fixed_effects is not None
+            # Families without outcome bounds, such as Gaussian, cannot separate.
+            self._family.outcome_bounds
+            and model_matrix.fixed_effects is not None
             and self.options.separation_check is not None
-            and self.options.separation_check  # not an empty list
+            and self.options.separation_check
         ):
             na_separation = check_for_separation(
                 Y=model_matrix.dependent,
                 X=model_matrix.independent,
-                fe=model_matrix.fixed_effects,
-                fml=self.model.formula,
-                data=self._data,
+                fe=model_matrix.fixed_effects.loc[
+                    :,
+                    [
+                        spec.intercept
+                        for spec in model_matrix.fixed_effect_specifications
+                    ],
+                ],
+                effects=self._fixed_effects_for_demeaning(),
+                outcome_bounds=self._family.outcome_bounds,
                 demeaner=self.options.demeaner,
+                collin_tol=self.options.collin_tol,
                 methods=self.options.separation_check,
             )
 
         if na_separation:
-            self._data.drop(na_separation, axis=0, inplace=True)
+            self._data = self._data.drop(na_separation, axis=0)
             model_matrix = model_matrix.without_rows(na_separation, stage="separation")
             self._publish_model_matrix(model_matrix)
 
-            # possible to have dropped fixed effects level due to separation
-            self._n_fe = int(np.sum(self._k_fe > 1))
+            counts = self.fixef_counts
+            self._n_fe_after_separation = sum(
+                n_levels > 1 and has_intercept
+                for n_levels, has_intercept in zip(
+                    counts.n_levels_by_fe, counts.has_intercept_by_fe, strict=True
+                )
+            )
 
         return model_matrix
 
+    def _dof_counts(self, **kwargs: Any) -> DegreesOfFreedomCounts:
+        "Count only fixed effects with several levels once separation dropped rows."
+        counts = super()._dof_counts(**kwargs)
+        if self._n_fe_after_separation is None:
+            return counts
+        return replace(counts, n_fe=self._n_fe_after_separation)
+
     def get_fit(self) -> None:
-        "Fit the GLM via IRLS and write results onto self.* attributes."
+        "Fit the GLM via IWLS and write results onto self.* attributes."
         model_matrix = self.model_matrix
         response = model_matrix.dependent.to_numpy()
         design = model_matrix.independent.to_numpy()
         fixed_effect_frame = model_matrix.fixed_effects
         offset_frame = model_matrix.offset
         fixed_effects = (
-            None if fixed_effect_frame is None else fixed_effect_frame.to_numpy()
+            None if fixed_effect_frame is None else self._fixed_effects_for_demeaning()
         )
         offset = (
             None if offset_frame is None else offset_frame.to_numpy().reshape((-1, 1))
@@ -188,8 +214,6 @@ class Feglm(Feols):
         self._coefnames = list(fit.collinearity.coefnames)
         working_state = fit.working_state
         self.working_state = working_state
-        # The prediction view of the same arrays: eta is the linear predictor
-        # (fixed effects and offset included), mu its inverse-link mean.
         self.fitted_values = FittedValues(
             link=working_state.eta, response=working_state.mu
         )
@@ -199,12 +223,22 @@ class Feglm(Feols):
 
         self._beta_hat = fit.beta
         self.sandwich = fit.sandwich
-
-        self.fitstat = FitStatistics(deviance=fit.deviance)
         self.convergence = fit.converged
 
+    def _fit_statistics(self) -> FitStatistics:
+        """Compute the deviance of the final IWLS iteration.
+
+        Families with further measures extend this in their subclass.
+        """
+        deviance = self._family.deviance(
+            self.model_matrix.dependent.to_numpy().flatten(),
+            self.working_state.mu,
+            self.observation_weights.values,
+        )
+        return FitStatistics(deviance=deviance)
+
     def _prediction_design(self) -> np.ndarray:
-        """Supply the final IRLS design to the inherited predict() method.
+        """Supply the final IWLS design to the inherited predict() method.
 
         Unlike linear models, GLMs store this coefficient-ordered design in
         working_state. It is not multiplied by square-root working weights.
@@ -277,11 +311,11 @@ class Feglm(Feols):
         self,
         v: np.ndarray,
         X: np.ndarray,
-        flist: np.ndarray | None,
+        flist: np.ndarray | list[Effect] | None,
         weights: np.ndarray,
         tol: float,
     ) -> tuple[np.ndarray, np.ndarray]:
-        "Residualize v and X by flist using weights."
+        """Demean v and X with current working weights and a reused preconditioner."""
         if flist is None:
             return v, X
 
@@ -331,7 +365,7 @@ class Feglm(Feols):
             Can be either "response" (default) or "link".
             If type="response", the output is at the level of the response variable,
             i.e., it is the expected predictor E(Y|X).
-            If "link", the output is at the level of the explanatory variables,
+            If "link", the output is on the scale of the linear predictor,
             i.e., the linear predictor X @ beta.
         atol : Float, default 1e-6
             Stopping tolerance for scipy.sparse.linalg.lsqr().
@@ -340,27 +374,29 @@ class Feglm(Feols):
             Another stopping tolerance for scipy.sparse.linalg.lsqr().
             See https://docs.scipy.org/doc/scipy/reference/generated/scipy.sparse.linalg.lsqr.html
         se_fit: Optional[bool], optional
-            If True, the standard error of the prediction is computed. Only feasible
-            for models without fixed effects. GLMs are not supported. Defaults to False.
+            Prediction standard errors are not supported for GLMs. Passing True
+            raises NotImplementedError. Defaults to False.
         interval: str, optional
-            The type of interval to compute. Can be either 'prediction' or None.
+            Prediction intervals are not supported for GLMs. Passing 'prediction'
+            raises NotImplementedError. Defaults to None.
         alpha: float, optional
             The alpha level for the confidence interval. Defaults to 0.05. Only
             used if interval = "prediction" is not None.
 
         Returns
         -------
-        Union[np.ndarray, pd.DataFrame]
-            Returns a pd.Dataframe with columns "fit", "se_fit" and CIs if argument "interval=prediction".
-            Otherwise, returns a np.ndarray with the predicted values of the model or the prediction
-            standard errors if argument "se_fit=True".
+        np.ndarray
+            Predicted values on the requested scale.
         """
-        if se_fit:
-            raise NotImplementedError(
-                "Prediction with standard errors is not implemented for GLMs."
-            )
-
-        yhat = super().predict(newdata=newdata, type="link", atol=atol, btol=btol)
+        yhat = super().predict(
+            newdata=newdata,
+            type="link",
+            atol=atol,
+            btol=btol,
+            se_fit=se_fit,
+            interval=interval,
+            alpha=alpha,
+        )
         if type == "response":
             return self._family.inv_link(
                 yhat.to_numpy() if isinstance(yhat, pd.DataFrame) else yhat
@@ -370,20 +406,24 @@ class Feglm(Feols):
 
     def _validate_response(self) -> None:
         """Validate the prepared response against the family's constraints."""
-        self._family.check_y(self.model_matrix.dependent.to_numpy())
+        try:
+            self._family.check_y(self.model_matrix.dependent.to_numpy())
+        except ValueError as exc:
+            exc.add_note(f"Dependent variable {self.model.depvar!r}.")
+            raise
 
     def _finalize_fit(self) -> None:
         """Skip the OLS Wald test; GLMs run no Wald test at fit time."""
 
 
-def _glm_input_checks(drop_singletons: bool, tol: float, maxiter: int) -> None:
-    if not isinstance(drop_singletons, bool):
-        raise TypeError("drop_singletons must be logical.")
+def _glm_input_checks(tol: float, maxiter: int) -> None:
     if not isinstance(tol, (int, float)):
-        raise TypeError("tol must be numeric.")
-    if tol <= 0 or tol >= 1:
-        raise AssertionError("tol must be between 0 and 1.")
-    if not isinstance(maxiter, int):
-        raise TypeError("maxiter must be integer.")
+        raise TypeError(f"iwls_tol must be numeric; got {tol!r}.")
+    if not 0 < tol < 1:
+        raise ValueError(
+            f"iwls_tol must be greater than 0 and less than 1; got {tol!r}."
+        )
+    if isinstance(maxiter, bool) or not isinstance(maxiter, int):
+        raise TypeError(f"iwls_maxiter must be an integer; got {maxiter!r}.")
     if maxiter <= 0:
-        raise AssertionError("maxiter must be greater than 0.")
+        raise ValueError(f"iwls_maxiter must be greater than 0; got {maxiter!r}.")

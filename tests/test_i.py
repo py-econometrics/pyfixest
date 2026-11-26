@@ -12,13 +12,16 @@ Tests cover:
 """
 
 import re
+import warnings
 
 import numpy as np
 import pandas as pd
 import pytest
 import rpy2.robjects as ro
+from rpy2.rinterface_lib.embedded import RRuntimeError
 from rpy2.robjects.packages import importr
 
+from pyfixest.errors import FormulaSyntaxError
 from pyfixest.estimation import feols
 
 fixest = importr("fixest")
@@ -50,8 +53,8 @@ def normalize_coef_name(name: str) -> str:
             return f"{prefix}{int(num)}{suffix}"
         return match.group(0)
 
-    name = re.sub(r"(::)(\d+\.0)(\b|:)", normalize_float_level, name)
-    return name
+    name = re.sub(r"(::)(-?\d+\.0)(\b|:)", normalize_float_level, name)
+    return name.replace("::-Inf", "::-inf")
 
 
 def get_r_coef_names(fit_r) -> list[str]:
@@ -155,20 +158,18 @@ def df_test() -> pd.DataFrame:
 
 @pytest.mark.against_r_core
 @pytest.mark.parametrize(
-    "formula,excluded_coef",
+    "formula",
     [
-        ("dep_var ~ i(rel_year, ref=1.0)", "rel_year::1"),
-        ("dep_var ~ i(rel_year, ref=-2.0)", "rel_year::-2"),
-        ("dep_var ~ i(rel_year, treat, ref=1.0)", "rel_year::1:treat"),
-        ("dep_var ~ i(rel_year, treat, ref=-2.0)", "rel_year::-2:treat"),
+        "dep_var ~ i(rel_year, ref=1.0)",
+        "dep_var ~ i(rel_year, ref=-2.0)",
+        "dep_var ~ i(rel_year, treat, ref=1.0)",
+        "dep_var ~ i(rel_year, treat, ref=-2.0)",
     ],
 )
-def test_i_reference_exclusion(df_het, formula, excluded_coef):
+def test_i_reference_exclusion(df_het, formula):
     """Test that reference levels are properly excluded."""
-    fit = feols(formula, df_het)
-    assert excluded_coef not in fit._coefnames, (
-        f"{excluded_coef} should not be in coefficient names"
-    )
+    py_names, py_values, r_names, r_values = compare_with_r(formula, df_het)
+    assert_models_match(py_names, py_values, r_names, r_values)
 
 
 @pytest.mark.against_r_core
@@ -249,10 +250,22 @@ def test_with_intercept_drop_level(df_test, fml):
 
 
 @pytest.mark.against_r_core
-def test_binning_simple(df_test):
+@pytest.mark.parametrize(
+    "r_fml,py_fml",
+    [
+        (
+            "Y ~ i(f_str, bin=list(fruit=c('apple','banana')))",
+            "Y ~ i(f_str, bin={'fruit': ['apple','banana']})",
+        ),
+        # A scalar old level bins that level instead of its characters.
+        (
+            "Y ~ i(f_str, bin=list(fruit='apple'))",
+            "Y ~ i(f_str, bin={'fruit': 'apple'})",
+        ),
+    ],
+)
+def test_binning_simple(df_test, r_fml, py_fml):
     """Test i() with bin parameter."""
-    r_fml = "Y ~ i(f_str, bin=list(fruit=c('apple','banana')))"
-    py_fml = "Y ~ i(f_str, bin={'fruit': ['apple','banana']})"
     py_names, py_values, r_names, r_values = compare_with_r(r_fml, df_test, py_fml)
     assert_models_match(py_names, py_values, r_names, r_values)
 
@@ -290,6 +303,14 @@ def test_binning_with_continuous(df_test):
             "Y ~ i(f_str, i.g, ref='apple', ref2='X')",
             "Y ~ i(f_str, g, ref='apple', ref2='X')",
         ),
+        # C() marks a numeric second variable as a factor (#1770)
+        ("Y ~ i(f_str, i.f_int)", "Y ~ i(f_str, C(f_int))"),
+        ("Y ~ i(f_str, i.f_int, ref2=10)", "Y ~ i(f_str, C(f_int), ref2=10)"),
+        ("Y ~ i(f_str, i.f_float)", "Y ~ i(f_str, C(f_float))"),
+        (
+            "Y ~ i(f_str, i.f_int, bin2=list(low=c(1, 2)), ref2='low')",
+            "Y ~ i(f_str, C(f_int), bin2={'low': [1, 2]}, ref2='low')",
+        ),
     ],
 )
 def test_factor_x_factor(df_test, r_fml, py_fml):
@@ -303,6 +324,7 @@ def test_factor_x_factor(df_test, r_fml, py_fml):
     "r_fml,py_fml",
     [
         ("Y ~ i(f_str, i.g) | fe1", "Y ~ i(f_str, g) | fe1"),
+        ("Y ~ i(f_str, i.f_int) | fe1", "Y ~ i(f_str, C(f_int)) | fe1"),
         (
             "Y ~ i(f_str, i.g, ref='apple', ref2='X') | fe1",
             "Y ~ i(f_str, g, ref='apple', ref2='X') | fe1",
@@ -313,6 +335,23 @@ def test_factor_x_factor_with_fe(df_test, r_fml, py_fml):
     """Test i(factor1, factor2) with fixed effects."""
     py_names, py_values, r_names, r_values = compare_with_r(r_fml, df_test, py_fml)
     assert_models_match(py_names, py_values, r_names, r_values)
+
+
+@pytest.mark.against_r_core
+def test_numeric_second_variable_ref2_differs_from_fixest(df_test):
+    """`ref2` on a numeric second variable raises; fixest ignores it."""
+    with pytest.raises(ValueError, match=r"`f_int` is numeric.*C\(f_int\)"):
+        feols("Y ~ i(f_str, f_int, ref2=10)", df_test)
+
+    fit_r = fixest.feols(ro.Formula("Y ~ i(f_str, f_int, ref2 = 10)"), df_test)
+    fit_r_slopes = fixest.feols(ro.Formula("Y ~ i(f_str, f_int)"), df_test)
+    np.testing.assert_allclose(
+        get_r_coef_values(fit_r),
+        get_r_coef_values(fit_r_slopes),
+        rtol=0,
+        atol=1e-10,
+        err_msg="fixest no longer ignores ref2 on a numeric second variable",
+    )
 
 
 # =============================================================================
@@ -388,6 +427,34 @@ def test_factor_x_continuous(df_test, fml):
     assert_models_match(py_names, py_values, r_names, r_values)
 
 
+@pytest.mark.against_r_core
+@pytest.mark.parametrize("dtype", ["bool", "boolean", "object"])
+@pytest.mark.parametrize("fml", ["Y ~ i(f_str, flag)", "Y ~ i(f_str, flag) | fe1"])
+def test_factor_x_boolean(df_test, fml, dtype):
+    """Test that a boolean second variable is a 0/1 slope, as in fixest."""
+    rng = np.random.default_rng(1756)
+    flag = pd.Series(rng.choice([True, False], len(df_test)), dtype=dtype)
+    if dtype != "bool":
+        flag.iloc[[3, 30]] = np.nan
+    fit_py = feols(fml, df_test.assign(flag=flag))
+    # rpy2 converts object NaNs to TRUE; nullable booleans preserve R logical NAs.
+    fit_r = fixest.feols(ro.Formula(fml), df_test.assign(flag=flag.astype("boolean")))
+    assert_models_match(
+        [normalize_coef_name(str(n)) for n in fit_py.coef().index],
+        fit_py.coef().values,
+        get_r_coef_names(fit_r),
+        get_r_coef_values(fit_r),
+    )
+
+
+@pytest.mark.against_r_core
+def test_event_study_boolean_treatment(df_het):
+    """Test the event study with the boolean `treat` column of df_het."""
+    fml = "dep_var ~ i(rel_year, treat, ref=-1.0) | unit + year"
+    py_names, py_values, r_names, r_values = compare_with_r(fml, df_het)
+    assert_models_match(py_names, py_values, r_names, r_values)
+
+
 # =============================================================================
 # Edge Cases
 # =============================================================================
@@ -408,6 +475,173 @@ def test_i_with_same_var_standalone(df_test):
     fml = "Y ~ X1 + i(f_str, X1)"
     py_names, py_values, r_names, r_values = compare_with_r(fml, df_test)
     assert_models_match(py_names, py_values, r_names, r_values, check_names=False)
+
+
+@pytest.fixture(scope="module")
+def df_unused_categories(df_test) -> pd.DataFrame:
+    """Categorical columns with categories absent from the data."""
+    df = df_test.copy()
+    # Unused first category must not become the reference level; unused last
+    # category must not produce an all-zero column.
+    df["f_cat"] = pd.Categorical(
+        df["f_str"], categories=["avocado", "apple", "banana", "cherry", "zucchini"]
+    )
+    # The first observed category, not the alphabetically first, is the reference.
+    df["f_cat_reordered"] = df["f_cat"].cat.reorder_categories(
+        ["avocado", "cherry", "apple", "banana", "zucchini"]
+    )
+    df["g_cat"] = pd.Categorical(df["g"], categories=["W", "X", "Y", "Z"])
+    return df
+
+
+@pytest.mark.against_r_core
+@pytest.mark.parametrize(
+    "r_fml,py_fml",
+    [
+        ("Y ~ X1 + i(f_cat)", None),
+        ("Y ~ X1 + i(f_cat_reordered) | fe1", None),
+        ("Y ~ X1 + i(f_cat, X2)", None),
+        ("Y ~ X1 + i(f_cat, i.g_cat)", "Y ~ X1 + i(f_cat, g_cat)"),
+    ],
+)
+def test_unused_categories(df_unused_categories, r_fml, py_fml):
+    """Unused categories of a categorical produce no columns, as in fixest."""
+    with warnings.catch_warnings():
+        warnings.filterwarnings("error", message=r"\s*\d+ variables dropped")
+        py_names, py_values, r_names, r_values = compare_with_r(
+            r_fml, df_unused_categories, py_fml
+        )
+    assert_models_match(py_names, py_values, r_names, r_values)
+
+
+@pytest.mark.against_r_core
+def test_unused_category_reference(df_unused_categories):
+    """An unused category cannot be the reference, matching fixest."""
+    fml = "Y ~ i(f_cat, ref='avocado')"
+    with pytest.raises(ValueError, match=r"avocado.*not among the provided levels"):
+        feols(fml, data=df_unused_categories)
+    with pytest.raises(RRuntimeError, match="no match was found for 'avocado'"):
+        fixest.feols(ro.Formula(fml), df_unused_categories)
+
+
+@pytest.mark.against_r_core
+@pytest.mark.parametrize(
+    "r_fml,py_fml",
+    [
+        ("Y ~ X1 + i(f_str)", None),
+        ("Y ~ X1 + i(f_cat)", None),
+        (
+            "Y ~ X1 + i(f_cat, i.g_cat, ref2='X')",
+            "Y ~ X1 + i(f_cat, g_cat, ref2='X')",
+        ),
+    ],
+)
+def test_levels_fixed_before_missing_row_filter(df_unused_categories, r_fml, py_fml):
+    """Levels observed only on excluded rows still affect reference selection."""
+    df = df_unused_categories.copy()
+    df.loc[(df["f_str"] == "apple") | (df["g"] == "X"), "Y"] = np.nan
+    with pytest.warns(UserWarning, match="variables dropped"):
+        py_names, py_values, r_names, r_values = compare_with_r(r_fml, df, py_fml)
+    assert_models_match(py_names, py_values, r_names, r_values)
+
+
+@pytest.fixture(scope="module", params=["string", "category"])
+def df_split_levels(request) -> pd.DataFrame:
+    """Apple occurs only in g1; banana and cherry occur in both samples."""
+    cells = [
+        ("g1", "apple", 10.0),
+        ("g1", "banana", 20.0),
+        ("g1", "cherry", 30.0),
+        ("g2", "banana", 20.0),
+        ("g2", "cherry", 30.0),
+    ]
+    df = pd.DataFrame(
+        [
+            (group, level, mean + error)
+            for group, level, mean in cells
+            for error in [-1.5, -0.5, 0.5, 1.5]
+        ],
+        columns=["grp", "fc", "Y"],
+    )
+    df["fc"] = df["fc"].astype(request.param)
+    return df
+
+
+@pytest.mark.against_r_core
+@pytest.mark.parametrize("split_arg", ["split", "fsplit"])
+def test_split_levels_choose_sample_reference(df_split_levels, split_arg):
+    """Split-local references intentionally differ from fixest 0.14.0."""
+    data = df_split_levels
+    fml = "Y ~ i(fc)"
+    py_models = feols(fml, data=data, **{split_arg: "grp"}).to_list()
+    r_models = fixest.feols(ro.Formula(fml), data, **{split_arg: ro.Formula("~grp")})
+    samples = [None, "g1", "g2"] if split_arg == "fsplit" else ["g1", "g2"]
+    assert [model.model.sample_split.value for model in py_models] == samples
+    assert len(r_models) == len(samples)
+
+    for i, (sample, fit_py) in enumerate(zip(samples, py_models, strict=True)):
+        fit_r = r_models.rx2(i + 1)
+        if sample == "g2":
+            # Pyfixest uses banana; fixest keeps full-data levels and drops
+            # cherry as collinear, giving an equivalent parameterization.
+            py_names = ["Intercept", "fc::cherry"]
+            py_values = [20.0, 10.0]
+            r_names = ["Intercept", "fc::banana"]
+            r_values = [30.0, -10.0]
+        else:
+            py_names = r_names = ["Intercept", "fc::banana", "fc::cherry"]
+            py_values = r_values = [10.0, 10.0, 20.0]
+        assert fit_py.coef().index.tolist() == py_names
+        assert get_r_coef_names(fit_r) == r_names
+        np.testing.assert_allclose(
+            fit_py.coef().values,
+            py_values,
+            rtol=1e-10,
+            atol=1e-10,
+            err_msg=f"Pyfixest coefficients for sample {sample}",
+        )
+        np.testing.assert_allclose(
+            get_r_coef_values(fit_r),
+            r_values,
+            rtol=1e-10,
+            atol=1e-10,
+            err_msg=f"R fixest coefficients for sample {sample}",
+        )
+        sample_data = data if sample is None else data.loc[data["grp"] == sample]
+        newdata = sample_data.drop_duplicates(subset="fc")
+        np.testing.assert_allclose(
+            fit_py.predict(newdata=newdata),
+            np.asarray(stats.predict(fit_r, newdata=newdata)),
+            rtol=1e-10,
+            atol=1e-10,
+            err_msg=f"Split predictions must match R fixest for sample {sample}",
+        )
+
+
+@pytest.mark.against_r_core
+@pytest.mark.parametrize("split_arg", ["split", "fsplit"])
+def test_split_reference_validity(df_split_levels, split_arg):
+    """Unlike fixest 0.14.0, references must exist in every split sample."""
+    data = df_split_levels
+    fml = "Y ~ i(fc, ref='apple')"
+    r_models = fixest.feols(ro.Formula(fml), data, **{split_arg: ro.Formula("~grp")})
+    # R accepts apple despite its absence from g2, for both split options.
+    assert len(r_models) == (3 if split_arg == "fsplit" else 2)
+    with pytest.raises(ValueError, match=r"apple.*not among the provided levels"):
+        feols(fml, data=data, **{split_arg: "grp"})
+
+
+@pytest.mark.parametrize(
+    "fml",
+    [
+        "Y ~ i(f_str, X1) + i(f_str, var2=X1)",
+        "Y ~ i(f_str, X1) + i(f_str, np.power(X1, 2))",
+    ],
+)
+def test_duplicate_column_names_raise(df_test, fml):
+    """Equally named columns would overwrite each other in the model matrix."""
+    with pytest.raises(FormulaSyntaxError, match="duplicate column names"):
+        feols(fml, df_test)
 
 
 # =============================================================================

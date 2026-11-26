@@ -25,7 +25,9 @@ import pyfixest  # noqa: E402
 
 if Path(pyfixest.__file__).resolve().is_relative_to(ROOT / "pyfixest"):
     raise RuntimeError(
-        "Imported pyfixest from this checkout instead of the pinned release wheel."
+        f"Imported pyfixest from {pyfixest.__file__}. The release baseline needs "
+        "the pinned release wheel. Run pixi run --locked --manifest-path "
+        "tests/snapshots/release/pixi.toml record from the checkout."
     )
 
 sys.path.insert(0, str(ROOT))
@@ -43,7 +45,8 @@ def main() -> int:
     installed = importlib.metadata.version("pyfixest")
     if installed != RELEASE_VERSION:
         raise RuntimeError(
-            f"Expected pyfixest=={RELEASE_VERSION} but found {installed}."
+            f"Expected pyfixest=={RELEASE_VERSION} but found {installed} at "
+            f"{pyfixest.__file__}. Use the pinned environment in tests/snapshots/release."
         )
     if CACHE_PATH.exists():
         import gzip

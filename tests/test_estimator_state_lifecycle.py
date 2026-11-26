@@ -32,6 +32,7 @@ from pyfixest.estimation.internals.model_state import (
     WithinLinearData,
 )
 from pyfixest.estimation.internals.retention import omitted_attributes
+from pyfixest.estimation.quantreg.frisch_newton_ip import QuantregSolution
 
 
 @pytest.fixture
@@ -63,7 +64,7 @@ def lifecycle_data() -> pd.DataFrame:
             "x2": second_covariate,
             "endog": endogenous,
             "z": instrument,
-            "fe": fixed_effect,
+            "fe": pd.Series(fixed_effect, dtype="string"),
             "weight": np.tile([1, 2, 4, 3, 1, 2], 4),
         }
     )
@@ -230,7 +231,7 @@ def test_glm_separation_replaces_formula_data_with_filtered_state() -> None:
     data = pd.DataFrame(
         {
             "y": [0, 0, 0, 1, 2, 3],
-            "fe": ["a", "a", "b", "b", "b", "c"],
+            "fe": pd.Series(["a", "a", "b", "b", "b", "c"], dtype="string"),
             "x": [-1.0, 0.5, 0.25, 1.0, -0.5, 1.5],
         }
     )
@@ -259,6 +260,31 @@ def test_glm_separation_replaces_formula_data_with_filtered_state() -> None:
     assert fit.sample_info.n_rows == model_matrix.n_rows
     assert fit.sample_info.dropped_row_index == model_matrix.dropped_row_index
     assert fit.sample_info.dropped_by_stage == model_matrix.dropped_by_stage
+
+
+def test_zero_weight_rows_are_dropped_and_counted() -> None:
+    """Zero-weight rows are dropped before singletons and counted separately."""
+    data = pf.get_data().dropna()
+    data.loc[data.index[:5], "weights"] = 0.0
+    data.loc[data.index[5], "Y"] = np.nan
+
+    with pytest.warns(UserWarning, match="5 rows with zero weight dropped"):
+        fit = pf.feols("Y ~ X1 | f1", data=data, weights="weights")
+    expected = pf.feols(
+        "Y ~ X1 | f1", data=data[data["weights"] != 0], weights="weights"
+    )
+
+    assert fit.sample_info.dropped_by_stage == DroppedRowCounts(
+        missing=1, zero_weight=5
+    )
+    assert fit.sample_info.dropped_row_index == frozenset(range(6))
+    assert fit.sample_info.n_rows == expected.sample_info.n_rows
+    pd.testing.assert_series_equal(fit.coef(), expected.coef())
+    pd.testing.assert_series_equal(fit.se(), expected.se())
+
+    data.loc[data.index[6], "weights"] = -1.0
+    with pytest.raises(ValueError, match="must have only non-negative values"):
+        pf.feols("Y ~ X1 | f1", data=data, weights="weights")
 
 
 @pytest.mark.parametrize("stage", ["missing", "separation"])
@@ -376,11 +402,13 @@ def test_gaussian_glm_performance_uses_explicit_response_domains(
     if observation_weights is None:
         ssu = np.sum(residuals**2)
         ssy = np.sum((response - np.mean(response)) ** 2)
+        sum_weights = fit.sample_info.n_obs
     else:
         ssu = np.sum(observation_weights * residuals**2)
         center = np.average(response, weights=observation_weights)
         ssy = np.sum(observation_weights * (response - center) ** 2)
-    np.testing.assert_allclose(fitstat.rmse, np.sqrt(ssu / fit.sample_info.n_obs))
+        sum_weights = np.sum(observation_weights)
+    np.testing.assert_allclose(fitstat.rmse, np.sqrt(ssu / sum_weights))
     np.testing.assert_allclose(fitstat.r2, 1 - ssu / ssy)
     if fit.model.has_fixef:
         assert observation_weights is not None
@@ -423,7 +451,6 @@ def test_undefined_fit_statistics_are_nan(
 ) -> None:
     fit = estimator(formula, lifecycle_data, **kwargs)
     assert all(np.isnan(value) for value in astuple(fit.fitstat))
-    assert not hasattr(fit, "get_performance")
 
 
 @pytest.mark.parametrize("copy_data", [False, True])
@@ -493,11 +520,21 @@ def test_published_components_preserve_inputs(
         "_tZy",
         "_tZZinv",
         "_tZXinv",
+        "_has_converged",
+        "_it",
+        "_x_final",
+        "_s_final",
+        "_z_final",
+        "_w_final",
+        "_y_final",
     )
-    assert not any(hasattr(fit, name) for name in removed)
+    # Compatibility accessors do not duplicate the retained instance state.
+    assert not set(removed) & set(vars(fit))
     if estimator is pf.quantreg:
         # Quantile inference follows R quantreg and never reads a sandwich.
         assert not hasattr(fit, "sandwich")
+        assert isinstance(fit.solution, QuantregSolution)
+        np.testing.assert_allclose(fit.solution.beta, fit.coef().to_numpy())
     else:
         assert isinstance(fit.sandwich, SandwichComponents)
     pd.testing.assert_frame_equal(lifecycle_data, original)
@@ -522,7 +559,13 @@ def test_multi_quantile_children_follow_ols_retention(
     )
     ols = pf.feols("y ~ x", lifecycle_data, store_data=store_data, lean=lean)
     assert hasattr(ols, "sandwich") == (not lean)
+    # cfm2 solves only the central quantile and updates the others by a single
+    # Newton step, so only that child carries an interior point solution.
+    solved = {0.5} if multi_method == "cfm2" else {0.25, 0.5, 0.75}
     for child in fit.to_list():
+        assert hasattr(child, "solution") is (
+            child.options.quantile in solved and not lean
+        )
         assert not hasattr(child, "sandwich")
         for name in ("_data", "model_matrix", "within_data", "observation_weights"):
             assert hasattr(child, name) == hasattr(ols, name), name
@@ -761,7 +804,7 @@ def test_split_samples_count_only_formula_drops(lifecycle_data: pd.DataFrame):
     data.loc[7, "x"] = np.nan
     fit = pf.feols("y ~ x", data, split="fe")
     for model in fit.to_list():
-        level = model.model.sample_split_value
+        level = model.model.sample_split.value
         population = data.index[data["fe"] == level]
         sample_info = model.sample_info
         assert sample_info.n_rows == len(population) - int(level == "b")
@@ -818,8 +861,23 @@ def test_get_inference_before_vcov_raises_empty_vcov(lifecycle_data):
     """A fixed-effects-only fit skips vcov() and carries no covariance."""
     fit = pf.feols("y ~ 1 | fe", lifecycle_data)
     assert not hasattr(fit, "variance_covariance")
-    with pytest.raises(EmptyVcovError):
+    with pytest.raises(EmptyVcovError, match="estimated no coefficients"):
         fit.get_inference()
+
+
+@pytest.mark.parametrize("estimator", [pf.feols, pf.fepois])
+@pytest.mark.parametrize("vcov", ["iid", "hetero", {"CRV1": "fe"}])
+def test_vcov_on_fixed_effects_only_fit_is_a_no_op(lifecycle_data, estimator, vcov):
+    """Post-estimation vcov() skips a fixed-effects-only fit, as estimation does."""
+    data = lifecycle_data.assign(y=lambda d: d["y"].abs())
+    fit = estimator("y ~ 1 | fe", data)
+
+    assert fit.vcov(vcov) is fit
+    assert not hasattr(fit, "variance_covariance")
+    # Multiple estimation updates its fixed-effects-only member without failing.
+    multi = estimator("y ~ csw0(x) | fe", data).vcov(vcov)
+    assert not hasattr(multi.fetch_model(0, print_fml=False), "variance_covariance")
+    assert hasattr(multi.fetch_model(1, print_fml=False), "variance_covariance")
 
 
 def test_quantreg_rejects_multiway_clustering(lifecycle_data):

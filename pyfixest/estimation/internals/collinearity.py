@@ -6,6 +6,7 @@ import numpy as np
 
 from pyfixest.core.collinear import find_collinear_variables
 from pyfixest.estimation.internals.model_state import CollinearityCheck
+from pyfixest.utils.dev_utils import _find_stack_level
 
 
 def drop_multicollinear_variables(
@@ -14,7 +15,7 @@ def drop_multicollinear_variables(
     collin_tol: float,
 ) -> tuple[np.ndarray, CollinearityCheck]:
     """
-    Check for multicollinearity in the design matrices X and Z.
+    Check for collinear regressors and instruments in the design and instrument matrices.
 
     Parameters
     ----------
@@ -35,8 +36,6 @@ def drop_multicollinear_variables(
         the value so that a fitted model can publish the check without keeping
         the design alive under `lean=True`.
     """
-    # TODO: avoid doing this computation twice, e.g. compute tXXinv here as fixest does
-
     tXX = np.ascontiguousarray(X.T @ X, dtype=np.float64)
     id_excl, n_excl, all_removed = find_collinear_variables(tXX, collin_tol)
 
@@ -44,10 +43,11 @@ def drop_multicollinear_variables(
     collin_index = np.zeros(len(names), dtype=bool)
 
     if all_removed:
+        dropped = repr(names[:5]) + (" ..." if len(names) > 5 else "")
         raise ValueError(
-            """
-            All variables are collinear. Maybe your model specification introduces multicollinearity? If not, please reach out to the package authors!.
-            """
+            f"All regressors are collinear at collin_tol={collin_tol:g}: {dropped}. "
+            "Check for redundant terms and regressors without variation after "
+            "absorbing any fixed effects."
         )
 
     names_array = np.array(names)
@@ -65,17 +65,12 @@ def drop_multicollinear_variables(
             f"""
             {len(collin_vars)} variables dropped due to multicollinearity.
             The following variables are dropped: {formatted_collinear_vars}.
-            """
+            """,
+            UserWarning,
+            stacklevel=_find_stack_level(),
         )
 
         X = np.delete(X, id_excl, axis=1)
-        if X.ndim == 2 and X.shape[1] == 0:
-            raise ValueError(
-                """
-                All variables are collinear. Please check your model specification.
-                """
-            )
-
         names_array = np.delete(names_array, id_excl)
         collin_index = np.asarray(id_excl, dtype=bool)
 

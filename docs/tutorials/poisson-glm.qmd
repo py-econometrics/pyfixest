@@ -1,13 +1,12 @@
 ---
 title: "Poisson & GLMs"
-description: "Poisson for nonnegative outcomes, DiD with counts, and logit/probit for propensity-score based AB testing."
+description: "Poisson for a nonnegative dependent variable, DiD with counts, and logit/probit for propensity-score based AB testing."
 categories: [Core Estimation]
 format:
   html:
     html-table-processing: none
 toc: true
 toc-title: "On this page"
-toc-location: left
 ---
 
 ::: {.callout-note}
@@ -17,11 +16,11 @@ This vignette is practical by design. We focus on how to use `pyfixest` and when
 
 ## 1. Why Poisson? (and Why Wooldridge Likes It)
 
-A common motivation for Poisson pseudo-maximum-likelihood (PPML) is that it works well for **nonnegative outcomes** and remains valid under fairly general forms of heteroskedasticity when the conditional mean is correctly specified.
+A common motivation for Poisson pseudo-maximum-likelihood (PPML) is that it works well for a **nonnegative dependent variable** and remains valid under fairly general forms of heteroskedasticity when the conditional mean is correctly specified.
 
 In practice, that makes Poisson attractive for many applied settings where:
 
-- outcomes are counts or nonnegative flows,
+- the dependent variable measures counts or nonnegative flows,
 - zeros are common,
 - log-linear OLS can be fragile.
 
@@ -80,9 +79,9 @@ This is the basic PPML gravity workflow in `pyfixest`.
 
 ## 3. Handling Zeros: "The Log of Zeros"
 
-One reason PPML is popular is straightforward handling of zero outcomes without ad-hoc transformations like `log(y + 1)`.
+One reason PPML is popular is straightforward handling of zeros in the dependent variable without ad-hoc transformations like `log(y + 1)`.
 
-This is central in modern work on nonnegative outcomes, including recent discussion in:
+This is central in modern work on nonnegative dependent variables, including recent discussion in:
 
 - Bellégo, Benatia, and Pape (2024), *Dealing with Logs and Zeros in Regression Models* ([QJE](https://academic.oup.com/qje/article-abstract/139/2/891/7473710)).
 
@@ -225,10 +224,10 @@ Both Poisson and GLM estimators in `pyfixest` support fixed effects using the sa
 - Poisson: `pf.fepois("y ~ x | fe1 + fe2", ...)`
 - GLM families (`logit`, `probit`, `gaussian`): `pf.feglm("y ~ x | fe1 + fe2", family="logit", ...)`
 
-That shared syntax makes it easy to move between linear, Poisson, and binary-response workflows while keeping your FE structure aligned.
+That shared syntax makes it easy to move between linear, Poisson, and binary-response workflows while keeping your fixed effects aligned.
 
 ## Where to Go Next
 
 - [Difference-in-Differences](difference-in-differences.qmd): richer DiD estimators and event studies.
 - [Standard Errors & Inference](standard-errors.qmd): clustered inference, randomization inference, and wild bootstrap.
-- [How-To: Variance Reduction in AB Tests](../how-to/panel_variance_reduction.qmd): AB testing workflows with controls and panel structure.
+- [How-To: Variance Reduction in AB Tests](../how-to/panel_variance_reduction.qmd): AB testing workflows with pre-treatment regressors and panel structure.

@@ -38,7 +38,7 @@ The simplest benchmark assumes errors are independent and identically distribute
 import pyfixest as pf
 
 data = pf.get_data()
-fit_iid = pf.feols("Y ~ X1 + X2 | f1", data=data, vcov="iid")
+fit_iid = pf.feols("Y ~ X1 + X2", data=data, vcov="iid")
 fit_iid.summary()
 ```
 
@@ -50,12 +50,15 @@ If error variance differs across observations, iid standard errors can be mislea
 
 Common robust choices:
 
-- `HC1` / `"hetero"`: common default.
-- `HC2`, `HC3`: often preferred in smaller samples.
+- `HC1` / `"hetero"`: common default, including for models with absorbed fixed effects.
+- `HC2`, `HC3`: often preferred in smaller samples. Use them with OLS models
+  without absorbed fixed effects.
+
+The comparison below uses the same model for all three variance estimators.
 
 ```python
-fit_hc1 = pf.feols("Y ~ X1 + X2 | f1", data=data, vcov="HC1")
-fit_hc3 = pf.feols("Y ~ X1 + X2 | f1", data=data, vcov="HC3")
+fit_hc1 = pf.feols("Y ~ X1 + X2", data=data, vcov="HC1")
+fit_hc3 = pf.feols("Y ~ X1 + X2", data=data, vcov="HC3")
 
 pf.etable([fit_iid, fit_hc1, fit_hc3])
 ```
@@ -63,21 +66,29 @@ pf.etable([fit_iid, fit_hc1, fit_hc3])
 ## 4. Cluster-Robust Inference
 
 If errors are correlated within groups (states, firms, schools, users), use cluster-robust inference.
+The simulated data from `pf.get_data()` includes a cluster identifier named
+`group_id`. The examples below absorb `f1` and cluster on `group_id`.
 
 ```python
 fit_crv1 = pf.feols("Y ~ X1 + X2 | f1", data=data, vcov={"CRV1": "group_id"})
 fit_crv3 = pf.feols("Y ~ X1 + X2 | f1", data=data, vcov={"CRV3": "group_id"})
 ```
 
-Multi-way clustering is supported as well:
+Multi-way clustering accepts any number of cluster variables separated by `+`:
 
 ```python
-fit_twoway = pf.feols(
+fit_multiway = pf.feols(
     "Y ~ X1 + X2 | f1",
-    data=data,
-    vcov={"CRV1": "f1 + f2"},
+    data=data.dropna(),
+    vcov={"CRV1": "f1 + f2 + group_id"},
 )
 ```
+
+CRV1 supports OLS, IV, and GLM fits, including their supported weights and fixed
+effects. CRV3 uses the same multi-way combination for OLS and Poisson fits;
+quantile regression supports only one cluster variable. To switch the multi-way
+fit to CRV3 inference in place, use
+`fit_multiway.vcov({"CRV3": "f1 + f2 + group_id"})`.
 
 ## 5. Which Level Should You Cluster On?
 
@@ -136,7 +147,7 @@ Goal: compare rejection rates under the null (`beta = 0`) for:
 Design sketch:
 
 1. Simulate clustered data with no true treatment effect.
-2. Fit `feols` with clustered vcov.
+2. Fit with `feols()` and a cluster-robust variance estimator.
 3. Test `H0: beta = 0` using conventional CRV p-values.
 4. Test the same null via `wildboottest`.
 5. Repeat many times and compare empirical rejection rates.
@@ -275,8 +286,8 @@ against R's `boot` package.
 Suggested workflow:
 
 1. Start from design and dependence structure.
-2. Use robust/clustered vcov aligned with that structure.
-3. If clusters are few or very uneven, consider a null-imposed wild cluster bootstrap for supported OLS designs; do not treat the weighting bootstrap as a few-cluster correction.
+2. Choose a variance estimator that accounts for that dependence structure.
+3. If clusters are few or very uneven, use wild cluster bootstrap; the weighting bootstrap is not a few-cluster correction.
 4. If assignment is randomized, add randomization inference as a design-based check.
 
 ## 11. Multiple Testing

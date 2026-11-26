@@ -186,8 +186,11 @@ def get_data2(N, seed):
 @pytest.mark.parametrize("method", ["fn", "pfn"])
 @pytest.mark.parametrize("multi_method", ["cfm1", "cfm2"])
 def test_quantreg_multiple_quantiles(data, fml, vcov, method, multi_method):
-    "Test that multiple quantile syntax via QuantregMulti produces the same results as the single quantile syntax."
-    quantiles = list(np.linspace(0.05, 0.95, 10))
+    "Test the quantile regression process against separate fits per quantile."
+    # cfm2 updates each quantile by a single Newton step from its neighbour,
+    # which approximates the separate fits only on a fine grid of quantiles.
+    n_quantiles = 10 if multi_method == "cfm1" else 91
+    quantiles = list(np.linspace(0.05, 0.95, n_quantiles))
     seed = 1231
 
     fit_single = [
@@ -201,33 +204,43 @@ def test_quantreg_multiple_quantiles(data, fml, vcov, method, multi_method):
         vcov=vcov,
         seed=seed,
         method=method,
-        multi_method="cfm1",
+        multi_method=multi_method,
     )
 
     for q in range(len(quantiles)):
-        # test coefficients
         single_coef = fit_single[q].coef().to_numpy()
         multi_coef = fit_multi.fetch_model(q).coef().to_numpy()
-
-        np.testing.assert_allclose(
-            single_coef,
-            multi_coef,
-            rtol=1e-06,  # is this too low?
-            atol=1e-06,  # is this too low?
-            err_msg=f"Quantile: {quantiles[q]} with method: {method} and multi_method: {multi_method}",
-        )
-
-        # test standard errors
         single_se = fit_single[q].se().to_numpy()
         multi_se = fit_multi.fetch_model(q).se().to_numpy()
 
-        np.testing.assert_allclose(
-            single_se,
-            multi_se,
-            rtol=1e-06,  # is this too low?
-            atol=1e-06,  # is this too low?
-            err_msg=f"Quantile: {quantiles[q]}",
-        )
+        if multi_method == "cfm2":
+            # The one-step estimates (Chernozhukov, Fernández-Val & Melly 2022,
+            # Algorithm 3) are only asymptotically equivalent to separate
+            # fits; at N = 1000 their error is of the order of the sampling
+            # error (max. 2.3 standard errors on this grid), while the
+            # pre-#1745 scalar-density Hessian missed `Y ~ X1 + X2` by 15 to 26.
+            # Standard errors evaluated at approximate coefficients have no
+            # exact reference and are not compared.
+            np.testing.assert_array_less(
+                np.abs(multi_coef - single_coef),
+                3 * single_se,
+                err_msg=f"Coefficients, quantile: {quantiles[q]} with method: {method}",
+            )
+        else:
+            np.testing.assert_allclose(
+                single_coef,
+                multi_coef,
+                rtol=1e-06,  # is this too low?
+                atol=1e-06,  # is this too low?
+                err_msg=f"Quantile: {quantiles[q]} with method: {method} and multi_method: {multi_method}",
+            )
+            np.testing.assert_allclose(
+                single_se,
+                multi_se,
+                rtol=1e-06,  # is this too low?
+                atol=1e-06,  # is this too low?
+                err_msg=f"Quantile: {quantiles[q]}",
+            )
 
 
 @pytest.mark.against_r_core

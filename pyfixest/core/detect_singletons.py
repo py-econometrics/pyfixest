@@ -6,10 +6,10 @@ from pyfixest.core._core_impl import _detect_singletons_rs
 
 def detect_singletons(ids: NDArray[np.integer]) -> NDArray[np.bool_]:
     """
-    Detect singleton fixed effects in a dataset.
+    Detect singletons in a dataset.
 
     This function iterates over the columns of a 2D numpy array representing
-    fixed effects to identify singleton fixed effects.
+    fixed effects to identify singletons.
     An observation is considered a singleton if it is the only one in its group
     (fixed effect identifier).
 
@@ -24,7 +24,7 @@ def detect_singletons(ids: NDArray[np.integer]) -> NDArray[np.bool_]:
     -------
     numpy.ndarray
         A boolean array of shape (n_samples,), indicating which observations have
-        a singleton fixed effect.
+        a singleton.
 
     Notes
     -----
@@ -32,6 +32,9 @@ def detect_singletons(ids: NDArray[np.integer]) -> NDArray[np.bool_]:
     column is processed, it updates the record of non-singleton rows. This approach
     accounts for the possibility that removing an observation in one column can
     lead to the emergence of new singletons in subsequent columns.
+
+    Groups are counted in physical rows, also under frequency weights: a row
+    whose weight exceeds one is still a singleton if it is alone in its group.
 
     For performance reasons, the input array should be in column-major order.
     Operating on a row-major array can lead to significant performance losses.
@@ -57,7 +60,10 @@ def detect_singletons(ids: NDArray[np.integer]) -> NDArray[np.bool_]:
     ```
     """
     if not np.issubdtype(ids.dtype, np.integer):
-        raise TypeError("Fixed effects must be integers")
+        raise TypeError(
+            f"detect_singletons() requires integer fixed-effect level codes; got {ids.dtype}. "
+            "Encode each fixed-effect column before calling it."
+        )
 
     # Convert to uint32 F-contiguous array for optimal performance
     # (matches numba implementation behavior)

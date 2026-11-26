@@ -1,0 +1,163 @@
+/*-- scss:defaults --*/
+$primary: #087f81;
+$body-color: #293547;
+$body-bg: #ffffff;
+$headings-color: #111c38;
+$link-color: #087779;
+$font-family-sans-serif: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+$font-family-monospace: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+$web-font-path: false;
+$font-size-root: 17px;
+$line-height-base: 1.7;
+$headings-font-weight: 650;
+$navbar-bg: #ffffff;
+$navbar-fg: #293547;
+$navbar-hl: #087779;
+$code-color: #305b70;
+$code-bg: #f0f5f7;
+$code-block-bg: #f6f8fb;
+$code-block-border-left: false;
+$border-color: #e1e7ed;
+$border-radius: .4rem;
+
+/*-- scss:rules --*/
+
+// Keep the site chrome quiet and leave the colour to the PyFixest identity.
+#quarto-header {
+  border-top: 3px solid $primary;
+  border-bottom: 1px solid $border-color;
+  box-shadow: 0 2px 12px rgba(17, 28, 56, .035);
+}
+
+.navbar {
+  padding-block: .7rem;
+  .navbar-brand {
+    font-size: 1.3rem;
+    font-weight: 750;
+    letter-spacing: -.04em;
+    color: $headings-color;
+    margin-right: 2rem;
+  }
+  .nav-link { font-size: .88rem; font-weight: 550; }
+  .nav-link.active { color: $primary; }
+}
+
+.dropdown-menu {
+  border: 1px solid $border-color;
+  border-radius: .5rem;
+  box-shadow: 0 12px 30px rgba(17, 28, 56, .08);
+  padding: .5rem;
+  .dropdown-item { border-radius: .25rem; padding: .45rem .7rem; }
+}
+
+main { padding-bottom: 3rem; }
+#title-block-header { margin-bottom: 2.5rem; }
+h1, h2, h3 { letter-spacing: -.025em; }
+h1.title { font-size: clamp(2rem, 3vw, 2.7rem); line-height: 1.18; }
+h2 { margin-top: 2.6rem; padding-bottom: .6rem; border-color: $border-color; }
+h3 { margin-top: 1.9rem; }
+.subtitle { color: #5b6879; font-size: 1.1rem; line-height: 1.6; margin-top: .9rem; }
+main a { text-underline-offset: .18em; text-decoration-thickness: 1px; }
+main p, main li { overflow-wrap: break-word; }
+
+// Quarto retains its native collapse, search, active-page and mobile behaviour.
+.sidebar-navigation {
+  font-size: .86rem;
+  .sidebar-title { font-size: .8rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+  .sidebar-item-container { margin-block: .18rem; }
+  .sidebar-item-text { padding: .35rem .55rem; border-radius: .3rem; min-width: 0; overflow-wrap: anywhere; }
+  .sidebar-item-text.active { color: #076467; background: #edf7f6; font-weight: 650; }
+  .sidebar-item-text:hover { background: #f3f6f8; }
+}
+#quarto-margin-sidebar {
+  font-size: .8rem;
+  #toc-title { font-size: .78rem; font-weight: 700; color: $headings-color; }
+  .nav-link { line-height: 1.5; padding-block: .3rem; }
+}
+.quarto-page-breadcrumbs { font-size: .8rem; }
+
+div.sourceCode {
+  border: 1px solid $border-color;
+  border-radius: .55rem;
+  margin-block: 1.25rem;
+}
+div.sourceCode pre.sourceCode { padding: 1rem 1.2rem; }
+pre { font-size: .83rem; line-height: 1.65; }
+:not(pre) > code { border-radius: .2rem; padding: .1em .3em; }
+.cell-output pre { padding: .85rem 1rem; border-left: 2px solid $border-color; }
+div.callout { border-radius: .5rem; margin-block: 1.5rem; box-shadow: none; }
+details { margin-block: 1.2rem; padding: .75rem 1rem; border: 1px solid $border-color; border-radius: .5rem; }
+summary { color: $headings-color; font-weight: 600; cursor: pointer; }
+
+// Scope table styling to Quarto tables, preserving rendered regression outputs.
+// DataFrames carry .table-sm and keep Bootstrap's compact layout.
+.table:not(.table-sm) {
+  font-size: .88rem;
+  > thead { background: #f3f6f9; color: $headings-color; }
+  > :not(caption) > * > * { padding: .7rem .8rem; }
+}
+// Estimator pages group parameters under h3 subsections, one level deeper.
+.doc-section > .table:not(.table-sm),
+.doc-section > section > .table:not(.table-sm) {
+  table-layout: fixed;
+  overflow-wrap: anywhere;
+  // Pandoc can infer inline column widths from Markdown padding, not content.
+  col { width: auto !important; }
+  code { white-space: normal; }
+}
+.doc-section-returns > .table,
+.doc-section-returns > section > .table {
+  th:nth-child(1) { width: 19%; }
+  th:nth-child(2) { width: 23%; }
+  th:nth-child(3) { width: 58%; }
+}
+.doc-section-parameters > .table,
+.doc-section-parameters > section > .table {
+  th:nth-child(1) { width: 19%; }
+  th:nth-child(2) { width: 23%; }
+  th:nth-child(3) { width: 43%; }
+  th:nth-child(4) { width: 15%; }
+}
+
+.quarto-grid-item {
+  border: 1px solid $border-color;
+  border-radius: .65rem;
+  background: white;
+  transition: border-color .15s ease, box-shadow .15s ease;
+  &:hover, &:focus-within { border-color: #75b8b4; box-shadow: 0 5px 18px rgba(17, 28, 56, .06); }
+  .card-body { padding: 1.5rem; }
+  .listing-title { color: $headings-color; font-size: 1.2rem; line-height: 1.35; }
+  .listing-description { color: #566476; font-size: .92rem; line-height: 1.65; }
+  .listing-category { color: #176b6c; border-color: #d1e7e4; background: #f0f8f6; border-radius: 1rem; padding: .15rem .55rem; }
+}
+.quarto-listing-category-title { font-size: .85rem; font-weight: 650; }
+
+.docs-home {
+  main > p:first-of-type img { width: min(100%, 440px); border-radius: .75rem; }
+  main > section > h1 { font-size: clamp(2rem, 3.2vw, 2.8rem); line-height: 1.2; margin-block: 1.8rem 1.2rem; }
+  #features > ul { padding-left: 1.2rem; }
+  #features > ul > li { margin-bottom: 1.2rem; }
+  #features > ul > li > strong { color: $headings-color; }
+  #contributors > table { display: block; max-width: 100%; overflow-x: auto; }
+}
+.nav-footer { border-top: 1px solid $border-color; color: #5b6879; font-size: .8rem; padding-block: 1.5rem; }
+a:focus-visible, button:focus-visible, summary:focus-visible { outline: 3px solid #138b8d; outline-offset: 3px; }
+
+@media (max-width: 991.98px) {
+  .navbar .navbar-brand { margin-right: 1rem; }
+  #title-block-header { margin-bottom: 1.75rem; }
+  h1.title { font-size: 2rem; }
+  .quarto-grid-item .card-body { padding: 1.1rem; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .quarto-grid-item { transition: none; }
+}
+@media (max-width: 767.98px) {
+  .doc-section > .table:not(.table-sm),
+  .doc-section > section > .table:not(.table-sm) {
+    display: block;
+    overflow-x: auto;
+    th, td { min-width: 7rem; }
+    th:nth-child(3), td:nth-child(3) { min-width: 18rem; }
+  }
+}

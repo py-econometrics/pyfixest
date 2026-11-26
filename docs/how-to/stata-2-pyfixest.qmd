@@ -7,7 +7,6 @@ format:
     html-table-processing: none
 toc: true
 toc-title: "On this page"
-toc-location: left
 ---
 
 # How to Get Started
@@ -21,7 +20,7 @@ which includes a section on
 [Coming from Stata](https://aeturrell.github.io/coding-for-economists/coming-from-stata.html),
 or [Tidy Finance with Python](https://www.tidy-finance.org/python/) by Christopher
 Scheuch, Stefan Voigt, Patrick Weiss, and Christoph Frey. You can also check out the fixest section
-of [stata2r](https://stata2r.github.io/fixest/) as there is a lot of overlap between fixest and PyFixest
+of [stata2r](https://stata2r.github.io/fixest.html) as there is a lot of overlap between fixest and PyFixest
 syntax.
 
 # Data
@@ -36,7 +35,8 @@ df = pf.get_data()
 If you want to use the same dataset in Stata, you can save the data to your home
 directory as a .dta file with
 
-```{python, eval = FALSE}
+```{python}
+#| eval: false
 import os
 df.to_stata(os.path.join(os.path.expanduser("~"), "pyfixest-data.dta"))
 ```
@@ -190,7 +190,7 @@ reg Y X1 X2, vce(hc3)
 * ------------------------------------------------------------------------------
 ```
 
-this is because by default, `pyfixest` uses two small sample size corrections for HC3
+this is because by default, `pyfixest` uses two small-sample corrections for HC3
 robust standard errors, while Stata only uses one of them. You can turn off the
 correction that Stata doesn't use with the `ssc` argument.
 
@@ -199,9 +199,9 @@ fit5 = pf.feols("Y ~ X1 + X2", data=df, vcov="HC3", ssc=pf.ssc(k_adj = False))
 fit5.summary()
 ```
 
-which matches Stata exactly.  You can read all about the small sample size corrections
+which matches Stata exactly.  You can read all about the small-sample corrections
 implememnted by `pyfixest` at
-[On Small Sample Corrections](../explanation/ssc.qmd).
+[Small-sample corrections](../explanation/ssc.qmd).
 
 ## Clustered Standard Errors
 
@@ -273,7 +273,7 @@ reg Y X1 X2, vce(cluster f1 f2)
 * Cluster combinations formed by f1 and f2.
 ```
 
-this is because by default, `pyfixest` uses a small sample size correction that adjusts
+this is because by default, `pyfixest` uses a small-sample correction that adjusts
 each clustering dimentsion by whichever dimension has the smallest number of clusters,
 while in Stata the default is to adjust each dimension based on the number of clusters
 in that dimension. You can use the same correction as Stata through the `ssc` argument.
@@ -288,8 +288,8 @@ fit8 = pf.feols(
 fit8.summary()
 ```
 
-As a reminder, for an excellent breakdown on small sample correction in the `pyfixest` package, you can check out
-[On Small Sample Correction](../explanation/ssc.qmd).
+As a reminder, for an excellent breakdown on small-sample correction in the `pyfixest` package, you can check out
+[Small-sample corrections](../explanation/ssc.qmd).
 
 # Fixed Effect Regressions
 

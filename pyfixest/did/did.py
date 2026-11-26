@@ -26,7 +26,7 @@ class DID(ABC):
         Datetime variables are currently not accepted. Never treated units must
         have a value of 0.
     xfml : str
-        The formula for the covariates.
+        The formula for the regressors.
     att : str
         Whether to estimate the average treatment effect on the treated (ATT) or
         the canonical event study design with all leads and lags. Default is True.
@@ -46,7 +46,21 @@ class DID(ABC):
         xfml: str | None = None,
         att: bool = True,
     ):
-        # do some checks here
+        if not isinstance(data, pd.DataFrame):
+            raise TypeError(
+                f"Difference-in-differences requires a pandas DataFrame; got {type(data).__name__}."
+            )
+        for option, column in (
+            ("idname", idname),
+            ("tname", tname),
+            ("gname", gname),
+        ):
+            if column not in data.columns:
+                raise ValueError(
+                    f"{option}={column!r} must name an existing column in the panel data. "
+                    "Check the column names before fitting. "
+                    "See https://pyfixest.org/tutorials/difference-in-differences.html"
+                )
 
         self._data = data.copy()
         self._yname = yname
@@ -57,9 +71,7 @@ class DID(ABC):
         self._att = att
         self._cluster = cluster
 
-        # check if tname and gname are of type int (either int 64, 32, 8)
-
-        for var in [self._tname, self._gname]:
+        for option, var in (("tname", self._tname), ("gname", self._gname)):
             if self._data[var].dtype not in [
                 "int64",
                 "int32",
@@ -68,12 +80,12 @@ class DID(ABC):
                 "float32",
             ]:
                 raise ValueError(
-                    f"""The variable {var} must be of a numeric type, and more
-                    specifically, in the format YYYYMMDDHHMMSS. I.e. either 2012, 2013,
-                    etc. or 201201, 201202, 201203 etc."""
+                    f"{option}={var!r} must have dtype int8, int32, int64, float32, "
+                    f"or float64; got {self._data[var].dtype}. Convert it to one of "
+                    "these dtypes, for example with .astype('int64') for integer "
+                    "periods such as 2012 or 201201."
                 )
 
-        # create a treatment variable
         self._data["is_treated"] = (
             self._data[self._tname] >= self._data[self._gname]
         ) * (self._data[self._gname] > 0)

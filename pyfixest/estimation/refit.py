@@ -11,9 +11,12 @@ from __future__ import annotations
 from dataclasses import replace
 from typing import TYPE_CHECKING
 
+from within import PreconditionerConfig
+
 from pyfixest.core.demean import Preconditioner
 from pyfixest.demeaners import AnyDemeaner, LsmrDemeaner, LsmrPreconditioner
 from pyfixest.estimation.config import EstimationConfig
+from pyfixest.estimation.formula.parse import Formula
 from pyfixest.estimation.internals.retention import require_retained
 
 if TYPE_CHECKING:
@@ -27,7 +30,7 @@ def refit(
     fit: Feols,
     *,
     data: pd.DataFrame,
-    fml: str | None = None,
+    formula: Formula | None = None,
     vcov: VcovSpec,
     same_sample: bool = False,
 ) -> Feols:
@@ -51,10 +54,10 @@ def refit(
         The fitted model whose estimator and options are replayed.
     data : pd.DataFrame
         The data to fit, with the columns of the fit's sample.
-    fml : str, optional
-        The formula to fit; defaults to the fit's.
+    formula : Formula, optional
+        The formula to fit; defaults to the fit's retained parsed formula.
     vcov : VcovSpec
-        The covariance estimator of the refit.
+        The variance estimator of the refit.
     same_sample : bool, optional
         Whether `data` has the rows of the fit's sample, so the refit must
         keep every row. Defaults to False.
@@ -66,7 +69,7 @@ def refit(
     """
     # lazy loading to avoid circular import
     from pyfixest.estimation.models.feols_ import Feols
-    from pyfixest.estimation.plan_ import estimation_method_of, parse_formula
+    from pyfixest.estimation.plan_ import estimation_method_of, plan_formulas
     from pyfixest.estimation.runner import run_estimation
 
     require_retained(fit, "refit", "_data")
@@ -81,7 +84,6 @@ def refit(
             fit.options,
             # do not drop singletons again (they are already dropped)
             drop_singletons=False,
-            # reuse the preconditioner
             demeaner=_with_preconditioner(fit.options.demeaner, fit.preconditioner),
         )
     else:
@@ -89,16 +91,18 @@ def refit(
             fit.options,
             demeaner=_without_prebuilt_preconditioner(fit.options.demeaner),
         )
+    formula = fit.model.parsed_formula if formula is None else formula
     config = EstimationConfig(
         method=estimation_method_of(type(fit)),
-        data=data.copy(deep=False),
-        fml=fit.model.formula if fml is None else fml,
-        # the shallow copy above keeps `data` unchanged without a deep copy
+        data=data,
+        formulas=(formula,),
+        # the runner does not modify `data`, so it need not copy it
         options=replace(options, copy_data=False),
         vcov=vcov,
     )
     # the caller reads the refit in full or throws it away
-    result = run_estimation(config, parse_formula(config), apply_retention=False)
+    plan = plan_formulas(config)
+    result = run_estimation(config, plan, apply_retention=False)
     if not isinstance(result, Feols):
         raise TypeError(f"A refit must return a single model, not {result!r}.")
     if same_sample and result.sample_info.n_obs != fit.sample_info.n_obs:
@@ -124,7 +128,7 @@ def _with_preconditioner(
 
 
 def _without_prebuilt_preconditioner(demeaner: AnyDemeaner) -> AnyDemeaner:
-    """Replace a prebuilt LSMR `Preconditioner` by the name of its variant.
+    """Replace a prebuilt LSMR `Preconditioner` by the name of its configuration.
 
     A prebuilt preconditioner is tied to the fixed-effect design it was built
     on, so a refit on another sample must build its own. Variants without a
@@ -135,12 +139,12 @@ def _without_prebuilt_preconditioner(demeaner: AnyDemeaner) -> AnyDemeaner:
         and isinstance(demeaner.preconditioner, Preconditioner)
     ):
         return demeaner
-    variant = demeaner.preconditioner.variant.lower()
+    config = demeaner.preconditioner.config
     preconditioner: LsmrPreconditioner = (
         "additive"
-        if variant == "additive"
+        if isinstance(config, PreconditionerConfig.Additive)
         else "diagonal"
-        if variant == "diagonal"
+        if isinstance(config, PreconditionerConfig.Diagonal)
         else "auto"
     )
     return replace(demeaner, preconditioner=preconditioner)

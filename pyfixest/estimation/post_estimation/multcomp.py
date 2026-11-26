@@ -9,6 +9,7 @@ from pyfixest.estimation.models.feiv_ import Feiv
 from pyfixest.estimation.models.feols_ import Feols
 from pyfixest.estimation.models.fepois_ import Fepois
 from pyfixest.report.utils import _post_processing_input_checks
+from pyfixest.utils.dev_utils import _find_stack_level
 
 ModelInputType = FixestMulti | list[Feols | Fepois | Feiv]
 
@@ -23,7 +24,7 @@ def bonferroni(models: ModelInputType, param: str) -> pd.DataFrame:
     Parameters
     ----------
     models : Feols, Fepois, Feiv, FixestMulti, or list
-        A fitted model object, or a list of Feols, Fepois, and Feiv models.
+        A fitted model, or a list of Feols, Fepois, and Feiv models.
     param : str
         The parameter for which the p-values should be adjusted.
 
@@ -53,7 +54,8 @@ def bonferroni(models: ModelInputType, param: str) -> pd.DataFrame:
     for i, model in enumerate(models):
         if param not in model._coefnames:
             raise ValueError(
-                f"Parameter '{param}' not found in the model {model.model.formula}."
+                f"Parameter '{param}' not found in the model {model.model.formula}. "
+                "Choose a coefficient that appears in fit.coef().index for every fit."
             )
         pvalues[i] = model.pvalue().xs(param)
         all_model_stats = pd.concat([all_model_stats, model.tidy().xs(param)], axis=1)
@@ -173,7 +175,6 @@ def _get_rwolf_pval(t_stats, boot_t_stats):
         else:
             corr_padj[j] = max(pinit[j], corr_padj[j - 1])
 
-    # Collect the results
     pval = corr_padj[ro]
 
     return pval
@@ -286,10 +287,10 @@ def _multcomp_resample(
 
     models = _post_processing_input_checks(models)
     if type not in ["rwolf", "wyoung"]:
-        raise ValueError("Type should be one of 'rwolf' and 'wyoung'")
+        raise ValueError(f"type must be 'rwolf' or 'wyoung'; got {type!r}.")
     if sampling_method not in ["wild-bootstrap", "ri"]:
         raise ValueError(
-            "Adjustment procedure should be one of 'wild-bootstrap' and 'ri'"
+            f"sampling_method must be 'wild-bootstrap' or 'ri'; got {sampling_method!r}."
         )
 
     all_model_stats = pd.DataFrame()
@@ -299,7 +300,8 @@ def _multcomp_resample(
     for model in models:
         if param not in model._coefnames:
             raise ValueError(
-                f"Parameter '{param}' not found in the model {model.model.formula}."
+                f"Parameter '{param}' not found in the model {model.model.formula}. "
+                "Choose a coefficient that appears in fit.coef().index for every fit."
             )
 
         if model.variance_covariance.spec.is_clustered:
@@ -310,7 +312,9 @@ def _multcomp_resample(
                     f"""
                               2^(the number of clusters) < the number of boot iterations for at least one model,
                               setting full_enumeration to True and reps = {2**G}.
-                              """
+                              """,
+                    UserWarning,
+                    stacklevel=_find_stack_level(),
                 )
                 full_enumeration = True
 

@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, Any, Final
 import numpy as np
 import pandas as pd
 from formulaic import FactorValues
+from formulaic.parser.types import Factor
 from formulaic.transforms import encode_contrasts
 from formulaic.transforms.contrasts import TreatmentContrasts
 from formulaic.utils.sentinels import UNSET
@@ -31,15 +32,19 @@ def factor_interaction(
     data : array-like
         The categorical variable to encode.
     var2 : array-like, optional
-        Optional second variable to interact with (continuous or categorical).
+        Optional second variable to interact with. A numeric `var2` gives
+        continuous slopes; a non-numeric `var2` is a factor. Wrap a numeric
+        `var2` in `C()`, as in `i(f, C(k))`, to treat it as a factor.
     ref : Hashable, optional
         Reference level to drop from `data`.
     ref2 : Hashable, optional
-        Reference level to drop from `var2` (only if `var2` is categorical).
+        Reference level to drop from a factor `var2`. Raises `ValueError` for a
+        continuous `var2`.
     bin : dict, optional
         Mapping of `new_level -> [old_levels]` for binning `data`.
     bin2 : dict, optional
-        Mapping of `new_level -> [old_levels]` for binning `var2`.
+        Mapping of `new_level -> [old_levels]` for binning a factor `var2`.
+        Raises `ValueError` for a continuous `var2`.
 
     Returns
     -------
@@ -77,8 +82,8 @@ def factor_interaction(
         i(cyl, ref=4)     -> cyl::6, cyl::8
         i(cyl, wt)        -> cyl::4:wt, cyl::6:wt, cyl::8:wt
         i(cyl, wt, ref=4) -> cyl::6:wt, cyl::8:wt
+        i(cyl, C(gear))   -> cyl::4:gear::3, ..., cyl::8:gear::5
     """
-    # Try to get variable names from Series.name attribute
     factor_name = _get_series_name(data, default="factor")
     var2_name = _get_series_name(var2, default="var") if var2 is not None else None
 
@@ -108,10 +113,15 @@ def factor_interaction(
     # will check both for null values. This ensures drop_rows is correctly populated.
     wrapped_data = {"__data__": data, "__var2__": var2} if var2 is not None else data
 
+    var2_is_factor = var2 is not None and _is_factor_interaction(var2=var2)
+    # Only a complete set of factor levels or interaction cells spans the
+    # intercept. Explicit references remove groups, and slopes on a numeric
+    # second variable never span it, so later terms keep their full rank.
+    spans_intercept = ref is None and ref2 is None and (var2 is None or var2_is_factor)
     return FactorValues(
         wrapped_data,
         kind="categorical",
-        spans_intercept=var2 is None,
+        spans_intercept=spans_intercept,
         encoder=encoder,
     )
 
@@ -150,28 +160,35 @@ def _encode_i(
     unwrapped = unwrap_factor_values(values)
     data = unwrapped["__data__"] if var2_name is not None else unwrapped
     var2 = unwrapped.get("__var2__") if var2_name is not None else None
-    # Convert to pandas Series and drop specified rows
     data = pd.Series(data)
     data.name = factor_name
-    data.drop(index=data.index[drop_rows], inplace=True)
+    data = _observed_levels(data, bins=bin, encoder_state=encoder_state)
+    data = data.drop(index=data.index[drop_rows])
+    var2_is_numeric = False
     if var2 is not None:
-        var2 = pd.Series(var2)
+        var2_is_numeric = not _is_factor_interaction(var2=var2)
+        if var2_is_numeric and (ref2 is not None or bin2 is not None):
+            raise ValueError(
+                f"`ref2` and `bin2` apply only to a categorical second variable "
+                f"of i(), but `{var2_name}` is numeric and gives continuous "
+                f"slopes. To interact two factors, wrap it in `C()`, as in "
+                f"`i({factor_name}, C({var2_name}), ref2=...)`."
+            )
+        var2 = pd.Series(unwrap_factor_values(var2))
         var2.name = var2_name
-        var2.drop(index=var2.index[drop_rows], inplace=True)
+        if not var2_is_numeric:
+            var2 = _observed_levels(var2, bins=bin2, encoder_state=encoder_state)
+        var2 = var2.drop(index=var2.index[drop_rows])
     dummies = _encode_factor(
-        pd.Series(data),
+        data,
         ref=ref,
-        bins=bin,
         reduced_rank=reduced_rank and var2 is None,
         encoder_state=encoder_state,
         model_spec=model_spec,
     )
-    # Three options: (i) no interaction, (ii) interaction with continuous variable, (ii) factor-factor interaction
     if var2 is None:
-        # (i) No interaction: return categorical encoding of single variable
-        dummies.rename(
-            columns={level: f"{factor_name}::{level}" for level in dummies.columns},
-            inplace=True,
+        dummies = dummies.rename(
+            columns={level: f"{factor_name}::{level}" for level in dummies.columns}
         )
         return FactorValues(
             dummies,
@@ -180,17 +197,15 @@ def _encode_i(
             # (i.e., ref is None and reduced_rank is False)
             spans_intercept=(ref is None and not reduced_rank),
             column_names=tuple(dummies.columns),
-            format="{field}",  # Use column names directly
+            format="{field}",
         )
-    elif ref2 is None and bin2 is None and _is_numeric(var2):
-        # (ii) interaction with continuous variable
-        result = dummies.multiply(var2.to_numpy(), axis=0)
-        result.rename(
+    elif var2_is_numeric:
+        result = dummies.multiply(var2.to_numpy(dtype=np.float64), axis=0)
+        result = result.rename(
             columns={
                 level: f"{factor_name}::{level}:{var2_name}"
                 for level in dummies.columns
-            },
-            inplace=True,
+            }
         )
         return FactorValues(
             result,
@@ -200,12 +215,10 @@ def _encode_i(
             format="{field}",
         )
     else:
-        # (iii) factor-factor interaction
         assert var2_name is not None
         dummies2 = _encode_factor(
             data=var2,
             ref=ref2,
-            bins=bin2,
             reduced_rank=False,
             encoder_state=encoder_state,
             model_spec=model_spec,
@@ -222,40 +235,50 @@ def _encode_i(
             ],
             index=dummies.index,
         )
-        # Drop reference level
-        if ref is None:
-            ref = get_contrast_levels(encoder_state, factor_name)[0]
-        if ref2 is None:
-            ref2 = get_contrast_levels(encoder_state, var2_name)[0]
-        interacted.drop(
-            f"{factor_name}::{ref}:{var2_name}::{ref2}",
-            axis=1,
-            inplace=True,
-            errors="ignore",
-        )
+        # Without ref/ref2 the cells span the intercept. Drop the first cell
+        # only when the model already spans it (intercept or an earlier
+        # full-rank term); otherwise keep every cell.
+        spans_intercept = ref is None and ref2 is None
+        if spans_intercept and reduced_rank:
+            first = get_contrast_levels(encoder_state, factor_name)[0]
+            first2 = get_contrast_levels(encoder_state, var2_name)[0]
+            interacted = interacted.drop(
+                f"{factor_name}::{first}:{var2_name}::{first2}",
+                axis=1,
+                errors="ignore",
+            )
         return FactorValues(
             interacted,
             kind="categorical",
-            spans_intercept=True,
+            spans_intercept=spans_intercept and not reduced_rank,
             column_names=tuple(interacted.columns),
-            format="{field}",  # Use column names directly
+            format="{field}",
         )
+
+
+def _observed_levels(
+    series: pd.Series, bins: dict | None, encoder_state: dict[str, Any]
+) -> pd.Series:
+    """
+    Bin a factor and restrict its levels to the values in the supplied data.
+
+    Like fixest, i() fixes the levels before the model drops rows with missing
+    values: a level seen only on dropped rows remains a level (and can be the
+    reference), while unused categories of a pandas Categorical are not levels.
+    """
+    if bins is not None:
+        series = _apply_binning(series, bins, encoder_state)
+    return series.astype("category").cat.remove_unused_categories()
 
 
 def _encode_factor(
     data: pd.Series,
     ref: Hashable | None,
-    bins: dict | None,
     reduced_rank: bool,
     encoder_state: dict[str, Any],
     model_spec: ModelSpec,
 ) -> pd.DataFrame:
-    # --- Binning (optional) ---
-    if bins is not None:
-        data = _apply_binning(data, bins, encoder_state)
     contrasts_state = get_or_create_contrast_state(encoder_state, str(data.name))
-    # Drop a level if: (1) model has intercept (reduced_rank=True), OR (2) ref is explicitly specified
-    # This replicates the old monkey-patched behavior: drop=reduced_rank or ref is not None
     dummies = encode_contrasts_with_state(
         data,
         ref=ref,
@@ -275,20 +298,33 @@ def _encode_factor(
 
 
 def _interact_dummies(left: np.ndarray, right: np.ndarray) -> np.ndarray:
-    # Compute all pairwise products using broadcasting
-    # arr1[:, :, None] has shape (n_rows, n_levels1, 1)
-    # arr2[:, None, :] has shape (n_rows, 1, n_levels2)
     return np.reshape(
-        # Product has shape (n_rows, n_levels1, n_levels2)
         left[:, :, None] * right[:, None, :],
-        shape=(len(left), -1),
+        (len(left), -1),
     )
 
 
+def _is_factor_interaction(var2: Any) -> bool:
+    """Return whether `i(f, var2)` interacts two factors rather than a slope.
+
+    `C(var2)` marks a numeric second variable as a factor.
+    """
+    marked_factor = (
+        isinstance(var2, FactorValues)
+        and var2.__formulaic_metadata__.kind is Factor.Kind.CATEGORICAL
+    )
+    return marked_factor or not _is_numeric(pd.Series(unwrap_factor_values(var2)))
+
+
 def _is_numeric(series: pd.Series) -> bool:
-    """Check if series is numeric (not categorical/object)."""
-    return pd.api.types.is_numeric_dtype(series) and not pd.api.types.is_bool_dtype(
-        series
+    """Check whether a second variable encodes numeric slopes.
+
+    Booleans count as numeric: fixest interacts a logical second variable as a
+    0/1 slope, not as a factor, including object columns of booleans.
+    """
+    return pd.api.types.is_numeric_dtype(series) or (
+        pd.api.types.is_object_dtype(series)
+        and pd.api.types.infer_dtype(series, skipna=True) == "boolean"
     )
 
 
@@ -296,16 +332,48 @@ def _apply_binning(series: pd.Series, bins: dict, state: dict) -> pd.Series:
     """
     Apply binning: bin={'low': ['a','b'], 'high': ['c','d']}.
 
-    Values not in the mapping are kept unchanged (matches R fixest behavior).
-    The bin mapping is namespaced per variable to avoid collisions when
-    both sides of an interaction are binned (``i(a, b, bin=..., bin2=...)``).
+    Values not in the mapping are kept unchanged. The mapping is validated and
+    cached when it is first built from the estimation data, so prediction reuses
+    it; the cache key is per variable, so ``bin`` and ``bin2`` do not collide.
     """
     bin_key = bin_mapping_state_key(str(series.name))
     if bin_key not in state:
+        if not bins:
+            raise ValueError(
+                f"The binning of i() for the variable `{series.name}` is empty. "
+                "Map each new level to the values it bins, as in "
+                "{'low': ['a', 'b']}."
+            )
         mapping = {}
+        duplicated = []
         for new_level, old_levels in bins.items():
+            if isinstance(old_levels, str) or not isinstance(old_levels, Iterable):
+                old_levels = [old_levels]
+            old_levels = list(old_levels)
+            if not old_levels:
+                raise ValueError(
+                    f"The binning of i() assigns no values of the variable "
+                    f"`{series.name}` to the bin {new_level!r}. "
+                    "Supply at least one observed level for that bin."
+                )
             for old in old_levels:
+                if old in mapping and old not in duplicated:
+                    duplicated.append(old)
                 mapping[old] = new_level
+        if duplicated:
+            raise ValueError(
+                f"The binning of i() assigns the values {duplicated!r} of the "
+                f"variable `{series.name}` to more than one bin. Each value may "
+                "belong to only one bin."
+            )
+        observed = set(series.dropna().unique())
+        unmatched = [old for old in mapping if old not in observed]
+        if unmatched:
+            raise ValueError(
+                f"The binning of i() names values that do not occur in the "
+                f"variable `{series.name}`. No match was found for {unmatched!r}. "
+                "Correct these entries or remove levels you do not wish to bin."
+            )
         state[bin_key] = mapping
     return series.replace(state[bin_key])
 
@@ -329,7 +397,7 @@ def contrast_state_key(variable: str) -> str:
     return f"{_CONTRASTS_PREFIX}{variable}{_CONTRASTS_SUFFIX}"
 
 
-def is_contrast_state_key(key: str) -> bool:
+def is_i_contrast_state_key(key: str) -> bool:
     """Return whether a key stores pyfixest i() contrast state."""
     return key.startswith(_CONTRASTS_PREFIX) and key.endswith(_CONTRASTS_SUFFIX)
 

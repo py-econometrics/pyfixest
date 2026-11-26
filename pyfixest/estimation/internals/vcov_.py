@@ -22,7 +22,7 @@ def vcov_iid_ols(
     N: int | float,
     weights: np.ndarray | None = None,
 ) -> np.ndarray:
-    """Compute IID OLS covariance from response-scale residuals.
+    """Compute the iid OLS variance-covariance matrix from residuals.
 
     ``weights=None`` applies no weights. Otherwise, the residual sum of
     squares is weighted by the observation weights.
@@ -35,7 +35,7 @@ def vcov_iid_ols(
 
 
 def vcov_iid_glm(bread: np.ndarray) -> np.ndarray:
-    "IID Variance-Covariance Matrix for GLMs."
+    "Compute the iid variance-covariance matrix for GLMs."
     return bread
 
 
@@ -98,22 +98,34 @@ def meat_hac(
     panel_arr: np.ndarray | None,
     lag: int | None,
     vcov_type_detail: HacVcovTypeOptions,
+    *,
+    time_id: str | None,
+    panel_id: str | None,
 ) -> np.ndarray:
     "Unscaled HAC meat, shape (k, k): Newey-West (time or panel) or Driscoll-Kraay."
     if vcov_type_detail == "NW":
         if panel_arr is None:
             if lag is None:
                 raise ValueError(
-                    "We have not yet implemented the default Newey-West HAC lag. Please provide a lag value via the `vcov_kwargs`."
+                    "Time-series Newey-West inference requires an explicit lag. "
+                    f"Pass vcov_kwargs={{'time_id': {time_id!r}, 'lag': 2}}, "
+                    "using a lag appropriate to the analysis."
                 )
             if len(np.unique(time_arr)) != len(time_arr):
                 raise ValueError(
-                    "There are duplicate time periods in the data. This is not supported for HAC SEs."
+                    "Time-series Newey-West inference requires one row per time "
+                    f"value. The time_id column {time_id!r} contains duplicate values "
+                    "on the estimation sample. Check for duplicate rows or pass "
+                    "panel_id in vcov_kwargs for panel data."
                 )
             hac_meat = _nw_meat_time(scores=scores, time_arr=time_arr, lag=lag)
         else:
             order, _, starts, counts, panel_arr_sorted, time_arr_sorted = (
-                _get_panel_idx(panel_arr=panel_arr, time_arr=time_arr)
+                _get_panel_idx(
+                    panel_arr=panel_arr,
+                    time_arr=time_arr,
+                    identifier_columns=(panel_id, time_id),
+                )
             )
 
             hac_meat = _nw_meat_panel(
@@ -126,15 +138,15 @@ def meat_hac(
             )
     elif vcov_type_detail == "DK":
         if panel_arr is None:
-            raise ValueError("Missing required 'panel_id' for DK vcov")
+            raise ValueError(
+                "Driscoll-Kraay inference requires panel_id. "
+                f"Pass vcov_kwargs={{'time_id': {time_id!r}, 'panel_id': 'panel'}}."
+            )
 
         order, _, starts, _, time_arr_sorted, _ = _get_panel_idx(
-            # hack: sort first by time, than panel
-            # we need the data sorted by time, but sort by
-            # panel too to check for duplicate time periods
-            # per panel
             panel_arr=time_arr,
             time_arr=panel_arr,
+            identifier_columns=(panel_id, time_id),
         )
         hac_meat = _dk_meat_panel(
             scores=scores[order], time_arr=time_arr_sorted, idx=starts, lag=lag

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import re
 
 import numpy as np
@@ -11,6 +13,8 @@ from rpy2.robjects.packages import importr
 import pyfixest as pf
 from pyfixest.estimation import feols
 from pyfixest.estimation.FixestMulti_ import FixestMulti
+from pyfixest.estimation.internals.model_state import VcovSpec
+from pyfixest.estimation.refit import refit
 from pyfixest.utils.utils import get_data, ssc
 from tests._feols_test_cases import (
     FEOLS_FORMULA_F3_CASES,
@@ -361,6 +365,10 @@ def test_single_fit_feols(
     check_absolute_diff(py_r2, r_r2, inference_tol, "py_r2 != r_r2")
     check_absolute_diff(py_adj_r2, r_adj_r2, inference_tol, "py_adj_r2 != r_adj_r2")
 
+    py_rmse = mod.fitstat.rmse
+    r_rmse = float(ro.r('fixest::fitstat(r_fixest, "rmse")$rmse')[0])
+    check_absolute_diff(py_rmse, r_rmse, inference_tol, "py_rmse != r_rmse")
+
     if not np.isnan(py_r2_within):
         check_absolute_diff(
             py_r2_within, r_r2_within, inference_tol, "py_r2_within != r_r2_within"
@@ -419,9 +427,13 @@ def test_single_fit_feols_empty(
     r_predict = stats.predict(r_fixest)
 
     check_absolute_diff(py_nobs, r_nobs, 1e-08, "py_nobs != r_nobs")
-    check_absolute_diff((py_resid)[0:5], (r_resid)[0:5], 1e-07, "py_resid != r_resid")
+    # With within's 1e-8 stopping tolerance, two-way FE-only projections differ
+    # from fixest by at most 2.49e-7 on this fixture (2.35e-7 unweighted).
+    # Residuals and predictions inherit the same projection error; the solver
+    # tolerance is not an elementwise error bound.
+    check_absolute_diff((py_resid)[0:5], (r_resid)[0:5], 3e-07, "py_resid != r_resid")
     check_absolute_diff(
-        py_predict[0:5], r_predict[0:5], 1e-07, "py_predict != r_predict"
+        py_predict[0:5], r_predict[0:5], 3e-07, "py_predict != r_predict"
     )
 
     assert mod._beta_hat.size == 0
@@ -680,6 +692,75 @@ def test_fepois_hc2_hc3_against_sandwich(vcov_type):
 
 
 @pytest.mark.against_r_core
+@pytest.mark.parametrize("weights", [None, "weights"])
+@pytest.mark.parametrize(
+    ("family", "separation_check"),
+    [("logit", None), ("probit", None), ("poisson", None), ("poisson", ["fe", "ir"])],
+)
+def test_fe_separation_at_outcome_bounds(family, separation_check, weights):
+    """Drop FE groups whose outcomes all sit at a bound of the inverse link.
+
+    One `f1` level has only 1 outcomes, and one `f2` level has only 0 outcomes
+    outside that `f1` level. Binomial fits drop both: the `f2` level is
+    separated once the `f1` level is gone. Poisson has no upper bound and
+    keeps both levels.
+    """
+    model = "Fepois" if family == "poisson" else "Feols"
+    data = pf.get_data(N=1000, seed=76540251, model=model).dropna()
+    data = data.reset_index(drop=True)
+    if family != "poisson":
+        data["Y"] = (data["Y"] > 0).astype(int)
+    all_one = data.f1 == data.f1.iloc[0]
+    data.loc[all_one, "Y"] = 1
+    zero_outside = data.f2 == data.loc[all_one, "f2"].iloc[0]
+    data.loc[zero_outside & ~all_one, "Y"] = 0
+
+    fml = "Y ~ X1 | f1 + f2"
+    fit = pf.feglm(
+        fml=fml,
+        data=data,
+        family=family,
+        vcov="hetero",
+        weights=weights,
+        separation_check=separation_check,
+        iwls_tol=1e-10,
+    )
+    r_family = stats.poisson() if family == "poisson" else stats.binomial(link=family)
+    reference = fixest.feglm(
+        ro.Formula(fml),
+        data=data,
+        family=r_family,
+        vcov="hetero",
+        weights=ro.NULL if weights is None else ro.Formula(f"~{weights}"),
+        glm_tol=1e-10,
+    )
+
+    # fixest stores removed rows as negative one-based positions.
+    obs_removed = np.asarray(reference.rx2("obs_selection").rx2("obsRemoved"))
+    removed = set((-obs_removed - 1).tolist())
+    assert fit.sample_info.dropped_row_index == removed
+    if family == "poisson":
+        assert fit.sample_info.dropped_by_stage.separation == 0
+    else:
+        assert set(np.flatnonzero(all_one | zero_outside).tolist()) <= removed
+
+    np.testing.assert_allclose(
+        fit.coef(),
+        np.asarray(stats.coef(reference)),
+        rtol=0,
+        atol=1e-8,
+        err_msg="Coefficients differ from R fixest::feglm",
+    )
+    np.testing.assert_allclose(
+        fit.variance_covariance.vcov,
+        np.asarray(stats.vcov(reference)),
+        rtol=0,
+        atol=1e-8,
+        err_msg="Heteroskedastic covariance differs from R fixest::feglm",
+    )
+
+
+@pytest.mark.against_r_core
 def test_feglm_gaussian_reference_behavior():
     """Lock in pyfixest's Gaussian-GLM compatibility decision."""
     data = pf.get_data(N=500, seed=76540251, model="Feols").dropna()
@@ -780,13 +861,24 @@ def test_feglm_gaussian_reference_behavior():
 
 
 @pytest.mark.against_r_core
-@pytest.mark.parametrize("fml", ["Y ~ X1", "Y ~ X1 | f1", "Y ~ X1 | f1 + f2"])
-def test_fepois_transformed_offset_against_fixest(data_fepois, fml):
+@pytest.mark.parametrize(
+    ("fml", "demeaner"),
+    [(fml, pf.MapDemeaner()) for fml in ["Y ~ X1", "Y ~ X1 | f1", "Y ~ X1 | f1 + f2"]]
+    + [
+        pytest.param(
+            "Y ~ X1 | f1 + f2",
+            pf.LsmrDemeaner(preconditioner=preconditioner),
+            id=f"within-{preconditioner}",
+        )
+        for preconditioner in ["additive", "adaptive"]
+    ],
+)
+def test_fepois_transformed_offset_against_fixest(data_fepois, fml, demeaner):
     """Compare transformed-offset estimation and prediction with fixest."""
     data = data_fepois.dropna().copy()
     data["exposure"] = np.random.default_rng(20260810).uniform(0.5, 3.0, len(data))
 
-    fit = pf.fepois(fml=fml, data=data, offset="log(exposure)")
+    fit = pf.fepois(fml=fml, data=data, offset="log(exposure)", demeaner=demeaner)
     fit_r = fixest.fepois(
         ro.Formula(fml), data=data, offset=ro.Formula("~log(exposure)")
     )
@@ -796,6 +888,7 @@ def test_fepois_transformed_offset_against_fixest(data_fepois, fml):
         fit_r.rx2("coefficients"),
         rtol=OFFSET_COEF_RTOL,
         atol=OFFSET_COEF_ATOL,
+        err_msg="Poisson offset coefficients differ from fixest",
     )
 
     newdata = data.iloc[:5]
@@ -806,6 +899,7 @@ def test_fepois_transformed_offset_against_fixest(data_fepois, fml):
             rtol=OFFSET_PRED_RTOL,
             atol=OFFSET_PRED_ATOL,
             equal_nan=True,
+            err_msg=f"Poisson {prediction_type} predictions differ from fixest",
         )
 
 
@@ -1054,21 +1148,38 @@ def test_single_fit_iv(
 @pytest.mark.parametrize("seed", [172])
 @pytest.mark.parametrize("dropna", [True, False])
 @pytest.mark.parametrize(
-    "fml",
-    glm_fmls,
+    ("fml", "demeaner", "weights"),
+    [(fml, pf.MapDemeaner(), None) for fml in glm_fmls]
+    + [
+        pytest.param(
+            "Y ~ X1 + X2 | f1 + f2",
+            pf.LsmrDemeaner(preconditioner=preconditioner),
+            weights,
+            id=f"within-{preconditioner}-{weights or 'unweighted'}",
+        )
+        for preconditioner in ["additive", "adaptive"]
+        for weights in [None, "weights"]
+    ],
 )
 @pytest.mark.parametrize("inference", ["iid", "hetero", {"CRV1": "group_id"}])
 @pytest.mark.parametrize("family", ["probit", "logit", "gaussian"])
-def test_glm_vs_fixest(N, seed, dropna, fml, inference, family):
+def test_glm_vs_fixest(N, seed, dropna, fml, demeaner, weights, inference, family):
     data = pf.get_data(N=N, seed=seed)
     data["Y"] = np.where(data["Y"] > 0, 1, 0)
     if dropna:
-        data.dropna(inplace=True)
+        data = data.dropna()
 
     r_inference = _get_r_inference(inference)
 
     # Fit models for the current family
-    fit_py = pf.feglm(fml=fml, data=data, family=family, vcov=inference)
+    fit_py = pf.feglm(
+        fml=fml,
+        data=data,
+        family=family,
+        vcov=inference,
+        demeaner=demeaner,
+        weights=weights,
+    )
     r_fml = _py_fml_to_r_fml(fml)
     data_r = get_data_r(fml, data)
 
@@ -1078,6 +1189,7 @@ def test_glm_vs_fixest(N, seed, dropna, fml, inference, family):
             data=data_r,
             family=stats.binomial(link="probit"),
             vcov=r_inference,
+            weights=ro.NULL if weights is None else ro.Formula(f"~{weights}"),
         )
     elif family == "logit":
         fit_r = fixest.feglm(
@@ -1085,10 +1197,15 @@ def test_glm_vs_fixest(N, seed, dropna, fml, inference, family):
             data=data_r,
             family=stats.binomial(link="logit"),
             vcov=r_inference,
+            weights=ro.NULL if weights is None else ro.Formula(f"~{weights}"),
         )
     elif family == "gaussian":
         fit_r = fixest.feglm(
-            ro.Formula(r_fml), data=data_r, family=stats.gaussian(), vcov=r_inference
+            ro.Formula(r_fml),
+            data=data_r,
+            family=stats.gaussian(),
+            vcov=r_inference,
+            weights=ro.NULL if weights is None else ro.Formula(f"~{weights}"),
         )
 
     # Compare coefficients
@@ -1224,6 +1341,12 @@ def test_glm_vs_fixest(N, seed, dropna, fml, inference, family):
 @pytest.mark.parametrize(
     "fml_multi",
     [
+        ("Y ~ sw(X1)"),
+        ("Y ~ csw(X1)"),
+        ("Y ~ sw0(X1)"),
+        ("Y ~ csw0(X1)"),
+        ("Y ~ X1 | sw0(f1)"),
+        ("Y ~ X1 | csw0(f1)"),
         ("Y~ sw(X1, X2)"),
         ("Y~ sw(X1, X2) |f1 "),
         ("Y~ csw(X1, X2)"),
@@ -1287,6 +1410,10 @@ def test_glm_vs_fixest(N, seed, dropna, fml, inference, family):
         ("Y + Y2 ~ sw(X1, X2) | csw(f1, f2)"),
         ("Y + Y2 ~ csw(X1, X2) | sw(f1, f2)"),
         ("Y + Y2 ~ sw0(X1, X2) | csw0(f1, f2)"),
+        # Varying slopes with intercepts; slope-only models are compared with
+        # single fits in tests/test_varying_slopes_vs_fixest.py.
+        ("Y ~ X1 | sw(f1[X2], f1[X2, Z1])"),
+        ("Y ~ X1 | csw0(f2[X2], f1)"),
         # ("Y ~ i(f1,X2) | csw0(f2)"),
         # ("Y ~ i(f1,X2) | sw0(f2)"),
         # ("Y ~ i(f1,X2) | csw(f2, f3)"),
@@ -1300,7 +1427,7 @@ def test_multi_fit(N, seed, beta_type, error_type, dropna, fml_multi):
     data = get_data(N=N, seed=seed, beta_type=beta_type, error_type=error_type)
     data.where(data != "nan", np.nan, inplace=True)
     if dropna:
-        data.dropna(inplace=True)
+        data = data.dropna()
 
     # suppress correction for fixed effects
     fixest.setFixest_ssc(fixest.ssc(True, "nonnested", False, True, "min", "min"))
@@ -1309,7 +1436,6 @@ def test_multi_fit(N, seed, beta_type, error_type, dropna, fml_multi):
 
     try:
         pyfixest = feols(fml=fml_multi, data=data)
-        assert isinstance(pyfixest, FixestMulti)
     except ValueError as e:
         if "is not of type 'O' or 'category'" in str(e):
             data["f1"] = pd.Categorical(data.f1.astype(str))
@@ -1326,10 +1452,14 @@ def test_multi_fit(N, seed, beta_type, error_type, dropna, fml_multi):
         ssc=fixest.ssc(True, "nonnested", False, True, "min", "min"),
     )
 
-    n_models = len(pyfixest.all_fitted_models)
+    models = pyfixest.to_list() if isinstance(pyfixest, FixestMulti) else [pyfixest]
+    r_models = (
+        [r_fixest.rx2(x + 1) for x in range(len(r_fixest))]
+        if "fixest_multi" in r_fixest.rclass
+        else [r_fixest]
+    )
 
-    for x in range(n_models):
-        mod = pyfixest.fetch_model(x)
+    for mod, fixest_object in zip(models, r_models, strict=True):
         py_coef = mod.coef().values
         py_se = mod.se().values
 
@@ -1337,7 +1467,6 @@ def test_multi_fit(N, seed, beta_type, error_type, dropna, fml_multi):
         if len(py_coef) == 0:
             continue
 
-        fixest_object = r_fixest.rx2(x + 1)
         fixest_coef = np.atleast_1d(np.array(fixest_object.rx2("coefficients")))
         fixest_se = np.atleast_1d(np.array(fixest_object.rx2("se")))
 
@@ -1374,7 +1503,7 @@ def test_split_fit(N, seed, beta_type, error_type, dropna, fml_multi, split, fsp
     data = get_data(N=N, seed=seed, beta_type=beta_type, error_type=error_type)
     data.where(data != "nan", np.nan, inplace=True)
     if dropna:
-        data.dropna(inplace=True)
+        data = data.dropna()
 
     # suppress correction for fixed effects
     fixest.setFixest_ssc(fixest.ssc(True, "nonnested", False, True, "min", "min"))
@@ -1501,7 +1630,7 @@ def test_twoway_clustering(data, k_adj, k_fixef, G_adj, G_df):
 def test_wls_na():
     """Special tests for WLS and NA values."""
     data = get_data()
-    data.dropna(inplace=True)
+    data = data.dropna()
 
     # case 1: NA in weights
     data.loc[data.index[0], "weights"] = np.nan
@@ -1555,6 +1684,29 @@ def test_wls_na():
         atol=1e-04,
         err_msg="WLS: Coefs are not equal.",
     )
+
+
+@pytest.mark.against_r_core
+@pytest.mark.parametrize("fml", ["Y ~ X1", "Y ~ X1 | f1"])
+def test_wls_zero_weights(fml):
+    """Zero-weight rows are dropped before estimation, as in R fixest."""
+    data = get_data().dropna()
+    data.loc[data.index[:5], "weights"] = 0.0
+
+    with pytest.warns(UserWarning, match="5 rows with zero weight dropped"):
+        fit_py = feols(fml, data=data, weights="weights", vcov="hetero")
+    fit_r = fixest.feols(
+        ro.Formula(fml),
+        data=data,
+        weights=ro.Formula("~ weights"),
+        vcov="hetero",
+        ssc=fixest.ssc(True, "nonnested", False, True, "min", "min"),
+    )
+
+    assert fit_py.sample_info.n_obs == stats.nobs(fit_r)[0]
+    assert fit_py.sample_info.dropped_by_stage.zero_weight == 5
+    np.testing.assert_allclose(fit_py.coef(), stats.coef(fit_r), rtol=rtol, atol=atol)
+    np.testing.assert_allclose(fit_py.se(), fixest.se(fit_r), rtol=rtol, atol=atol)
 
 
 def _py_fml_to_r_fml(py_fml):
@@ -1738,6 +1890,14 @@ def test_ssc(ssc_data, fml, dropna, weights, vcov, k_adj, G_adj, k_fixef, model)
         "vcov": vcov if vcov in ["iid", "hetero"] else {"CRV1": vcov},
     }
 
+    mixed_slope = fml == "Y ~ X1 + X2 | f1[[Z1]] + f2"
+    if mixed_slope:
+        # Mixed effects need tighter solver tolerances for inference comparisons.
+        r_kwargs["fixef_tol"] = 1e-10
+        py_kwargs["demeaner"] = pf.LsmrDemeaner(
+            fixef_atol=1e-12, fixef_btol=1e-12, fixef_maxiter=10_000
+        )
+
     if weights is not None:
         r_kwargs["weights"] = ro.Formula(f"~{weights}")
         py_kwargs["weights"] = weights
@@ -1746,9 +1906,9 @@ def test_ssc(ssc_data, fml, dropna, weights, vcov, k_adj, G_adj, k_fixef, model)
         r_fit = fixest.feols(**r_kwargs)
         py_fit = pf.feols(**py_kwargs)
     else:
-        r_kwargs["glm_tol"] = 1e-10
+        r_kwargs["glm_tol"] = 1e-12 if mixed_slope else 1e-10
         r_kwargs["glm_iter"] = 100
-        py_kwargs["iwls_tol"] = 1e-10
+        py_kwargs["iwls_tol"] = 1e-12 if mixed_slope else 1e-10
         py_kwargs["iwls_maxiter"] = 100
 
         r_fit = fixest.fepois(**r_kwargs)
@@ -1849,7 +2009,7 @@ def test_inf_dropping(fml, weights):
     n_zeros = (data.Y == 0).sum()
     with pytest.warns(
         UserWarning,
-        match=f"{n_zeros} rows with infinite values detected. These rows are dropped from the model.",
+        match=f"{n_zeros} rows with infinite values dropped from the model.",
     ):
         fit_py = feols(fml=fml, data=data, weights=weights, fixef_rm="none")
 
@@ -1892,3 +2052,269 @@ def _skip_f3_checks(fml, f3_type):
         pytest.skip(
             "No need to tests for different types of factor variable when not included in formula."
         )
+
+
+@pytest.mark.against_r_core
+@pytest.mark.parametrize(
+    "fml, fml_r, renamed_terms",
+    [
+        (
+            "Y ~ 0 + X1 + i(f1, ref=1) + C(f2)",
+            "Y ~ 0 + X1 + i(f1, ref=1) + factor(f2)",
+            {
+                **{f"f1::{i}": f"f1::{i}.0" for i in range(14) if i != 1},
+                **{f"factor(f2){i}": f"C(f2)[{i}.0]" for i in range(18)},
+            },
+        ),
+        (
+            "Y ~ 0 + X1 + i(f1) + C(f2)",
+            "Y ~ 0 + X1 + i(f1) + i(f2, ref=0)",
+            {
+                **{f"f1::{i}": f"f1::{i}.0" for i in range(14)},
+                **{f"f2::{i}": f"C(f2)[T.{i}.0]" for i in range(1, 18)},
+            },
+        ),
+        (
+            "Y ~ 0 + X1 + i(f1, X2) + C(f2)",
+            "Y ~ 0 + X1 + i(f1, X2) + factor(f2)",
+            {
+                **{f"f1::{i}:X2": f"f1::{i}.0:X2" for i in range(14)},
+                **{f"factor(f2){i}": f"C(f2)[{i}.0]" for i in range(18)},
+            },
+        ),
+        (
+            "Y ~ 0 + X1 + i(f1, C(f3))",
+            "Y ~ 0 + X1 + i(f1, i.f3)",
+            {
+                f"f1::{i}:f3::{j}": f"f1::{i}.0:f3::{j}.0"
+                for i in range(14)
+                for j in range(2)
+            },
+        ),
+        (
+            "Y ~ 0 + X1 + i(f1, X2) + i(f1, C(f3))",
+            "Y ~ 0 + X1 + i(f1, X2) + i(f1, i.f3, keep=0:13)",
+            {
+                **{f"f1::{i}:X2": f"f1::{i}.0:X2" for i in range(14)},
+                **{
+                    f"f1::{i}:f3::{j}": f"f1::{i}.0:f3::{j}.0"
+                    for i in range(14)
+                    for j in range(2)
+                },
+            },
+        ),
+        (
+            "Y ~ 0 + X1 + i(f1, C(f3), ref2=0)",
+            "Y ~ 0 + X1 + i(f1, i.f3, ref2=0)",
+            {f"f1::{i}:f3::1": f"f1::{i}.0:f3::1.0" for i in range(14)},
+        ),
+        (
+            "Y ~ X1 + i(f1, C(f3))",
+            "Y ~ X1 + i(f1, i.f3)",
+            {
+                f"f1::{i}:f3::{j}": f"f1::{i}.0:f3::{j}.0"
+                for i in range(14)
+                for j in range(2)
+            },
+        ),
+        ("Y ~ {X1 * X2}", "Y ~ I(X1 * X2)", {"I(X1 * X2)": "X1 * X2"}),
+        ("Y ~ X1 + {X1 ** 2}", "Y ~ X1 + I(X1^2)", {"I(I(X1^2))": "X1 ** 2"}),
+        ("Y ~ X2 + [X1 ~ {Z1 * Z2}]", "Y ~ X2 | X1 ~ I(Z1 * Z2)", {}),
+        (
+            "Y ~ center(X1) + [X2 ~ Z1]",
+            "Y ~ scale(X1, scale = FALSE) | X2 ~ Z1",
+            {"scale(X1, scale = FALSE)": "center(X1)"},
+        ),
+        (
+            "Y ~ X1 + [center(X2) ~ scale(Z1)]",
+            "Y ~ X1 | scale(X2, scale = FALSE) ~ scale(Z1)",
+            {"scale(X2, scale = FALSE)": "center(X2)"},
+        ),
+        (
+            "Y ~ X2 + [`my endog` ~ `my instrument`] | f1",
+            "Y ~ X2 | f1 | X1 ~ Z1",
+            {"X1": "my endog"},
+        ),
+    ],
+)
+def test_parsed_stage_expressions_against_fixest(data_feols, fml, fml_r, renamed_terms):
+    """Expressions and quoted names retain their meaning through matrix construction."""
+    # Stateful transforms calculate sample moments before missing rows are dropped.
+    data = data_feols.dropna().assign(
+        **{"my endog": data_feols.X1, "my instrument": data_feols.Z1}
+    )
+    fit = pf.feols(fml, data=data, vcov="iid")
+    fit_r = fixest.feols(ro.Formula(fml_r), data=data, vcov="iid")
+    names = [
+        renamed_terms.get(name, name)
+        for name in (
+            name.replace("(Intercept)", "Intercept").removeprefix("fit_")
+            for name in ro.r("function(fit) names(coef(fit))")(fit_r)
+        )
+    ]
+    assert set(fit.coef().index) == set(names), "coefficient names != fixest"
+    assert fit.sample_info.n_obs == int(stats.nobs(fit_r)[0]), "n_obs != fixest"
+    # Match the canonical linear-model tolerances for direct solves and inference.
+    np.testing.assert_allclose(
+        fit.coef()[names],
+        stats.coef(fit_r),
+        rtol=0,
+        atol=1e-8,
+        err_msg="coefficients != fixest",
+    )
+    np.testing.assert_allclose(
+        fit.se()[names],
+        fixest.se(fit_r),
+        rtol=0,
+        atol=1e-7,
+        err_msg="standard errors != fixest",
+    )
+
+
+@pytest.mark.against_r_core
+def test_parsed_no_intercept_refit_against_fixest(data_feols):
+    """#1759: replaying the parsed formula retains the absent intercept."""
+    fit = pf.feols("Y ~ X1 - 1", data=data_feols, vcov="iid")
+    fit_r = fixest.feols(ro.Formula("Y ~ X1 - 1"), data=data_feols, vcov="iid")
+    replay = refit(
+        fit,
+        data=fit._data,
+        vcov=VcovSpec(vcov_type="iid", vcov_type_detail="iid"),
+    )
+
+    assert list(fit.coef().index) == ["X1"]
+    assert fit.sample_info.n_obs == int(stats.nobs(fit_r)[0])
+    np.testing.assert_allclose(
+        fit.coef(),
+        stats.coef(fit_r),
+        rtol=0,
+        atol=1e-8,
+        err_msg="no-intercept coefficients != fixest",
+    )
+    np.testing.assert_allclose(
+        replay.coef(),
+        fit.coef(),
+        rtol=0,
+        atol=1e-12,
+        err_msg="parsed formula replay added an intercept",
+    )
+    np.testing.assert_allclose(
+        replay.se(),
+        fit.se(),
+        rtol=0,
+        atol=1e-12,
+        err_msg="parsed formula replay changed standard errors",
+    )
+
+
+@pytest.mark.against_r_core
+@pytest.mark.parametrize("statistic", ["randomization-c", "randomization-t"])
+def test_no_intercept_ritest_against_fixest(data_feols, statistic):
+    """Each no-intercept resample agrees with a live R fit of that sample."""
+    data = data_feols.dropna().assign(D=lambda frame: (frame.X1 > 0).astype(float))
+    fit = pf.feols("Y ~ D - 1", data=data)
+    expected = []
+    rng = np.random.default_rng(71)
+    for _ in range(5):
+        resampled = fit._data.copy(deep=False)
+        resampled["D"] = rng.permutation(fit._data.D.to_numpy())
+        reference = fixest.feols(ro.Formula("Y ~ D - 1"), data=resampled, vcov="iid")
+        value = (
+            stats.coef(reference)[0]
+            if statistic == "randomization-c"
+            else np.asarray(fixest.coeftable(reference))[0, 2]
+        )
+        expected.append(value)
+    fit.ritest(
+        "D",
+        reps=5,
+        type=statistic,
+        choose_algorithm="slow",
+        rng=np.random.default_rng(71),
+        store_ritest_statistics=True,
+    )
+    np.testing.assert_allclose(
+        fit.ritest_statistics.statistics, expected, rtol=0, atol=1e-8
+    )
+    if statistic == "randomization-c":
+        fit.ritest(
+            "D",
+            reps=5,
+            choose_algorithm="fast",
+            rng=np.random.default_rng(71),
+            store_ritest_statistics=True,
+        )
+        np.testing.assert_allclose(
+            fit.ritest_statistics.statistics, expected, rtol=0, atol=1e-8
+        )
+
+
+@pytest.mark.against_r_core
+def test_no_intercept_poisson_crv3_against_fixest():
+    """No-intercept CRV3 agrees with leave-cluster-out R Poisson fits."""
+    data = pf.get_data(N=300, seed=731, model="Fepois").dropna()
+    data["cluster"] = np.arange(len(data)) % 5
+    fit = pf.fepois(
+        "Y ~ X1 - 1",
+        data=data,
+        vcov={"CRV3": "cluster"},
+        ssc=ssc(k_adj=False, G_adj=False),
+        iwls_tol=1e-12,
+    )
+    reference = fixest.fepois(
+        ro.Formula("Y ~ X1 - 1"), data=data, vcov="iid", glm_tol=1e-12
+    )
+    coef = np.asarray(stats.coef(reference))
+    vcov = np.zeros((1, 1))
+    for cluster in data.cluster.unique():
+        jack = fixest.fepois(
+            ro.Formula("Y ~ X1 - 1"),
+            data=data[data.cluster != cluster],
+            vcov="iid",
+            glm_tol=1e-12,
+        )
+        difference = np.asarray(stats.coef(jack)) - coef
+        vcov += np.outer(difference, difference)
+    np.testing.assert_allclose(fit.coef(), coef, rtol=0, atol=1e-8)
+    np.testing.assert_allclose(fit.se(), np.sqrt(np.diag(vcov)), rtol=0, atol=1e-7)
+
+
+@pytest.mark.against_r_core
+def test_separation_arithmetic_against_fixest():
+    """IR preserves arithmetic terms and agrees with an independent R fit."""
+    data = pd.DataFrame(
+        {
+            "Y": [0, 0, 0, 1, 2, 3, 1, 2],
+            "X": [1, 2, 1, 2, 3, 4, 2, 3],
+            "fe": ["a", "a", "b", "b", "b", "b", "b", "b"],
+        }
+    )
+    fit = pf.fepois(
+        "{Y * 2} ~ {X ** 2} - 1 | fe",
+        data=data,
+        separation_check=["ir"],
+        iwls_tol=1e-12,
+        ssc=ssc(k_adj=False, G_adj=False),
+    )
+    reference = fixest.fepois(
+        ro.Formula("I(Y * 2) ~ I(X^2) - 1 | fe"),
+        data=data,
+        vcov="iid",
+        glm_tol=1e-12,
+        ssc=fixest.ssc(K_adj=False, G_adj=False),
+    )
+    assert fit.sample_info.n_obs == int(stats.nobs(reference)[0]) == 6
+    np.testing.assert_allclose(
+        fit.coef(),
+        stats.coef(reference),
+        rtol=0,
+        atol=1e-8,
+        err_msg="IR coefficients differ from R's fit of the same evaluated design",
+    )
+    np.testing.assert_allclose(
+        fit.se(),
+        fixest.se(reference),
+        rtol=0,
+        atol=1e-7,
+        err_msg="IR standard errors differ from R's fit of the same evaluated design",
+    )

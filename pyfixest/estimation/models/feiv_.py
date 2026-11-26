@@ -2,27 +2,31 @@ from __future__ import annotations
 
 import warnings
 from dataclasses import replace
-from typing import Any
+from typing import Any, ClassVar
 
 import numpy as np
 import pandas as pd
 from numpy.typing import NDArray
 
+from pyfixest.core.collinear import find_collinear_variables
 from pyfixest.core.demean import Preconditioner
+from pyfixest.errors import IVIdentificationError
 from pyfixest.estimation.formula.model_matrix import _ModelMatrixKey
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.estimation.internals.collinearity import drop_multicollinear_variables
 from pyfixest.estimation.internals.demean_ import DemeanedData
-from pyfixest.estimation.internals.fit_ import fit_iv
+from pyfixest.estimation.internals.fit_ import fit_iv, project_onto_design
+from pyfixest.estimation.internals.fit_statistics import FitStatistics
 from pyfixest.estimation.internals.model_state import (
+    Capabilities,
     CollinearityCheck,
     EstimationOptions,
     FirstStage,
     FirstStageDiagnostics,
     FittedValues,
     ModelDescription,
+    SampleSplit,
     WithinIvData,
-    WithinLinearData,
 )
 from pyfixest.estimation.internals.retention import require_retained
 from pyfixest.estimation.internals.vcov_ import meat_hetero
@@ -53,10 +57,10 @@ class Feiv(Feols):
         Demeaning cache shared across the models of one cache block.
     lookup_preconditioner : Optional[dict[frozenset[int], Preconditioner]]
         Preconditioner cache shared across the models of one cache block.
-    sample_split_var : Optional[str]
-        Name of the sample-split variable, or ``None`` for the full sample.
-    sample_split_value : Optional[str | int]
-        Value of `sample_split_var` this model is fitted on.
+    sample_split : SampleSplit or None
+        The variable and value by which the estimation sample was split.
+        ``None`` if the model was fit on the entire input data set (minus
+        dropping of missings etc). For all model classes.
 
     Attributes
     ----------
@@ -86,7 +90,7 @@ class Feiv(Feols):
     first_stage : FirstStage
         First-stage regression fitted after second-stage inference: the
         coefficients pi_hat, the fitted values X_hat, the residuals v_hat, the
-        fitted first-stage model, the excluded instruments, and the
+        fitted first-stage model, the instruments, and the
         instrument-strength `diagnostics`.
     _data: pd.DataFrame
         The data frame used in the estimation. None if arguments `lean = True` or
@@ -95,19 +99,21 @@ class Feiv(Feols):
 
     Raises
     ------
-    ValueError
-        If Z is not a two-dimensional array.
+    IVIdentificationError
+        If the exogenous regressors and instruments fully explain an
+        endogenous regressor, or the instruments add no explanatory power for
+        it.
 
     Examples
     --------
     `Feiv` is returned by [feols()](/reference/estimation.api.feols.feols.qmd)
-    when the formula includes an IV part, i.e.
-    `depvar ~ exog | fe | endog ~ instrument`.
+    when the formula includes an instrument block, i.e.
+    `depvar ~ exog + [endog ~ instruments] | fe`.
 
     ```{python}
     import pyfixest as pf
 
-    fit = pf.feols("Y ~ X2 | f1 | X1 ~ Z1", pf.get_data())
+    fit = pf.feols("Y ~ X2 + [X1 ~ Z1] | f1", pf.get_data())
     fit.tidy()
     ```
 
@@ -122,14 +128,28 @@ class Feiv(Feols):
     details.
     """
 
-    # Set in _fit_first_stage().
     first_stage: FirstStage
-    # Set in get_fit().
     collinearity_instruments: CollinearityCheck
     # Two-stage fit: no single least-squares solve to shortcut.
     _closed_form_ols = False
 
-    # Constructor and methods implementation...
+    _declared_capabilities: ClassVar[Capabilities] = Capabilities(
+        covariance_update=True,
+        crv3_inference=False,
+        hac_inference=True,
+        multiway_clustering=True,
+        wildboottest=False,
+        cluster_causal_variance=False,
+        decomposition=False,
+        prediction=False,
+        prediction_inference=False,
+        fixed_effect_recovery=False,
+        randomization_inference=False,
+        sherman_morrison_update=False,
+        weighting_bootstrap=True,
+        anytime_valid_inference=False,
+    )
+
     def __init__(
         self,
         FixestFormula: FixestFormula,
@@ -138,8 +158,7 @@ class Feiv(Feols):
         options: EstimationOptions,
         lookup_demeaned_data: dict[frozenset[int], DemeanedData],
         lookup_preconditioner: dict[frozenset[int], Preconditioner] | None = None,
-        sample_split_var: str | None = None,
-        sample_split_value: str | int | None = None,
+        sample_split: SampleSplit | None = None,
     ) -> None:
         super().__init__(
             FixestFormula=FixestFormula,
@@ -147,20 +166,7 @@ class Feiv(Feols):
             options=options,
             lookup_demeaned_data=lookup_demeaned_data,
             lookup_preconditioner=lookup_preconditioner,
-            sample_split_var=sample_split_var,
-            sample_split_value=sample_split_value,
-        )
-
-        self.capabilities = replace(
-            self.capabilities,
-            crv3_inference=False,
-            wildboottest=False,
-            cluster_causal_variance=False,
-            decomposition=False,
-            prediction=False,
-            fixed_effect_recovery=False,
-            randomization_inference=False,
-            sherman_morrison_update=False,
+            sample_split=sample_split,
         )
 
     def _publish_model_matrix(self, model_matrix):
@@ -186,9 +192,9 @@ class Feiv(Feols):
             endogenous, instruments, _ = self._demean_cache.demean_yx(
                 endogenous,
                 instruments,
-                y_names=tuple(endogenous_frame.columns),
-                x_names=tuple(instrument_frame.columns),
-                fe=fixed_effects.to_numpy(),
+                y_keys=self.model_matrix.column_keys("endogenous"),
+                x_keys=self.model_matrix.column_keys("instruments"),
+                fe=self._fixed_effects_for_demeaning(),
                 weights=self.observation_weights.values,
                 na_index=self.sample_info.dropped_row_index,
                 demeaner=self.options.demeaner,
@@ -200,30 +206,125 @@ class Feiv(Feols):
             endogenous=endogenous,
         )
 
-    def _drop_multicollinear_within_data(
-        self, within_data: WithinLinearData
-    ) -> WithinLinearData:
-        """Drop collinear columns from the second-stage design and the instruments."""
-        within_data = super()._drop_multicollinear_within_data(within_data)
-        assert isinstance(within_data, WithinIvData)
-        instruments, collinearity = drop_multicollinear_variables(
-            within_data.instruments,
-            self._coefnames_z,
-            self.options.collin_tol,
+    def _validate_iv_identification(
+        self,
+        within_data: WithinIvData,
+        *,
+        projected_design: NDArray[np.float64],
+        sqrt_weights: NDArray[np.float64] | None,
+    ) -> None:
+        """Check each endogenous regressor's first-stage SSRs.
+
+        Runs before structural column selection, which could otherwise drop an
+        endogenous regressor.
+        """
+        endogenous_frame = self.model_matrix.endogenous
+        assert endogenous_frame is not None
+
+        endogenous_names = endogenous_frame.columns
+        endogenous_positions = self.model_matrix.independent.columns.get_indexer(
+            endogenous_names
         )
-        self.collinearity_instruments = collinearity
-        self._coefnames_z = list(collinearity.coefnames)
-        return replace(within_data, instruments=instruments)
+        # A missing name would select no columns, which broadcast to zero SSRs.
+        if np.any(endogenous_positions < 0):
+            raise RuntimeError(
+                "Endogenous variables are missing from the second-stage design: "
+                f"{list(endogenous_names[endogenous_positions < 0])}. "
+                f"The first-stage terms did not match the main equation for "
+                f"{self.model.model_name!r}. Report this with a minimal formula and data example."
+            )
+        exogenous_mask = np.ones(projected_design.shape[1], dtype=bool)
+        exogenous_mask[endogenous_positions] = False
+
+        endogenous = within_data.endogenous
+        fitted_endogenous = projected_design[:, endogenous_positions]
+        exogenous = within_data.design[:, exogenous_mask]
+
+        # Drop collinear controls before the controls-only regression.
+        if exogenous.shape[1] > 0:
+            collinear, _, _ = find_collinear_variables(
+                np.ascontiguousarray(exogenous.T @ exogenous, dtype=np.float64),
+                self.options.collin_tol,
+            )
+            exogenous = exogenous[:, ~np.asarray(collinear, dtype=bool)]
+
+        residuals = endogenous - fitted_endogenous
+
+        if exogenous.shape[1] == 0:
+            residuals_without_instruments = endogenous
+        else:
+            fitted_without_instruments = project_onto_design(
+                response=endogenous,
+                design=exogenous,
+                sqrt_weights=sqrt_weights,
+                solver=self.options.solver,
+            )
+            residuals_without_instruments = endogenous - fitted_without_instruments
+
+        if sqrt_weights is not None:
+            residuals = residuals * sqrt_weights
+            residuals_without_instruments = residuals_without_instruments * sqrt_weights
+
+        ssr = np.sum(residuals**2, axis=0)
+        ssr_without_instruments = np.sum(residuals_without_instruments**2, axis=0)
+
+        # Absolute thresholds on the first-stage SSRs.
+        for name, ssr_i, ssr_without_instruments_i in zip(
+            endogenous_names, ssr, ssr_without_instruments, strict=True
+        ):
+            if ssr_i < 1e-10:
+                raise IVIdentificationError(
+                    f"The endogenous regressor '{name}' is fully explained by the "
+                    "exogenous regressors and instruments in the first stage. "
+                    "Check for a duplicate or transformation of the endogenous regressor "
+                    "among those terms. See https://pyfixest.org/tutorials/instrumental-variables.html"
+                )
+            if abs(ssr_without_instruments_i - ssr_i) < 1e-10:
+                raise IVIdentificationError(
+                    "The instruments add no explanatory power for the endogenous "
+                    f"regressor '{name}' in the first stage. Check that the instruments "
+                    "predict this regressor after accounting for exogenous regressors and "
+                    "any fixed effects. See https://pyfixest.org/tutorials/instrumental-variables.html"
+                )
 
     def get_fit(self) -> None:
         """Fit a IV model using a 2SLS estimator."""
-        within_data = self._drop_multicollinear_within_data(self._demean())
-        # Narrow the base return type so `within_data.instruments` type-checks.
-        assert isinstance(within_data, WithinIvData)
+        within_data = self._demean()
+        instruments, instrument_collinearity = drop_multicollinear_variables(
+            X=within_data.instruments,
+            names=self._coefnames_z,
+            collin_tol=self.options.collin_tol,
+        )
+        self.collinearity_instruments = instrument_collinearity
+        self._coefnames_z = list(instrument_collinearity.coefnames)
+
+        weights = self.observation_weights.values
+        sqrt_weights = (
+            None if weights is None else np.sqrt(weights.reshape(-1))[:, None]
+        )
+        projected_design = project_onto_design(
+            response=within_data.design,
+            design=instruments,
+            sqrt_weights=sqrt_weights,
+            solver=self.options.solver,
+        )
+
+        # Validate identification using first-stage projection
+        # before collinearity removal can drop the endogenous regressor
+        self._validate_iv_identification(
+            within_data=within_data,
+            projected_design=projected_design,
+            sqrt_weights=sqrt_weights,
+        )
+
+        structural_data = self._drop_multicollinear_within_data(within_data)
+        assert isinstance(structural_data, WithinIvData)
+        within_data = replace(structural_data, instruments=instruments)
         self._set_within_data(within_data)
+
         fit = fit_iv(
             X=within_data.design,
-            Z=within_data.instruments,
+            X_hat=self.collinearity.select(projected_design),
             Y=within_data.response,
             weights=self.observation_weights.values,
             solver=self.options.solver,
@@ -238,6 +339,10 @@ class Feiv(Feols):
         fitted = self.model_matrix.dependent.to_numpy().flatten() - self.resid()
         self.fitted_values = FittedValues(link=fitted, response=fitted)
 
+    def _fit_statistics(self) -> FitStatistics:
+        """Leave the goodness-of-fit measures of a 2SLS fit undefined."""
+        return FitStatistics()
+
     def _fit_first_stage(self) -> None:
         """Fit the first-stage regression and publish it as `first_stage`."""
         require_retained(self, "_fit_first_stage", "_data")
@@ -248,16 +353,10 @@ class Feiv(Feols):
             str(name) for name in self._coefnames_z if name not in exogenous
         )
 
-        fml_first_stage = self.model.fixest_formula.first_stage
-        # Append fixed effects manually since fml_first_stage doesn't include them
-        # (see Formula.fml_first_stage docstring for explanation)
-        if self.model.has_fixef and fml_first_stage is not None:
-            fml_first_stage += f" | {self.model.fixef}"
-
-        # As in fixest, the first stage uses the second stage's rows and options.
+        # The first stage uses the second stage's rows and options.
         model1 = refit(
             self,
-            fml=fml_first_stage,
+            formula=self.model.parsed_formula.as_first_stage(),
             data=self._data,
             vcov=self.variance_covariance.spec,
             same_sample=True,
@@ -327,30 +426,30 @@ class Feiv(Feols):
             import pandas as pd
             from pyfixest.estimation import feols
 
-            # Set random seed for reproducibility
-            np.random.seed(1)
+            # Seeded generator for reproducibility
+            rng = np.random.default_rng(1)
 
             # Number of observations
             n = 1000
 
             # Simulate the data
             # Instrumental variable
-            z = np.random.binomial(1, 0.5, size=n)
-            z2 = np.random.binomial(1, 0.5, size=n)
+            z = rng.binomial(1, 0.5, size=n)
+            z2 = rng.binomial(1, 0.5, size=n)
 
             # Endogenous variable
-            d = 0.5 * z + 1.5 * z2 + np.random.normal(size=n)
+            d = 0.5 * z + 1.5 * z2 + rng.normal(size=n)
 
             # Control variables
-            c1 = np.random.normal(size=n)
-            c2 = np.random.normal(size=n)
+            c1 = rng.normal(size=n)
+            c2 = rng.normal(size=n)
 
             # Outcome variable
-            y = 1.0 + 1.5 * d + 0.8 * c1 + 0.5 * c2 + np.random.normal(size=n)
+            y = 1.0 + 1.5 * d + 0.8 * c1 + 0.5 * c2 + rng.normal(size=n)
 
             # Cluster variable
-            cluster = np.random.randint(1, 50, size=n)
-            weights = np.random.uniform(1, 3, size=n)
+            cluster = rng.integers(1, 50, size=n)
+            weights = rng.uniform(1, 3, size=n)
 
             # Create a DataFrame
             data = pd.DataFrame({
@@ -370,7 +469,7 @@ class Feiv(Feols):
             fit_ols = feols("y ~ 1 + d + c1 + c2", data=data, vcov=vcov_detail)
 
             # Fit IV model
-            fit_iv = feols("y ~ 1 + c1 + c2 | d ~ z", data=data,
+            fit_iv = feols("y ~ 1 + c1 + c2 + [d ~ z]", data=data,
                      vcov=vcov_detail,
                      weights="weights")
             F_stat_pf = fit_iv.first_stage.diagnostics.f_stat
@@ -382,13 +481,10 @@ class Feiv(Feols):
 
             ```
         """
-        # Set default statistics
         iv_diag_stat = ["f_stat", "effective_f"]
 
-        # Set statistics allowed in the current version
         iv_diag_stat_allowed = ["f_stat", "effective_f"]
 
-        # Check whether there is unsupported statistics.
         if statistics:
             invalid_stats = [
                 stat for stat in statistics if stat not in iv_diag_stat_allowed
@@ -396,8 +492,8 @@ class Feiv(Feols):
 
             if invalid_stats:
                 raise ValueError(
-                    f"Statistics not supported: {invalid_stats}."
-                    f"You should specify from the following list of statistics {iv_diag_stat_allowed}"
+                    f"IV_Diag() received unsupported statistics {invalid_stats!r}. "
+                    f"Pass statistics from {iv_diag_stat_allowed!r}."
                 )
 
             iv_diag_stat += statistics
@@ -488,7 +584,7 @@ class Feiv(Feols):
 
 
 def _instrument_positions(*, model: Feols, instruments: tuple[str, ...]) -> list[int]:
-    """Locate the excluded instruments among the first-stage coefficients."""
+    """Locate the instruments among the first-stage coefficients."""
     coefnames = list(model._coefnames)
     return [coefnames.index(instrument) for instrument in instruments]
 
@@ -496,15 +592,15 @@ def _instrument_positions(*, model: Feols, instruments: tuple[str, ...]) -> list
 def first_stage_f_test(
     *, model: Feols, instrument_positions: list[int]
 ) -> FirstStageDiagnostics:
-    r"""Test that the excluded instruments are jointly irrelevant.
+    r"""Test that the instruments are jointly irrelevant.
 
     Wald test of
 
     H0 : \beta_{z_1} = 0 & ... & \beta_{z_{p_iv}} = 0
-         where z_1, ..., z_{p_iv} are the excluded instruments
+         where z_1, ..., z_{p_iv} are the instruments
     H1 : H0 does not hold
 
-    under the first stage's own covariance estimator, so the statistic is
+    under the first stage's own variance estimator, so the statistic is
     heteroskedasticity- or cluster-robust whenever that estimator is.
 
     Parameters
@@ -512,7 +608,7 @@ def first_stage_f_test(
     model : Feols
         The fitted first-stage model.
     instrument_positions : list[int]
-        Positions of the excluded instruments among `model`'s coefficients.
+        Positions of the instruments among `model`'s coefficients.
 
     Returns
     -------
@@ -542,8 +638,8 @@ def effective_f_statistic(
 ) -> float:
     """Compute the effective F statistic of Olea and Pflueger (2013).
 
-    With the excluded instruments Z on within scale, the first-stage
-    coefficients pi on those instruments, and their covariance Sigma,
+    Given demeaned instruments Z, their first-stage coefficients pi,
+    and the variance-covariance matrix Sigma of those coefficients,
 
         F_eff = pi' Q_zz pi / trace(Sigma Q_zz),   Q_zz = Z' W Z.
 
@@ -553,11 +649,11 @@ def effective_f_statistic(
     Parameters
     ----------
     pi_hat : NDArray[np.float64]
-        First-stage coefficients on the excluded instruments, shape (p_iv,).
+        First-stage coefficients on the instruments, shape (p_iv,).
     instruments_within : NDArray[np.float64]
-        Within-scale excluded instruments, shape (n_rows, p_iv).
+        Within-scale instruments, shape (n_rows, p_iv).
     instrument_vcov : NDArray[np.float64]
-        Heteroskedasticity-robust covariance of `pi_hat`, shape (p_iv, p_iv).
+        Heteroskedasticity-robust variance-covariance matrix of `pi_hat`, shape (p_iv, p_iv).
     weights : NDArray[np.float64] or None
         Observation weights, or `None` for an unweighted fit.
 

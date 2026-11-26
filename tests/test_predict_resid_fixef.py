@@ -7,6 +7,7 @@ import rpy2.robjects as ro
 from rpy2.robjects.packages import importr
 
 import pyfixest as pf
+from pyfixest.demeaners import MapDemeaner
 
 fixest = importr("fixest")
 stats = importr("stats")
@@ -57,6 +58,34 @@ def test_ols_prediction_internally(data, fml, weights):
     assert len(updated_prediction2) != len(updated_prediction), (
         "Arrays have the same length"
     )
+
+
+@pytest.mark.parametrize("fixed_effects", ["f1", "f1 + f2"])
+@pytest.mark.parametrize("weights", [None, "weights"])
+def test_recovery_preserves_codes_after_levels_are_removed(fixed_effects, weights):
+    """#1786: dropped levels must not shift recovery's code-to-level mapping."""
+    data = pf.get_data(N=400, seed=6534714).dropna()
+    removed_level = data.f1.min()
+    removed = data.f1 == removed_level
+    data.loc[removed, "Y"] = np.nan
+    singleton = data.index[-1]
+    data.loc[singleton, "f1"] = 999
+    fit = pf.feols(
+        f"Y ~ X1 | {fixed_effects}",
+        data=data,
+        weights=weights,
+        fixef_rm="singleton",
+        demeaner=MapDemeaner(fixef_tol=1e-12),
+    )
+    recovered = fit.fixef(atol=1e-12, btol=1e-12)
+    assert {str(removed_level), "999.0"}.isdisjoint(
+        recovered.loc[recovered.variable == "f1", "level"]
+    )
+    np.testing.assert_allclose(
+        fit.predict(newdata=fit._data), fit.predict(), rtol=0, atol=1e-10
+    )
+    assert np.isnan(fit.predict(newdata=data.loc[removed].iloc[:1])).all()
+    assert np.isnan(fit.predict(newdata=data.loc[[singleton]])).all()
 
 
 @pytest.mark.parametrize("fml", ["Y ~ X1", "Y~X1 |f1", "Y ~ X1 | f1 + f2"])
@@ -144,22 +173,13 @@ def fits_vs_fixest(fixest_data, estimator, fml, weights):
         "Y ~ 1 | f1",
     ],
 )
-def test_vs_fixest(request, fits_vs_fixest, fixest_data, estimator, fml):
+def test_vs_fixest(fits_vs_fixest, fixest_data, estimator, fml):
     """Compare fixef, predict, and resid with fixest.
 
     `Y ~ 1 | f1` covers fixed effects recovered without covariates; GLM fixed
-    effects live on the link scale net of the offset.
+    effects live on the link scale net of the offset. Logit `Y ~ X1 | f1:f2`
+    covers fixed-effect groups with only 1 outcomes.
     """
-    if estimator == "logit" and fml == "Y ~ X1 | f1:f2":
-        request.applymarker(
-            pytest.mark.xfail(
-                strict=True,
-                reason=(
-                    "The binomial separation check drops only all-zero FE groups; "
-                    "fixest also drops all-one groups (#1623)."
-                ),
-            )
-        )
     fit, fit_r = fits_vs_fixest
     tol = {"rtol": 1e-6, "atol": 1e-6}
 
@@ -223,11 +243,18 @@ def test_feglm_resid_vs_fixest(data, family, fml):
         glm_iter=100,
     )
 
+    # At LSMR's default 1e-8 stopping tolerance, two-way logit response
+    # residuals differ from fixest by up to 1.95e-8 (Linux and macOS).
+    # Tightening LSMR to 1e-9 reduces this to 2.73e-9; coefficients already
+    # agree within 9e-17. Allow the propagated solver error in y - mu only.
+    resid_atol = (
+        3e-8 if family == "logit" and fml == "Y_bin ~ X1 + X2 | f1 + f2" else 1e-8
+    )
     np.testing.assert_allclose(
         mod.resid(),
         np.asarray(stats.residuals(r_mod)).ravel(),
         rtol=1e-08,
-        atol=1e-08,
+        atol=resid_atol,
         err_msg=f"{family} response residuals differ from fixest",
     )
 
@@ -281,7 +308,7 @@ def test_weighted_fixef_is_on_response_scale(data, fml, weights_name, weights_ty
 
     # With two fixed effects the per-level values depend on the normalization
     # of the second effect, so compare levels only for the single-FE model.
-    if fit._n_fe == 1:
+    if fit.fixef_counts.n_fixef == 1:
         fixed_effects_by_level = fixed_effects.set_index(
             fixed_effects["level"].astype(float)
         )["coefficient"].sort_index()

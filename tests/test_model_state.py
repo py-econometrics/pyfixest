@@ -143,10 +143,19 @@ _ALL_CAPABILITIES = frozenset(field.name for field in fields(Capabilities))
     "model,enabled",
     [
         ("feols", _ALL_CAPABILITIES),
-        ("feols-iv", {"hac_inference", "multiway_clustering", "weighting_bootstrap"}),
+        (
+            "feols-iv",
+            {
+                "covariance_update",
+                "hac_inference",
+                "multiway_clustering",
+                "weighting_bootstrap",
+            },
+        ),
         (
             "fepois",
             {
+                "covariance_update",
                 "crv3_inference",
                 "hac_inference",
                 "multiway_clustering",
@@ -159,6 +168,7 @@ _ALL_CAPABILITIES = frozenset(field.name for field in fields(Capabilities))
         (
             "feglm-logit",
             {
+                "covariance_update",
                 "hac_inference",
                 "multiway_clustering",
                 "prediction",
@@ -166,14 +176,8 @@ _ALL_CAPABILITIES = frozenset(field.name for field in fields(Capabilities))
                 "weighting_bootstrap",
             },
         ),
-        ("quantreg", {"prediction"}),
-        (
-            "did2s",
-            {
-                "hac_inference",
-                "multiway_clustering",
-            },
-        ),
+        ("quantreg", {"covariance_update", "prediction"}),
+        ("did2s", set()),
         (
             "twfe",
             _ALL_CAPABILITIES
@@ -181,6 +185,7 @@ _ALL_CAPABILITIES = frozenset(field.name for field in fields(Capabilities))
                 "randomization_inference",
                 "sherman_morrison_update",
                 "weighting_bootstrap",
+                "anytime_valid_inference",
             },
         ),
         (
@@ -190,6 +195,7 @@ _ALL_CAPABILITIES = frozenset(field.name for field in fields(Capabilities))
                 "randomization_inference",
                 "sherman_morrison_update",
                 "weighting_bootstrap",
+                "anytime_valid_inference",
             },
         ),
     ],

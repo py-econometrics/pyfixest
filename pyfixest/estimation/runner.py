@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import warnings
 from typing import Any
 
 import pandas as pd
@@ -17,7 +18,7 @@ from pyfixest.estimation.plan_ import (
     expand_specs,
     fit_one,
 )
-from pyfixest.utils.dev_utils import _narwhals_to_pandas
+from pyfixest.utils.dev_utils import _find_stack_level, _narwhals_to_pandas
 
 
 def _prepare_data(config: EstimationConfig) -> pd.DataFrame:
@@ -29,7 +30,7 @@ def _prepare_data(config: EstimationConfig) -> pd.DataFrame:
     data = _narwhals_to_pandas(config.data)
     if config.options.copy_data:
         data = data.copy()
-    data.reset_index(drop=True, inplace=True)
+    data = data.reset_index(drop=True)
     return data
 
 
@@ -80,13 +81,13 @@ def run_estimation(
         data=data,
         splits=all_splits,
         is_iv=parsed.is_iv,
-        splitvar=splitvar,
     )
 
     _NO_CACHE_KEY: Any = object()
     prev_cache_key: Any = _NO_CACHE_KEY
     lookup_demeaned_data: dict[frozenset[int], DemeanedData] = {}
     lookup_preconditioner: dict[frozenset[int], Preconditioner] = {}
+    duplicate_model_names: list[str] = []
 
     for spec in specs:
         if spec.cache_key != prev_cache_key:
@@ -94,17 +95,42 @@ def run_estimation(
             lookup_preconditioner = {}
             prev_cache_key = spec.cache_key
 
-        FIT = fit_one(
-            spec,
-            lookup_demeaned_data=lookup_demeaned_data,
-            lookup_preconditioner=lookup_preconditioner,
-            vcov=config.vcov,
-        )
+        try:
+            FIT = fit_one(
+                spec,
+                lookup_demeaned_data=lookup_demeaned_data,
+                lookup_preconditioner=lookup_preconditioner,
+                vcov=config.vcov,
+            )
+        except Exception as exc:
+            split = spec.sample_split
+            if split is not None:
+                sample = (
+                    "all nonmissing rows" if split.value is None else repr(split.value)
+                )
+                exc.add_note(
+                    f"While fitting {spec.formula.render()!r} for {split.var!r} = {sample}."
+                )
+            raise
 
         for fitted_result in FIT._iter_fitted_models():
             if apply_retention:
                 fitted_result._clear_attributes()
-            fixest.all_fitted_models[fitted_result.model.model_name] = fitted_result
+            model_name = fitted_result.model.model_name
+            if model_name in fixest.all_fitted_models:
+                duplicate_model_names.append(model_name)
+            fixest.all_fitted_models[model_name] = fitted_result
+
+    if duplicate_model_names:
+        # Formulaic drops repeated terms, so steps such as `csw(X1, X1)` or a
+        # step repeating the endogenous variable render to the same model.
+        warnings.warn(
+            "Several multiple estimation steps parse to the same model after "
+            "repeated terms are dropped; only one model is returned for each of: "
+            f"{sorted(set(duplicate_model_names))}.",
+            UserWarning,
+            stacklevel=_find_stack_level(),
+        )
 
     if parsed.is_multiple_estimation:
         return fixest

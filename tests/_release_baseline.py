@@ -66,7 +66,10 @@ def pinned_release() -> str:
     """
     match = re.search(r'(?m)^pyfixest = "==([^"]+)"$', RELEASE_MANIFEST.read_text())
     if match is None:
-        raise RuntimeError(f"Could not find the pyfixest pin in {RELEASE_MANIFEST}.")
+        raise RuntimeError(
+            f"Could not find the pyfixest pin in {RELEASE_MANIFEST}. "
+            'Add a pyfixest = "==<version>" entry under pypi-dependencies.'
+        )
     return match.group(1)
 
 
@@ -208,6 +211,12 @@ class Baseline:
             f"{name} differs from pyfixest {RELEASE_VERSION}: "
             f"{entry[name]!r} != {expected[name]!r}"
         )
+
+    def record_or_read_release_value(self, name: str, value: Any) -> Any:
+        """Record a release value without comparing it, and return the release's value."""
+        if self._recording:
+            self._recorded[name] = _jsonable(value)
+        return self._expect(name, [name])[name]
 
     def skip(self, name: str, *, reason: str) -> None:
         """Document a quantity with no comparable counterpart in the release."""

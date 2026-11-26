@@ -9,7 +9,7 @@ jupyter: python3
 
 ## Motivation
 
-In regression analyses, we often wonder about "how much covariates matter?" for explaining the relationship between a target variable $D$ and an outcome variable $Y$.
+A Gelbach decomposition measures how much of the relationship between a focal regressor $D$ and a dependent variable $Y$ is explained by additional regressors.
 
 For example, we might start analysing the gender wage gap with a simple regression model as `log(wage) on gender`. But arguably, men and women differ in many socio-economic characteristics: they might have different (average) levels of education or career experience, and they might work in different industries and select into different higher- or lower-paying industries. So which fraction of the gender wage gap can be explained by these observable characteristics?
 
@@ -41,7 +41,7 @@ fit_base = pf.feols("log(wage) ~ gender", data=psid, vcov="hetero")
 fit_base.summary()
 ```
 
-To examine the impact of observable on the relationship between wage and gender, a common strategy in applied research is to incrementally add a set of covariates to the baseline regression model of `log(wage) on gender`. Here, we will incrementally add the following covariates:
+To examine the impact of observable on the relationship between wage and gender, a common strategy in applied research is to incrementally add a set of regressors to the baseline regression model of `log(wage) on gender`. Here, we will incrementally add the following regressors:
 
 - education,
 - experience
@@ -68,13 +68,13 @@ pf.etable(fit_stepwise1, keep=["gender", "ethnicity", "education"])
 
 We see that the coefficient on gender is roughly the same in all models. Tentatively, we might already conclude that the observable characteristics in the data do not explain a large part of the gender wage gap.
 
-But how much do differences in education matter? We have computed 6 additional models that contain education as a covariate. The obtained point estimates
+But how much do differences in education matter? We have computed 6 additional models that contain education as a regressor. The obtained point estimates
 vary between $0.059$ and $0.075$. Which of these numbers should we report?
 
-Additionally, note that while we have only computed 6 additional models with covariates, the number of possible models is much larger.
-If I did the math correctly, simply by additively and incrementally adding covariates, we could have computed $57$ different models (not all of which would have included `education` as a control).
+Additionally, note that while we have only computed 6 models with additional regressors, the number of possible models is much larger.
+If I did the math correctly, simply by additively and incrementally adding regressors, we could have computed $57$ different models (not all of which would have included `education` as a regressor).
 
-As it turns out, different models **will lead to different point estimates**. The order of incrementally adding covariates **might** impact our conclusion. To illustrate this, we keep the same ordering as before, but start with `ethnicity` as our first variable:
+As it turns out, different models **will lead to different point estimates**. The order of incrementally adding regressors **might** impact our conclusion. To illustrate this, we keep the same ordering as before, but start with `ethnicity` as our first variable:
 
 ```{python}
 fit_stepwise2 = pf.feols(
@@ -89,12 +89,12 @@ We obtain 5 new coefficients on `education` that vary between 0.074 and 0.059.
 So, which share of the "raw" gender wage gap can be attributed to differences in education between men and women? Should we report a statisics based on the 0.075 estimate? Or
 on the 0.059 estimate? Which value should we pick?
 
-To help us with this problem, Gelbach (2016, JoLE) develops a decomposition procedure building on the omitted variable bias formula that produces a single value for the contribution of a given covariate, say education, to the gender wage gap.
+To help us with this problem, Gelbach (2016, JoLE) develops a decomposition procedure building on the omitted variable bias formula that produces a single value for the contribution of a given regressor, say education, to the gender wage gap.
 
 ## Notation and Gelbach's Algorithm
 
 Before we dive into a code example, let us first introduce the notation and Gelbach's algorithm. We are interested in "decomposing" the effect of
-a variable $X_{1} \in \mathbb{R}$ on an outcome $Y \in \mathbb{R}$ into a part explained by covariates $X_{2} \in \mathbb{R}^{k_{2}}$ and an unexplained part.
+a focal regressor $X_{1} \in \mathbb{R}$ on a dependent variable $Y \in \mathbb{R}$ into a part explained by additional regressors $X_{2} \in \mathbb{R}^{k_{2}}$ and an unexplained part.
 
 Thus we can specify two regression models:
 
@@ -111,24 +111,24 @@ Thus we can specify two regression models:
 
 By fitting the **short** regression, we obtain an estimate $\hat{\beta}_{1}$, which we will denote as the **direct effect**, and by estimating the **long** regression, we obtain an estimate of the regression coefficients $\hat{\beta}_{2} \in \mathbb{R}^{k_2}$. We will denote the estimate on $X_1$ in the long regression as the **full** effect.
 
-We can then compute the contribution of an individual covariate $\hat{\delta}_{k}$ via the following algorithm:
+We can then compute the contribution of an individual regressor $\hat{\delta}_{k}$ via the following algorithm:
 
 - Step 1: we compute coefficients from $k_{2}$ auxiliary regression models $\hat{\Gamma}$ as
     $$
         \hat{\Gamma} = (X_{1}'X_{1})^{-1} X_{1}'X_{2}
     $$
 
-    In words, we regress the target variable $X_{1}$ on each covariate in $X_{2}$. In practice, we can easily do this in one line of code via `scipy.linalg.lstsq()`.
+    In words, we regress the focal regressor $X_{1}$ on each regressor in $X_{2}$. In practice, we can easily do this in one line of code via `scipy.linalg.lstsq()`.
 
-- Step 2: We can compute the total effect **explained** by the covariates, which we denote by $\delta$, as
+- Step 2: We can compute the total effect **explained** by the additional regressors, which we denote by $\delta$, as
 
     $$
         \hat{\delta} = \sum_{k=1}^{k_2} \hat{\Gamma}_{k} \hat{\beta}_{2,k}
     $$
 
-    where $\hat{\Gamma}_{k}$ are the coefficients from an auxiliary regression $X_1$ on covariate $X_{2,k}$ and $\hat{\beta}_{2,k}$ is the associated estimate on $X_{2,k}$ from the **full** model.
+    where $\hat{\Gamma}_{k}$ are the coefficients from an auxiliary regression $X_1$ on regressor $X_{2,k}$ and $\hat{\beta}_{2,k}$ is the associated estimate on $X_{2,k}$ from the **full** model.
 
-    The individual **contribution of covariate $k$** is then defined as
+    The individual **contribution of regressor $k$** is then defined as
 
     $$
         \hat{\delta}_{k} = \hat{\Gamma}_{k} \hat{\beta}_{2,k}.
@@ -160,11 +160,11 @@ gb = fit_full.decompose(decomp_var="gender[T.male]", digits=5)
 
 As before, this produces a pretty big output table that reports
 - the **direct effect** of the regression of `log(wage) ~ gender`
-- the **full effect** of gender on log wage using the **full regression** with all control variables
+- the **full effect** of gender on log wage using the **full regression** with all additional regressors
 - the **explained effect** as the difference between the full and direct effect
-- a **single scalar value** for the individual contributions of a covariate to overall **explained effect**
+- a **single scalar value** for the individual contributions of an additional regressor to overall **explained effect**
 
-For our example at hand, the additional covariates only explain a tiny fraction of the differences in log wages between men and women - 0.064 points.
+For our example at hand, the additional regressors only explain a tiny fraction of the differences in log wages between men and women - 0.064 points.
 Of these, around one third can be attributed to ethnicity, 0.00064 to years of eduaction, etc.
 
 Note that for now, we ask `etable()` to only report effects in levels. By switching to `panels = "all"`, we would also report normalized coefficient; but we decided not to do so here as otherwise the table would have turned out even longer than it already has.
@@ -188,6 +188,7 @@ allows us to group individual contributions into a single number. In the `decomp
 gb2 = fit_full.decompose(
     decomp_var="gender[T.male]",
     combine_covariates={
+        "education": ["education"],
         "experience": re.compile("experience"),
         "occupation": re.compile("occupation"),
         "industry": re.compile("industry"),

@@ -9,7 +9,6 @@ format:
     html-table-processing: none
 toc: true
 toc-title: "On this page"
-toc-location: left
 freeze: auto
 ---
 
@@ -101,7 +100,7 @@ fit_multi2 = pf.quantreg(
 pf.etable(fit_multi1.to_list() +  fit_multi2.to_list())
 ```
 
-Note that the first method `cfm1` is exactly identical to running separate regressions per quantile, while the second method `cfm2` is only **asymptotically** identical.
+Note that the first method `cfm1` is exactly identical to running separate regressions per quantile. The second method `cfm2` solves only the central quantile and reaches each neighbouring quantile by a single Newton step, so it only approximates separate regressions, and only on a fine grid of quantiles (for example, steps of 0.01). On the coarse grid above, its estimates at the 0.1 and 0.9 quantiles differ visibly from `cfm1`.
 
 You can combine different estimation `method`'s with different `multi_methods`:
 
@@ -151,7 +150,7 @@ Tba.
 
 ### Quantile Regression Process
 
-We fit a quantile regression process on $q = 0.1, 0.2, ..., 0.9$ quantiles and vary sample size and number of covariates. We test pyfixest's implementation of the quantile regression process against a "naive" for loop implementation via `statsmodels`. We can see that both `multi_method = "cmf1"` and `multi_method = "cmf2"` outperform
+We fit a quantile regression process on $q = 0.1, 0.2, ..., 0.9$ quantiles and vary sample size and number of regressors. We test pyfixest's implementation of the quantile regression process against a "naive" for loop implementation via `statsmodels`. We can see that both `multi_method = "cmf1"` and `multi_method = "cmf2"` outperform
 the for-loop strategy for large problems. Note that the plot is in log-scale!
 
 ![](../figures/quantreg_benchmarks.png)

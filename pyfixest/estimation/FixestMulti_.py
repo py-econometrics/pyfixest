@@ -62,7 +62,7 @@ class FixestMulti(TidyColumnAccessors):
         """Parsed formula dict keyed by fixed-effects spec (deprecated)."""
         warnings.warn(
             "`FixestFormulaDict` is deprecated and will be removed in a future "
-            "release. Use `fit.model.fixest_formula` on the models returned by "
+            "release. Use `fit.model.parsed_formula` on the models returned by "
             "`to_list()` instead.",
             FutureWarning,
             stacklevel=2,
@@ -161,10 +161,7 @@ class FixestMulti(TidyColumnAccessors):
             df["fml"] = fxst.model.formula
             res.append(df)
 
-        res_df = pd.concat(res, axis=0)
-        res_df.set_index(["fml", "Coefficient"], inplace=True)
-
-        return res_df
+        return pd.concat(res, axis=0).set_index(["fml", "Coefficient"])
 
     def confint(self) -> pd.DataFrame:
         """
@@ -269,20 +266,37 @@ class FixestMulti(TidyColumnAccessors):
         Parameters
         ----------
         i : int or str
-            The index of the model to fetch.
+            The position of the model, or its key in `all_fitted_models`,
+            for example `"Y ~ X1 | f1"`. Any other string is read as an
+            integer position, so `"0"` fetches the first model.
         print_fml : bool, optional
             Whether to print the formula of the model. Default is True.
 
         Returns
         -------
-            A Feols object.
+            The fitted model.
         """
-        if isinstance(i, str):
-            i = int(i)
-
         keys = list(self.all_fitted_models.keys())
-        if i >= len(keys):
-            raise IndexError(f"Index {i} is larger than the number of fitted models.")
+        if isinstance(i, str):
+            if i in self.all_fitted_models:
+                i = keys.index(i)
+            else:
+                try:
+                    i = int(i)
+                except ValueError:
+                    raise KeyError(
+                        f"No fitted model with key {i!r}. Available keys: {keys}."
+                    ) from None
+
+        if not keys:
+            raise IndexError(
+                "fetch_model() cannot select a model because there are no fitted models."
+            )
+        if not -len(keys) <= i < len(keys):
+            raise IndexError(
+                f"fetch_model() index {i} is outside the bounds for {len(keys)} fitted "
+                f"models. Use an index from {-len(keys)} to {len(keys) - 1} or pass a model key."
+            )
         key = keys[i]
         if print_fml:
             print("Model: ", key)

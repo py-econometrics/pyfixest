@@ -24,6 +24,7 @@ from pyfixest.estimation.torch._lsmr_batched import (
     _lsmr_compiled_batched,
 )
 from pyfixest.estimation.torch._lsmr_single import _lsmr_compiled, _lsmr_eager
+from pyfixest.utils.dev_utils import _find_stack_level
 
 
 @torch.no_grad()
@@ -52,7 +53,7 @@ def lsmr_torch(
             "torch.compile is not supported reliably on MPS for LSMR; "
             "falling back to eager execution.",
             RuntimeWarning,
-            stacklevel=2,
+            stacklevel=_find_stack_level(),
         )
         use_compile = False
 
@@ -107,7 +108,7 @@ def lsmr_torch_batched(
             "torch.compile is not supported reliably on MPS for batched LSMR; "
             "falling back to eager execution.",
             RuntimeWarning,
-            stacklevel=2,
+            stacklevel=_find_stack_level(),
         )
         use_compile = False
 

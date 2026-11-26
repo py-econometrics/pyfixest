@@ -19,11 +19,12 @@ if TYPE_CHECKING:
         VarianceCovariance,
         WithinLinearData,
     )
+    from pyfixest.estimation.models.feols_ import Feols
 from pyfixest.estimation.internals.literals import (
     InferenceType,
     _validate_literal_argument,
 )
-from pyfixest.utils.dev_utils import _select_coefnames_and_indices
+from pyfixest.utils.dev_utils import _find_stack_level, _select_coefnames_and_indices
 from pyfixest.utils.utils import simultaneous_crit_val
 
 
@@ -129,7 +130,6 @@ class TidyColumnAccessors:
 class ResultAccessorMixin(TidyColumnAccessors):
     """Mixin providing result-accessor methods for fitted models."""
 
-    # Type declarations for attributes provided by the host class (Feols).
     variance_covariance: "VarianceCovariance"
     coeftable: CoefficientTable
     _beta_hat: np.ndarray
@@ -142,26 +142,10 @@ class ResultAccessorMixin(TidyColumnAccessors):
     fitstat: "FitStatistics"
     _coefnames: list[str]
     model: "ModelDescription"
-    _k_fe: pd.Series
     _k: int
 
-    @property
-    def _fml(self) -> str:
-        """Formula string. Kept for third-party integrations (e.g. marginaleffects's `ModelPyfixest`) that read this private attribute directly; use `model.formula` instead."""
-        return self.model.formula
-
-    @property
-    def _method(self) -> str:
-        """Estimator name. Kept for third-party integrations (e.g. marginaleffects's `ModelPyfixest`) that read this private attribute directly; use `model.method` instead."""
-        return self.model.method
-
-    @property
-    def _vcov(self) -> np.ndarray:
-        """Covariance matrix. Kept for third-party integrations (e.g. marginaleffects's `ModelPyfixest`) that read this private attribute directly; use `variance_covariance.vcov` instead."""
-        return self.variance_covariance.vcov
-
     def evalue(
-        self,
+        self: "Feols",
         mixture_precision: float = 1.0,
     ) -> pd.Series:
         """Compute coefficient-wise SAVI e-values.
@@ -181,7 +165,7 @@ class ResultAccessorMixin(TidyColumnAccessors):
         Notes
         -----
         SAVI currently supports unweighted, non-IV `feols` models without
-        absorbed fixed effects. The covariance estimator must be iid or
+        absorbed fixed effects. The variance estimator must be iid or
         heteroskedasticity robust (`hetero`, `HC1`, `HC2`, or `HC3`). Note that
         for `HC2`/`HC3`, pyfixest's default small-sample correction scales the
         variance by `n / (n - k)` while the R implementation in `avlm` does not.
@@ -197,12 +181,16 @@ class ResultAccessorMixin(TidyColumnAccessors):
         fit.evalue()
         ```
         """
-        from pyfixest.estimation.post_estimation.savi import _evalue
+        from pyfixest.estimation.post_estimation.savi import (
+            _evalue,
+            _validate_savi_model,
+        )
 
+        _validate_savi_model(model=self, method="evalue")
         return _evalue(model=self, mixture_precision=mixture_precision)
 
     def pvalue_savi(
-        self,
+        self: "Feols",
         mixture_precision: float = 1.0,
     ) -> pd.Series:
         """Compute coefficient-wise SAVI sequential p-values.
@@ -225,13 +213,17 @@ class ResultAccessorMixin(TidyColumnAccessors):
         fit.pvalue_savi()
         ```
         """
-        from pyfixest.estimation.post_estimation.savi import _pvalue_savi
+        from pyfixest.estimation.post_estimation.savi import (
+            _pvalue_savi,
+            _validate_savi_model,
+        )
 
+        _validate_savi_model(model=self, method="pvalue_savi")
         return _pvalue_savi(model=self, mixture_precision=mixture_precision)
 
     def get_inference(self, alpha: float = 0.05) -> None:
         """
-        Publish `coeftable`, the coefficient table of the current covariance.
+        Publish `coeftable`, the coefficient table under the current variance estimator.
 
         Parameters
         ----------
@@ -259,7 +251,6 @@ class ResultAccessorMixin(TidyColumnAccessors):
         se = np.sqrt(np.diagonal(covariance.vcov))
         tstat = beta_hat / se
         pvalue = dist.pvalue(tstat, covariance.df_t)
-        # fixest_CI_factor: beta +- q(1 - alpha / 2) * se at df_t degrees of freedom
         z_se = dist.crit_val(alpha, covariance.df_t) * se
         self.coeftable = CoefficientTable(
             estimate=beta_hat,
@@ -269,10 +260,6 @@ class ResultAccessorMixin(TidyColumnAccessors):
             conf_int=np.array([beta_hat - z_se, beta_hat + z_se]),
             alpha=alpha,
         )
-
-    def _n_fixef_coefficients(self) -> int:
-        """Return the number of fixed-effect coefficients, zero without fixed effects."""
-        return int(np.sum(self._k_fe - 1) + 1) if self.model.has_fixef else 0
 
     def tidy(
         self,
@@ -324,7 +311,8 @@ class ResultAccessorMixin(TidyColumnAccessors):
             )
         if inference_type == "savi":
             raise NotImplementedError(
-                "inference_type='savi' is not available in tidy() yet."
+                "inference_type='savi' is not available in tidy(). "
+                "Use confint(inference_type='savi') for confidence sequences."
             )
 
         ub, lb = 1 - alpha / 2, alpha / 2
@@ -335,8 +323,10 @@ class ResultAccessorMixin(TidyColumnAccessors):
             conf_int = table.conf_int
         except EmptyVcovError:
             warnings.warn(
-                "Empty variance-covariance matrix detected",
+                "Empty variance-covariance matrix detected. This fit estimated no coefficients, "
+                "so tidy() has no coefficient inference to report.",
                 UserWarning,
+                stacklevel=_find_stack_level(),
             )
             # Fixed-effects-only model: no coefficients, so no inference rows.
             se = tstat = pvalue = np.empty(0)
@@ -351,18 +341,16 @@ class ResultAccessorMixin(TidyColumnAccessors):
             f"{lb * 100:.1f}%": conf_int[0],
             f"{ub * 100:.1f}%": conf_int[1],
         }
-        if (
-            self.model.sample_split_var is not None
-            and (sample := self.model.sample_split_value) is not None
-        ):
-            data["Sample"] = sample
+        if self.model.sample_split is not None:
+            sample = self.model.sample_split.value
+            data["Sample"] = "all" if sample is None else sample
         return pd.DataFrame(data).set_index("Coefficient")
 
     def _normalize_inference_type(
         self, inference_type: InferenceType, joint: bool = False
     ) -> InferenceType:
         """Validate `inference_type` and fold the deprecated `joint` flag into it."""
-        _validate_literal_argument(inference_type, InferenceType)
+        _validate_literal_argument(inference_type, InferenceType, name="inference_type")
 
         if joint:
             warnings.warn(
@@ -373,14 +361,14 @@ class ResultAccessorMixin(TidyColumnAccessors):
             if inference_type not in ("regular", "simult"):
                 raise ValueError(
                     "joint=True cannot be combined with "
-                    f"inference_type={inference_type!r}."
+                    f"inference_type={inference_type!r}. Remove joint or use inference_type='simult'."
                 )
             inference_type = "simult"
 
         return inference_type
 
     def confint(
-        self,
+        self: "Feols",
         alpha: float = 0.05,
         keep: list | str | None = None,
         drop: list | str | None = None,
@@ -451,7 +439,7 @@ class ResultAccessorMixin(TidyColumnAccessors):
         Notes
         -----
         SAVI currently supports unweighted, non-IV `feols` models without
-        absorbed fixed effects. The covariance estimator must be iid or
+        absorbed fixed effects. The variance estimator must be iid or
         heteroskedasticity robust (`hetero`, `HC1`, `HC2`, or `HC3`). With
         `HC2`/`HC3`, pyfixest's default small-sample correction scales the
         variance by `n / (n - k)`. You need to pass `ssc(k_adj=False)` to reproduce `avlm`,
@@ -478,8 +466,12 @@ class ResultAccessorMixin(TidyColumnAccessors):
         """
         inference_type = self._normalize_inference_type(inference_type, joint=joint)
         if inference_type == "savi":
-            from pyfixest.estimation.post_estimation.savi import _confint
+            from pyfixest.estimation.post_estimation.savi import (
+                _confint,
+                _validate_savi_model,
+            )
 
+            _validate_savi_model(model=self, method="confint")
             return _confint(
                 model=self,
                 alpha=alpha,
@@ -514,7 +506,6 @@ class ResultAccessorMixin(TidyColumnAccessors):
                 f"{(1 - alpha / 2) * 100:.1f}%": ub,
             }
         )
-        # df = pd.DataFrame({f"{alpha / 2}%": lb, f"{1-alpha / 2}%": ub})
         df.index = coefnames
 
         return df

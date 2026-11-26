@@ -7,15 +7,15 @@ from typing import Any
 import pandas as pd
 
 from pyfixest.core.demean import Preconditioner
-from pyfixest.estimation.api.utils import _ALL_SAMPLE, _AllSampleSentinel
 from pyfixest.estimation.config import EstimationConfig, QuantileProcess
-from pyfixest.estimation.formula.parse import Formula as FixestFormula
+from pyfixest.estimation.formula.parse import Formula
 from pyfixest.estimation.internals.demean_ import DemeanedData
 from pyfixest.estimation.internals.literals import EstimationMethod
 from pyfixest.estimation.internals.model_state import (
     EstimationOptions,
     GlmEstimationOptions,
     QuantregEstimationOptions,
+    SampleSplit,
     VcovSpec,
 )
 from pyfixest.estimation.models.fegaussian_ import Fegaussian
@@ -108,28 +108,26 @@ def estimation_method_of(model_cls: type) -> EstimationMethod:
 class ParsedFormula:
     """Stores the results from formula parsing = everything the runner needs to know.
 
-    `formula_dict` keys by the fixed-effects formula string (or
-    `None` when no FE) and maps to the list of `FixestFormula`
+    `formula_dict` keys by the rendered fixed-effects formula (or
+    `None` when no FE) and maps to the list of `Formula`
     objects for that block.
     `is_iv` is true when any formula has a
     first stage.
     `is_multiple_estimation` if multiple estimation syntax is used.
     """
 
-    formula_dict: dict[str | None, list[FixestFormula]]
+    formula_dict: dict[str | None, list[Formula]]
     is_iv: bool
     is_multiple_estimation: bool
 
 
-def parse_formula(config: EstimationConfig) -> ParsedFormula:
-    """Parse the config's `fml` string into a `ParsedFormula`.
-
-    Pure: same `(fml, split, fsplit, quantile_process)` always produce
-    the same parse. `is_multiple_estimation` reflects formula
-    expansion *and* sample-split / multi-quantile fan-out.
-    """
+def plan_formulas(config: EstimationConfig) -> ParsedFormula:
+    """Group parsed formulas and account for sample and quantile fan-out."""
     run_split = config.split is not None or config.fsplit is not None
-    formula_dictionary = FixestFormula.parse_to_dict(config.fml)
+    formula_dictionary: dict[str | None, list[Formula]] = {}
+    for formula in config.formulas:
+        key = formula.fixed_effects_key
+        formula_dictionary.setdefault(key, []).append(formula)
     process = config.quantile_process
     is_multiple_estimation = (
         sum(len(v) for v in formula_dictionary.values()) > 1
@@ -162,18 +160,17 @@ class ModelSpec:
 
     method: EstimationMethod
     model_cls: ModelFactory
-    formula: FixestFormula
+    formula: Formula
     fixef_key: str | None
     data: pd.DataFrame
     options: EstimationOptions
-    sample_split_value: Any
-    sample_split_var: str | None
+    sample_split: SampleSplit | None
     quantile_process: QuantileProcess | None = None
 
     @property
-    def cache_key(self) -> tuple[Any, str | None]:
+    def cache_key(self) -> tuple[SampleSplit | None, str | None]:
         """Specs with the same key can share demean / preconditioner caches."""
-        return (self.sample_split_value, self.fixef_key)
+        return (self.sample_split, self.fixef_key)
 
 
 def build_all_splits(
@@ -182,33 +179,35 @@ def build_all_splits(
     run_split: bool,
     splitvar: str | None,
     data: pd.DataFrame,
-) -> list[Any]:
-    """List the sample-split values in the order the runner will visit them.
+) -> list[SampleSplit | None]:
+    """List the sample splits in the order the runner will visit them.
 
-    The full sample comes first if requested, followed by the
-    sorted unique values of the split column. The order matches
-    what `FixestMulti` did before the refactor, which keeps
-    cache blocks contiguous downstream.
+    An unsplit estimation has the single split ``None``. Otherwise the
+    full sample comes first if requested, followed by the sorted unique
+    values of the split column. The order matches what `FixestMulti` did
+    before the refactor, which keeps cache blocks contiguous downstream.
     """
-    all_splits: list[str | int | float | _AllSampleSentinel] = []
+    if not run_split:
+        return [None]
+    if splitvar is None:
+        raise RuntimeError("Sample splitting was requested without a split column.")
+    all_splits: list[SampleSplit | None] = []
     if run_full:
-        all_splits.append(_ALL_SAMPLE)
-    if run_split:
-        assert splitvar is not None
-        all_splits.extend(
-            data[splitvar].dropna().drop_duplicates().sort_values().tolist()
-        )
+        all_splits.append(SampleSplit(var=splitvar, value=None))
+    all_splits.extend(
+        SampleSplit(var=splitvar, value=value)
+        for value in data[splitvar].dropna().drop_duplicates().sort_values().tolist()
+    )
     return all_splits
 
 
 def expand_specs(
     *,
     config: EstimationConfig,
-    formula_dict: Mapping[str | None, list[FixestFormula]],
+    formula_dict: Mapping[str | None, list[Formula]],
     data: pd.DataFrame,
-    splits: list[Any],
+    splits: list[SampleSplit | None],
     is_iv: bool,
-    splitvar: str | None,
 ) -> list[ModelSpec]:
     """Build one `ModelSpec` per model the user's call expands into.
 
@@ -239,11 +238,10 @@ def expand_specs(
             fixef_key=fixef_key,
             data=data,
             options=config.options,
-            sample_split_value=sample_split_value,
-            sample_split_var=splitvar,
+            sample_split=sample_split,
             quantile_process=config.quantile_process,
         )
-        for sample_split_value in splits
+        for sample_split in splits
         for fixef_key in formula_dict
         for formula in formula_dict[fixef_key]
     ]
@@ -258,7 +256,8 @@ def fit_one(
 ) -> FittedModel:
     """Run the full fit pipeline for one model spec.
 
-    Constructs the model class and runs prepare → fit → vcov → inference.
+    Constructs the model class and runs prepare → fit → fit statistics →
+    vcov → inference.
     The model keeps all its state; `run_estimation` applies the storage
     options when its caller asks for it.
     `vcov` was parsed at the API boundary; the model rejects an estimator it
@@ -273,14 +272,12 @@ def fit_one(
         "FixestFormula": spec.formula,
         "data": spec.data,
         "options": spec.options,
-        "sample_split_value": spec.sample_split_value,
-        "sample_split_var": spec.sample_split_var,
+        "sample_split": spec.sample_split,
         "lookup_demeaned_data": lookup_demeaned_data,
     }
     if entry.accepts_preconditioner:
         model_kwargs["lookup_preconditioner"] = lookup_preconditioner
     if spec.quantile_process is not None:
-        # the fan-out itself is not an option of any single fit
         model_kwargs["quantile"] = spec.quantile_process.quantiles
         model_kwargs["multi_method"] = spec.quantile_process.multi_method
 
@@ -292,6 +289,7 @@ def fit_one(
     if not FIT._X_is_empty:
         FIT._check_vcov_support(vcov)
     FIT.get_fit()
+    FIT._publish_fit_statistics()
     if not FIT._X_is_empty:
         FIT._vcov_from_spec(vcov)
         FIT.get_inference()
