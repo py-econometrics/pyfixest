@@ -337,6 +337,7 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
                 prediction=False,
                 fixed_effect_recovery=False,
                 randomization_inference=False,
+                weighting_bootstrap=False,
             )
 
     def _check_varying_slopes_support(self) -> None:

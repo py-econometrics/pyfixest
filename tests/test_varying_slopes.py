@@ -59,8 +59,18 @@ def test_varying_slopes_require_within_demeaner(data, demeaner, estimator):
         lambda fit: fit.decompose(param="X1", x1_vars=["X2"]),
         lambda fit: fit.ritest(resampvar="X1", reps=10),
         lambda fit: fit.wildboottest(param="X1", reps=9),
+        lambda fit: fit.bootstrap_bayesian(reps=9, seed=1),
+        lambda fit: fit.bootstrap_pairs(reps=9, seed=1),
     ],
-    ids=["predict", "fixef", "decompose", "ritest", "wildboottest"],
+    ids=[
+        "predict",
+        "fixef",
+        "decompose",
+        "ritest",
+        "wildboottest",
+        "bootstrap_bayesian",
+        "bootstrap_pairs",
+    ],
 )
 def test_varying_slopes_reject_unsupported_post_estimation(data, call):
     fit = pf.feols("Y ~ X1 + X2 | f1[Z1]", data=data)
