@@ -631,8 +631,14 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
         )
 
     def _finalize_fit(self) -> None:
-        """Run the OLS Wald test that all coefficients are zero."""
-        self.wald_test()
+        """Run the OLS Wald test that all slope coefficients are zero."""
+        # As in fixest, an intercept-only model has no joint test.
+        if self._default_wald_restrictions().shape[0] > 0:
+            self.wald_test()
+
+    def _default_wald_restrictions(self) -> np.ndarray:
+        """Select every coefficient except the intercept, as fixest's wald()."""
+        return np.eye(self._k)[[name != "Intercept" for name in self._coefnames]]
 
     def _iter_fitted_models(self) -> tuple[Feols, ...]:
         """Yield this fitted model to the result container."""
@@ -1026,21 +1032,22 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
         Compute a Wald test for a linear hypothesis of the form R * beta = q.
         where R is m x k matrix, beta is a k x 1 vector of coefficients,
         and q is m x 1 vector.
-        By default, tests the joint null hypothesis that all coefficients are zero.
+        By default, tests the joint null hypothesis that all coefficients except
+        the intercept are zero, as `fixest::wald()` does.
 
         Parameters
         ----------
         R : array-like, optional
             The matrix R of the linear hypothesis.
-            If None, defaults to an identity matrix.
+            If None, selects every coefficient except the intercept.
         q : array-like, optional
             The vector q of the linear hypothesis.
             If None, defaults to a vector of zeros.
         distribution : str, optional
             The distribution to use for the p-value. Can be either "F" or "chi2".
             Defaults to "F". The F distribution is only used for the joint null
-            that all coefficients are zero; any other restriction falls back to
-            "chi2" with a warning.
+            that all coefficients, or all coefficients except the intercept, are
+            zero; any other restriction falls back to "chi2" with a warning.
 
         Returns
         -------
@@ -1072,7 +1079,16 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
             distribution, WaldDistributionOptions, name="distribution"
         )
 
-        R = np.eye(self._k) if R is None else np.atleast_2d(np.asarray(R, dtype=float))
+        default_R = self._default_wald_restrictions()
+        if R is None:
+            if default_R.shape[0] == 0:
+                raise ValueError(
+                    "The model has no coefficients besides the intercept to test "
+                    "jointly. Pass R to test the intercept."
+                )
+            R = default_R
+        else:
+            R = np.atleast_2d(np.asarray(R, dtype=float))
         q = _normalize_q(q=q, n_restrictions=R.shape[0])
 
         covariance = self.variance_covariance
@@ -1087,8 +1103,10 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
             )
 
         # The F distribution is only used for the joint test that all
-        # coefficients are zero (R identity, q zero).
-        R_is_identity = np.array_equal(R, np.eye(self._k))
+        # coefficients, or all but the intercept, are zero (q zero).
+        R_is_identity = np.array_equal(R, np.eye(self._k)) or np.array_equal(
+            R, default_R
+        )
         q_is_zero = not np.any(q)
         if distribution == "F" and not (R_is_identity and q_is_zero):
             reasons = []
