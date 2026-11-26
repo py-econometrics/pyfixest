@@ -47,6 +47,9 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
   empty list. Before, `summary([])` returned `None` and the others failed with
   an unrelated `IndexError`, `KeyError` or `ValueError`
   ([#2111](https://github.com/py-econometrics/pyfixest/issues/2111)).
+- `ritest()` now raises a `ValueError` for non-finite null values such as
+  `resampvar="X1=nan"` or `"X1=inf"` instead of running the test
+  ([#2106](https://github.com/py-econometrics/pyfixest/issues/2106)).
 - `collin_tol=nan` and `iwls_tol=nan` now raise a `ValueError`, and Boolean
   `maxiter` / `iwls_maxiter` values in `quantreg()`, `feglm()`, and `fepois()`
   now raise a `TypeError`
@@ -119,6 +122,11 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
 - Fits no longer emit pandas 3.1's `Pandas4Warning` about the deprecated
   `inplace=` keyword, and `copy_data=False` no longer resets the index of the
   data you pass in ([#2069](https://github.com/py-econometrics/pyfixest/pull/2069)).
+- `feols()`, `feglm()`, and `fepois()` raise `TypeError` when `demeaner` is not
+  `None`, a `MapDemeaner`, or an `LsmrDemeaner`. Before, `demeaner="rust"` was
+  ignored by `feols()` without fixed effects and failed with an unrelated
+  `AttributeError` in `feols()` with fixed effects and in `feglm()`/`fepois()`
+  ([#2109](https://github.com/py-econometrics/pyfixest/issues/2109)).
 
 ## PyFixest 0.70.0
 

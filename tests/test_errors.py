@@ -2415,6 +2415,27 @@ def test_estimation_type_errors_name_the_option(key, value, message):
 
 
 @pytest.mark.parametrize(
+    ("demeaner", "type_name"),
+    [
+        ("rust", "str"),
+        (pf.MapDemeaner, "type"),
+        (pf.BaseDemeaner(), "BaseDemeaner"),
+    ],
+)
+@pytest.mark.parametrize("fml", ["Y ~ X1", "Y ~ X1 | f1"])
+@pytest.mark.parametrize("estimator", [pf.feols, pf.fepois])
+def test_estimation_rejects_untyped_demeaner(estimator, fml, demeaner, type_name):
+    data = pf.get_data(N=50, model="Fepois")
+    with pytest.raises(
+        TypeError,
+        match=r"demeaner must be created with pf\.MapDemeaner\(\) or "
+        rf"pf\.LsmrDemeaner\(\); got {type_name}\. To select a demeaner backend, "
+        r".*backend='rust'",
+    ):
+        estimator(fml, data=data, demeaner=demeaner)
+
+
+@pytest.mark.parametrize(
     ("options", "error", "message"),
     [
         ({"quantile": []}, ValueError, r"quantile must include at least one value"),
@@ -2511,6 +2532,16 @@ def test_ritest_explains_invalid_null_hypotheses():
     fit = pf.feols("Y ~ X1", pf.get_data(N=50))
     with pytest.raises(ValueError, match=r"resampvar='X1=nope'.*'x=0'"):
         fit.ritest("X1=nope", reps=4)
+
+
+@pytest.mark.parametrize("resampvar", ["X1=nan", "X1=inf", "X1=-inf", "X1>inf"])
+def test_ritest_rejects_nonfinite_null_values(resampvar):
+    fit = pf.feols("Y ~ X1", pf.get_data(N=50))
+    with pytest.raises(
+        ValueError,
+        match=rf"finite null value in resampvar='{resampvar}'.*'x=0'",
+    ):
+        fit.ritest(resampvar, reps=4)
 
 
 def test_ritest_names_non_string_resampvar():
