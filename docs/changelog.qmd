@@ -42,6 +42,9 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
 
 ### Bug Fixes
 
+- `ritest()` now raises a `ValueError` for non-finite null values such as
+  `resampvar="X1=nan"` or `"X1=inf"` instead of running the test
+  ([#2106](https://github.com/py-econometrics/pyfixest/issues/2106)).
 - `collin_tol=nan` and `iwls_tol=nan` now raise a `ValueError`, and Boolean
   `maxiter` / `iwls_maxiter` values in `quantreg()`, `feglm()`, and `fepois()`
   now raise a `TypeError`

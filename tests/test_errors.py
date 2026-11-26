@@ -2534,6 +2534,16 @@ def test_ritest_explains_invalid_null_hypotheses():
         fit.ritest("X1=nope", reps=4)
 
 
+@pytest.mark.parametrize("resampvar", ["X1=nan", "X1=inf", "X1=-inf", "X1>inf"])
+def test_ritest_rejects_nonfinite_null_values(resampvar):
+    fit = pf.feols("Y ~ X1", pf.get_data(N=50))
+    with pytest.raises(
+        ValueError,
+        match=rf"finite null value in resampvar='{resampvar}'.*'x=0'",
+    ):
+        fit.ritest(resampvar, reps=4)
+
+
 def test_ritest_names_non_string_resampvar():
     fit = pf.feols("Y ~ X1", pf.get_data(N=50))
     with pytest.raises(TypeError, match=r"resampvar; got int\. Use a string"):
