@@ -42,6 +42,11 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
 
 ### Bug Fixes
 
+- `etable()`, `summary()`, `iplot()`, `coefplot()`, `qplot()`, `bonferroni()`,
+  `rwolf()` and `wyoung()` raise a `ValueError` naming `models` when passed an
+  empty list. Before, `summary([])` returned `None` and the others failed with
+  an unrelated `IndexError`, `KeyError` or `ValueError`
+  ([#2111](https://github.com/py-econometrics/pyfixest/issues/2111)).
 - `collin_tol=nan` and `iwls_tol=nan` now raise a `ValueError`, and Boolean
   `maxiter` / `iwls_maxiter` values in `quantreg()`, `feglm()`, and `fepois()`
   now raise a `TypeError`
