@@ -43,9 +43,10 @@ def test_F_test_single_equation_no_clustering_with_auto_computed_wald_test():
     fml = "dep_var ~ treat + X1"
     fit = feols(fml, data, vcov=None, ssc=ssc(k_adj=False))
 
-    # Wald test (is called with R = Identity_2 and distribution = "F" by default)
-    f_stat = fit.wald.f_statistic
-    p_stat = fit.wald.pvalue
+    # Joint test of all three coefficients, including the intercept.
+    wald = fit.wald_test(R=np.eye(3))
+    f_stat = wald.f_statistic
+    p_stat = wald.pvalue
 
     # Compare with R
 
@@ -308,3 +309,46 @@ def test_wald_test_joint_null_keeps_F_without_warning():
 
     assert not [w for w in record if "Distribution changed to chi2" in str(w.message)]
     assert wald.distribution == "F"
+
+
+@pytest.mark.against_r_core
+@pytest.mark.parametrize(
+    "fml, vcov",
+    [
+        ("Y ~ X1", "iid"),
+        ("Y ~ X1", {"CRV1": "f1"}),
+        ("Y ~ X1 + X2", "hetero"),
+        ("Y ~ X1 + X2 | f1", {"CRV1": "f1"}),
+    ],
+)
+def test_default_wald_test_excludes_intercept_like_fixest(fml, vcov):
+    # A weak signal keeps the p-values away from zero.
+    rng = np.random.default_rng(2096)
+    n = 500
+    data = pd.DataFrame(
+        {
+            "f1": np.repeat(np.arange(20), 25),
+            "X1": rng.normal(size=n),
+            "X2": rng.normal(size=n),
+        }
+    )
+    data["Y"] = 1.0 + 0.1 * data["X1"] + rng.normal(size=n)
+    fit = pf.feols(fml, data, vcov=vcov)
+
+    r_vcov = ro.Formula("~f1") if isinstance(vcov, dict) else vcov
+    fit_r = fixest.feols(ro.Formula(fml), data=data, vcov=r_vcov)
+    wald_r = fixest.wald(fit_r, print=False)
+
+    assert fit.wald.df1 == wald_r.rx2("df1")[0]
+    assert fit.wald.df2 == wald_r.rx2("df2")[0]
+    np.testing.assert_allclose(fit.wald.stat, wald_r.rx2("stat")[0], rtol=1e-6)
+    np.testing.assert_allclose(fit.wald.pvalue, wald_r.rx2("p")[0], rtol=1e-6)
+
+
+def test_intercept_only_model_has_no_default_wald_test():
+    fit = pf.feols("Y ~ 1", pf.get_data())
+
+    assert not hasattr(fit, "wald")
+    with pytest.raises(ValueError, match="no coefficients besides the intercept"):
+        fit.wald_test()
+    assert fit.wald_test(R=np.eye(1)).df1 == 1

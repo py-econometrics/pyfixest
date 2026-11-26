@@ -42,6 +42,11 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
 
 ### Bug Fixes
 
+- The joint Wald test in `fit.wald`, and `wald_test()` without `R`, no longer
+  tests the intercept, matching `fixest::wald()`. For `feols("Y ~ X1", vcov=
+  {"CRV1": "f1"})`, `df1` drops from 2 to 1. An intercept-only fit such as
+  `Y ~ 1` no longer sets `fit.wald`; pass `R` to test the intercept
+  ([#2096](https://github.com/py-econometrics/pyfixest/issues/2096)).
 - Time-series Newey–West inference with a missing `time_id` value raises a
   `ValueError` naming the column and the number of affected rows. Before, it
   aborted the Python process. HAC errors name the `time_id` and `panel_id`

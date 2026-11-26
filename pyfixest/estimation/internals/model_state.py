@@ -1083,8 +1083,8 @@ class WaldTest:
         the number of estimated coefficients and fixed effects.
     distribution : {"F", "chi2"}
         Reference distribution. ``"F"`` is only used for the joint null that
-        every coefficient is zero; any other restriction falls back to
-        ``"chi2"``.
+        every coefficient, or every coefficient except the intercept, is zero;
+        any other restriction falls back to ``"chi2"``.
     vcov_type : str
         Variance estimator the test was computed with, as
         `VarianceCovariance.vcov_type_detail`.
@@ -1102,7 +1102,8 @@ class WaldTest:
     fit.wald
     ```
 
-    `feols()` fits run the joint test on all coefficients automatically; other
+    `feols()` fits run the joint test on all coefficients except the intercept
+    automatically, as `fixest::wald()` does; other
     estimators publish `fit.wald` once `wald_test()` is called.
 
     ```{python}
