@@ -787,7 +787,9 @@ class GelbachDecomposition:
         --------
         ```{python}
         import pyfixest as pf
-        data = pf.gelbach_data(nobs=500)
+        from pyfixest.utils.dgps import gelbach_data
+
+        data = gelbach_data(nobs=500)
         fit = pf.feols("y ~ x1 + x21 + x22 + x23", data=data)
         gb = fit.decompose(decomp_var = "x1", x1_vars = ["x21"],reps = 10, nthreads = 1)
         gb.etable()
@@ -797,6 +799,7 @@ class GelbachDecomposition:
 
         ```{python}
         gb.etable(column_heads = ["Full Difference", "Unexplained Difference", "Explained Difference"])
+        ```
         """
         from maketables import MTable
 
@@ -1005,8 +1008,9 @@ class GelbachDecomposition:
         --------
         ```python
         import pyfixest as pf
+        from pyfixest.utils.dgps import gelbach_data
 
-        data = pf.gelbach_data(nobs=500)
+        data = gelbach_data(nobs=500)
         fit = pf.feols("y ~ x1 + x21 + x22 + x23", data=data)
         gb = fit.decompose(decomp_var="x1", only_coef=True)
         # Basic waterfall chart

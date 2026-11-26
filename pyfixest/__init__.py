@@ -100,7 +100,6 @@ _lazy_imports = {
     "coefplot": "pyfixest.report",
     "iplot": "pyfixest.report",
     "qplot": "pyfixest.report",
-    "make_table": "pyfixest.report",
     "get_bartik_data": "pyfixest.utils",
     "get_data": "pyfixest.utils",
     "get_encouragement_data": "pyfixest.utils",
