@@ -143,7 +143,15 @@ _ALL_CAPABILITIES = frozenset(field.name for field in fields(Capabilities))
     "model,enabled",
     [
         ("feols", _ALL_CAPABILITIES),
-        ("feols-iv", {"covariance_update", "hac_inference", "multiway_clustering"}),
+        (
+            "feols-iv",
+            {
+                "covariance_update",
+                "hac_inference",
+                "multiway_clustering",
+                "weighting_bootstrap",
+            },
+        ),
         (
             "fepois",
             {
@@ -154,6 +162,7 @@ _ALL_CAPABILITIES = frozenset(field.name for field in fields(Capabilities))
                 "prediction",
                 "fixed_effect_recovery",
                 "randomization_inference",
+                "weighting_bootstrap",
             },
         ),
         (
@@ -164,6 +173,7 @@ _ALL_CAPABILITIES = frozenset(field.name for field in fields(Capabilities))
                 "multiway_clustering",
                 "prediction",
                 "fixed_effect_recovery",
+                "weighting_bootstrap",
             },
         ),
         ("quantreg", {"covariance_update", "prediction"}),
@@ -174,6 +184,7 @@ _ALL_CAPABILITIES = frozenset(field.name for field in fields(Capabilities))
             - {
                 "randomization_inference",
                 "sherman_morrison_update",
+                "weighting_bootstrap",
                 "anytime_valid_inference",
             },
         ),
@@ -183,6 +194,7 @@ _ALL_CAPABILITIES = frozenset(field.name for field in fields(Capabilities))
             - {
                 "randomization_inference",
                 "sherman_morrison_update",
+                "weighting_bootstrap",
                 "anytime_valid_inference",
             },
         ),

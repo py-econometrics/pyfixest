@@ -11,6 +11,7 @@ from numpy.typing import NDArray
 from pyfixest.core.collinear import find_collinear_variables
 from pyfixest.core.demean import Preconditioner
 from pyfixest.errors import IVIdentificationError
+from pyfixest.estimation.formula.model_matrix import _ModelMatrixKey
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.estimation.internals.collinearity import drop_multicollinear_variables
 from pyfixest.estimation.internals.demean_ import DemeanedData
@@ -145,6 +146,7 @@ class Feiv(Feols):
         fixed_effect_recovery=False,
         randomization_inference=False,
         sherman_morrison_update=False,
+        weighting_bootstrap=True,
         anytime_valid_inference=False,
     )
 
@@ -378,6 +380,19 @@ class Feiv(Feols):
     def _finalize_fit(self) -> None:
         """Fit and retain the first-stage model after second-stage inference."""
         self._fit_first_stage()
+
+    def _weighting_bootstrap_instruments(
+        self, formula_context: dict[str, Any]
+    ) -> np.ndarray | None:
+        """Return the identified instruments rowwise, as the bootstrap draws refit."""
+        model_spec = self.model.model_spec
+        assert model_spec is not None, (
+            "weighting bootstraps run after the model matrix is built"
+        )
+        _, instruments = model_spec[
+            _ModelMatrixKey.instrumental_variable
+        ].get_model_matrix(self._data, output="pandas", context=formula_context)
+        return instruments.loc[:, self._coefnames_z].to_numpy()
 
     def _clear_attributes(self) -> None:
         """Apply the retention policy to this model and its first stage."""

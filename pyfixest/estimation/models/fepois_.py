@@ -78,6 +78,7 @@ class Fepois(Feglm):
         fixed_effect_recovery=True,
         randomization_inference=True,
         sherman_morrison_update=False,
+        weighting_bootstrap=True,
         anytime_valid_inference=False,
     )
 

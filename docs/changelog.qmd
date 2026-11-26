@@ -17,6 +17,24 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
 
 ## Unreleased
 
+### New Features
+
+- Fitted OLS, IV, and Gaussian, Poisson, logit, and probit GLM models gain
+  `bootstrap_bayesian()`, Rubin's (1981) Bayesian bootstrap, and
+  `bootstrap_pairs()`, the pairs bootstrap. Both reweight the observations, or
+  one-way clusters, and refit the model, re-absorbing fixed effects in every
+  draw; analytic weights multiply the bootstrap weights. The Bayesian bootstrap
+  reports the posterior mean, posterior SD, and an equal-tail credible
+  interval, and is validated against R `bayesboot`; the pairs bootstrap reports
+  the bootstrap SE, a percentile confidence interval, and a centered p-value,
+  and is validated against R `boot`. A replicate that cannot be estimated stays
+  `NaN` in the returned draws and is left out of the summaries. Quantile
+  regression, DiD and event-study fits, varying slopes, frequency weights,
+  offsets, multiway clustering, and fits with `lean=True` or `store_data=False`
+  are rejected. The methods need many independent observations or clusters and
+  do not replace the wild cluster bootstrap when clusters are few
+  ([#1275](https://github.com/py-econometrics/pyfixest/pull/1275)).
+
 ### Documentation
 
 - PyFixest now ships an agent skill for coding agents in

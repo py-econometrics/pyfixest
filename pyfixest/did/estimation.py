@@ -158,11 +158,13 @@ def event_study(
 
         fit.vcov(vcov={"CRV1": cluster})
         fit.model = replace(fit.model, method="twfe")
-        # ritest(), update(), and SAVI have not supported event-study fits.
+        # ritest(), update(), SAVI, and the weighting bootstraps have not supported
+        # event-study fits.
         fit.capabilities = replace(
             fit.capabilities,
             randomization_inference=False,
             sherman_morrison_update=False,
+            weighting_bootstrap=False,
             anytime_valid_inference=False,
         )
 
@@ -181,11 +183,13 @@ def event_study(
         fit.vcov(vcov={"CRV1": cluster})
 
         fit.model = replace(fit.model, method="saturated")
-        # ritest(), update(), and SAVI have not supported event-study fits.
+        # ritest(), update(), SAVI, and the weighting bootstraps have not supported
+        # event-study fits.
         fit.capabilities = replace(
             fit.capabilities,
             randomization_inference=False,
             sherman_morrison_update=False,
+            weighting_bootstrap=False,
             anytime_valid_inference=False,
         )
         fit.iplot = saturated.iplot.__get__(fit, type(fit))  # type: ignore
@@ -316,6 +320,7 @@ def _mark_as_did2s(fit: Feols) -> None:
         randomization_inference=False,
         sherman_morrison_update=False,
         crv3_inference=False,
+        weighting_bootstrap=False,
         anytime_valid_inference=False,
     )
 
