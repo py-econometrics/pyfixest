@@ -114,6 +114,11 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
 - Fits no longer emit pandas 3.1's `Pandas4Warning` about the deprecated
   `inplace=` keyword, and `copy_data=False` no longer resets the index of the
   data you pass in ([#2069](https://github.com/py-econometrics/pyfixest/pull/2069)).
+- `feols()`, `feglm()`, and `fepois()` raise `TypeError` when `demeaner` is not
+  `None`, a `MapDemeaner`, or an `LsmrDemeaner`. Before, `demeaner="rust"` was
+  ignored by `feols()` without fixed effects and failed with an unrelated
+  `AttributeError` in `feols()` with fixed effects and in `feglm()`/`fepois()`
+  ([#2109](https://github.com/py-econometrics/pyfixest/issues/2109)).
 
 ## PyFixest 0.70.0
 

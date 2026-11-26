@@ -2415,6 +2415,27 @@ def test_estimation_type_errors_name_the_option(key, value, message):
 
 
 @pytest.mark.parametrize(
+    ("demeaner", "type_name"),
+    [
+        ("rust", "str"),
+        (pf.MapDemeaner, "type"),
+        (pf.BaseDemeaner(), "BaseDemeaner"),
+    ],
+)
+@pytest.mark.parametrize("fml", ["Y ~ X1", "Y ~ X1 | f1"])
+@pytest.mark.parametrize("estimator", [pf.feols, pf.fepois])
+def test_estimation_rejects_untyped_demeaner(estimator, fml, demeaner, type_name):
+    data = pf.get_data(N=50, model="Fepois")
+    with pytest.raises(
+        TypeError,
+        match=r"demeaner must be created with pf\.MapDemeaner\(\) or "
+        rf"pf\.LsmrDemeaner\(\); got {type_name}\. To select a demeaner backend, "
+        r".*backend='rust'",
+    ):
+        estimator(fml, data=data, demeaner=demeaner)
+
+
+@pytest.mark.parametrize(
     ("options", "error", "message"),
     [
         ({"quantile": []}, ValueError, r"quantile must include at least one value"),
