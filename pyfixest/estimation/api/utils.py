@@ -79,7 +79,7 @@ def _estimation_input_checks(
 
     if fixef_rm not in ["none", "singleton"]:
         raise ValueError("fixef_rm must be either 'none' or 'singleton'.")
-    if collin_tol <= 0 or collin_tol >= 1:
+    if not 0 < collin_tol < 1:
         raise ValueError(
             f"collin_tol must be greater than 0 and less than 1; got {collin_tol!r}."
         )
