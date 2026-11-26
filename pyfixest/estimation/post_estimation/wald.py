@@ -20,22 +20,22 @@ def _normalize_q(q: float | np.ndarray | None, n_restrictions: int) -> np.ndarra
             f"q must be a numeric scalar or array; got dtype {q_array.dtype}."
         )
     q_array = q_array.astype(float, copy=False)
-
-    if q_array.ndim > 1:
-        raise ValueError(
-            f"q must be a one-dimensional array or a scalar; got shape {q_array.shape}."
-        )
-    if q_array.ndim == 1 and q_array.shape[0] != n_restrictions:
-        raise ValueError(
-            f"q must have the same number of rows as R; got {q_array.shape[0]} values "
-            f"for {n_restrictions} rows."
-        )
     if not np.isfinite(q_array).all():
         raise ValueError(
             "q must contain finite null values. Check q for missing or infinite values."
         )
+
     if q_array.ndim == 0:
         return np.full(n_restrictions, float(q_array))
+    if q_array.ndim != 1:
+        raise ValueError(
+            f"q must be a one-dimensional array or a scalar; got shape {q_array.shape}."
+        )
+    if q_array.shape[0] != n_restrictions:
+        raise ValueError(
+            f"q must have the same number of rows as R; got {q_array.shape[0]} values "
+            f"for {n_restrictions} rows."
+        )
     return q_array
 
 
