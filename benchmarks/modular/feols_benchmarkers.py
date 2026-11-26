@@ -314,6 +314,8 @@ def _parse_subprocess_output(
             entry = json.loads(payload)
         except json.JSONDecodeError:
             continue
+        if not isinstance(entry, dict):
+            continue
         dataset_id = entry.get("dataset_id")
         if isinstance(dataset_id, str):
             parsed_by_id[dataset_id] = entry

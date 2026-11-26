@@ -47,7 +47,7 @@ avg_slopes(fit, variables="X1", by="f1")
 ## Linear hypothesis tests
 
 Suppose we want to test the linear restriction $X_1 = X_2$.
-The `hypotheses()` function uses the model's estimated covariance matrix, so it works naturally with `PyFixest` objects.
+The `hypotheses()` function uses the fitted model's variance-covariance matrix.
 
 ```{python}
 hypotheses(fit, "X1 - X2 = 0")

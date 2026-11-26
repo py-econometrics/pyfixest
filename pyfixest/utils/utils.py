@@ -27,7 +27,7 @@ class Ssc:
     k_adj : bool, default True
         Apply the ``(N - 1) / (N - k)`` adjustment (``N / (N - k)`` for
         heteroskedasticity-robust estimators).
-    k_fixef : {"none", "full", "nonnested"}, default "nonnested"
+    k_fixef : {"nonnested", "full", "none"}, default "nonnested"
         Which fixed-effect parameters count toward ``k``.
     G_adj : bool, default True
         Apply the ``G / (G - 1)`` cluster adjustment.
@@ -144,65 +144,70 @@ def ssc(
     Parameters
     ----------
     k_adj : bool, default True
-        If True, applies an adjustment factor of (N-1) / (N-k) where N
-        is the number of observations and k is the number of estimated
-        coefficients excluding any fixed effects projected out by either
-        `feols()` or `fepois()`.
-    k_fixef : str, default "none"
-        Equal to 'none': the fixed effects parameters are discarded when
-        calculating k in (N-1) / (N-k).
+        If True, multiply the variance-covariance matrix by
+        `(N - 1) / (N - df_k)`, or by `N / (N - df_k)` for
+        heteroskedasticity-robust errors. `N` is the number of observations
+        (the sum of the weights under frequency weights). `df_k` counts the
+        estimated coefficients plus the fixed-effect parameters described
+        under `k_fixef`.
+    k_fixef : {"nonnested", "full", "none"}, default "nonnested"
+        Which fixed-effect parameters count toward `df_k`. "none" leaves out
+        the fixed-effect levels, "full" counts them, and "nonnested" reduces
+        the count for fixed effects nested in a cluster variable. See Details.
     G_adj : bool, default True
-        If True, a cluster correction G/(G-1) is performed, with G the number
-        of clusters. This argument is only relevant for clustered errors.
-    G_df : str, default "conventional"
-        Controls how "G" is computed for multiway clustering if G_adj = True.
-        Note that the variance-covariance matrix in the multiway clustering case is of
-        the form V = V_1 + V_2 - V_12. If "conventional", then each summand G_i
-        is multiplied by an adjustment factor G_i / (G_i - 1). If "min",
-        all summands are multiplied with the same value, min(G) / (min(G) - 1).
-        This argument is only relevant for clustered errors.
+        If True, multiply cluster-robust and HAC variance-covariance matrices
+        by `G / (G - 1)`. `G` is the number of clusters, or the number of time
+        periods for HAC errors. It has no effect on iid or
+        heteroskedasticity-robust errors.
+    G_df : {"min", "conventional"}, default "min"
+        Which `G` the `G_adj` factor uses under multiway clustering. "min"
+        uses the smallest cluster count for every term, "conventional" uses
+        each term's own count. It does not change the standard errors under
+        one-way clustering or with `G_adj=False`.
+    **kwargs : Any
+        Accepts only the deprecated names `adj` (now `k_adj`), `fixef_k` (now
+        `k_fixef`), `cluster_adj` (now `G_adj`) and `cluster_df` (now `G_df`).
+        Each takes the same values as its replacement and emits a
+        `DeprecationWarning`. Any other keyword raises a `ValueError`.
 
     Details
     -------
     The small-sample correction choices mimic fixest's behavior. For details, see
     https://cran.r-project.org/web/packages/fixest/vignettes/standard_errors.html.
 
-    In general, if k_adj = True, we multiply the variance-covariance matrix V with a
-    adjustment factor of (N-1) / (N-k), where N is the number of
-    observations and k is the number of estimated coefficients.
+    The variance-covariance matrix is multiplied by the product of the `k_adj`
+    and `G_adj` factors. A factor that is turned off or does not apply equals
+    one.
 
-    If k_fixef = "none", the fixed effects parameters are discarded when
-    calculating k. This is the default behavior and currently the only
-    option. Note that it is not r-fixest's default behavior.
+    `df_k` is the number of estimated coefficients, excluding fixed effects,
+    plus the following fixed-effect parameters:
 
-    Hence if k_adj = True, the variance-covariance matrix is computed as
-    V = V x (N-1) / (N-k) for iid and heteroskedastic errors.
+    - `"full"`: the number of levels summed over all fixed effects, minus one
+      for each fixed effect after the first.
+    - `"nonnested"`: the same count, but with cluster-robust errors a fixed
+      effect nested in a cluster variable enters the sum as one level. A fixed
+      effect is nested if, within each of its levels, all observations belong
+      to one cluster, as when it is itself the cluster variable. For all other
+      errors, `"nonnested"` equals `"full"`.
+    - `"none"`: no fixed-effect levels.
 
-    If k_adj = False, no small-sample correction is applied of the type
-    above is applied.
+    Varying-slope coefficients, one per level and slope, count under all three
+    options. A fixed effect with slopes only, such as `f1[[X2]]`, adds no
+    levels to the sum.
 
-    If G_adj = True, a cluster correction of G/(G-1) is performed,
-    with G the number of clusters.
+    Under two-way clustering, the variance-covariance matrix combines the
+    matrices clustered by the first variable, the second variable and their
+    intersection, `V = V_1 + V_2 - V_12`. With `G_adj=True` and
+    `G_df="conventional"`, each term `V_i` is multiplied by `G_i / (G_i - 1)`,
+    where `G_i` is its own cluster count. With `G_df="min"`, every term is
+    multiplied by `min(G) / (min(G) - 1)`. Clustering on more variables
+    follows the same pattern.
 
-    If k_adj = True and G_adj = True, V = V x (N - 1) / N - k) x G/(G-1)
-    for cluster robust errors where G is the number of clusters.
-
-    If k_adj = False and G_adj = True, V = V x G/(G-1) for cluster robust
-    errors, i.e. we drop the (N-1) / (N-k) factor. And if G_adj = False,
-    no cluster correction is applied.
-
-    Things are slightly more complicated for multiway clustering. In this
-    case, we compute the variance-covariance matrix as V = V1 + V2 - V_12.
-
-    If G_adj = True and G_df = "conventional", then
-    V += [V x G_i / (G_i - 1) for i in [1, 2, 12]], i.e. each separate
-    variance-covariance matrix G_i is multiplied by an adjustment factor
-    G_i / (G_i - 1) corresponding to the number of clusters in the
-    respective variance-covariance matrix. This is the default behavior
-    for clustered errors.
-
-    If G_df = "min", then
-    V += [V x min(G) / (min(G) - 1) for i in [1, 2, 12]].
+    The degrees of freedom of the t reference distribution are `N - df_k` for
+    iid and heteroskedasticity-robust errors, so `k_fixef` affects them even
+    with `k_adj=False`. They are `G - 1` for cluster-robust and HAC errors,
+    with the smallest `G` under multiway clustering for either `G_df`.
+    Poisson, logit and probit models use the normal distribution instead.
 
     Returns
     -------

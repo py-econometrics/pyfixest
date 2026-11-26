@@ -242,6 +242,7 @@ def _post_processing_input_checks(
     Raises
     ------
         TypeError: If the models argument is not of the expected type.
+        ValueError: If the models argument contains no models.
 
     """
     models_list: list[Feols | Fepois | Feiv] = []
@@ -261,6 +262,12 @@ def _post_processing_input_checks(
         raise TypeError(
             f"models must be a fitted model, a FixestMulti, or a list of fitted models; "
             f"got {type(models).__name__}. Pass the result of a call such as feols()."
+        )
+
+    if not models_list:
+        raise ValueError(
+            "models must contain at least one fitted model; got none. "
+            "Pass the result of a call such as feols()."
         )
 
     if check_duplicate_model_names or rename_models is not None:

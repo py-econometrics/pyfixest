@@ -20,6 +20,10 @@ def _normalize_q(q: float | np.ndarray | None, n_restrictions: int) -> np.ndarra
             f"q must be a numeric scalar or array; got dtype {q_array.dtype}."
         )
     q_array = q_array.astype(float, copy=False)
+    if not np.isfinite(q_array).all():
+        raise ValueError(
+            "q must contain finite null values. Check q for missing or infinite values."
+        )
 
     if q_array.ndim == 0:
         return np.full(n_restrictions, float(q_array))
