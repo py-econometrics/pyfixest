@@ -42,6 +42,9 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
 
 ### Bug Fixes
 
+- `ritest()` now raises a `ValueError` for non-finite null values such as
+  `resampvar="X1=nan"` or `"X1=inf"` instead of running the test
+  ([#2106](https://github.com/py-econometrics/pyfixest/issues/2106)).
 - Time-series Newey–West inference with a missing `time_id` value raises a
   `ValueError` naming the column and the number of affected rows. Before, it
   aborted the Python process. HAC errors name the `time_id` and `panel_id`
