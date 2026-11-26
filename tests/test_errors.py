@@ -2491,6 +2491,22 @@ def test_wald_rejects_nonfinite_restrictions():
         fit.wald_test(R=np.array([[1.0, np.nan]]))
 
 
+@pytest.mark.parametrize(
+    ("R", "q"),
+    [
+        (np.array([[1.0, 0.0]]), np.nan),
+        (np.array([[1.0, 0.0]]), np.inf),
+        (np.array([[1.0, 0.0]]), -np.inf),
+        (np.eye(2), np.array([0.0, np.nan])),
+        (np.eye(2), np.array([0.0, np.inf])),
+    ],
+)
+def test_wald_rejects_nonfinite_null_values(R, q):
+    fit = pf.feols("Y ~ X1", pf.get_data(N=50))
+    with pytest.raises(ValueError, match=r"q must contain finite null values"):
+        fit.wald_test(R=R, q=q, distribution="chi2")
+
+
 def test_ritest_explains_invalid_null_hypotheses():
     fit = pf.feols("Y ~ X1", pf.get_data(N=50))
     with pytest.raises(ValueError, match=r"resampvar='X1=nope'.*'x=0'"):
