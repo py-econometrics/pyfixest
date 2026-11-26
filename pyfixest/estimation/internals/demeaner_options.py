@@ -5,13 +5,22 @@ import warnings
 from pyfixest.demeaners import (
     AnyDemeaner,
     LsmrDemeaner,
+    MapDemeaner,
 )
 from pyfixest.utils.dev_utils import _find_stack_level
 
 
 def _resolve_demeaner(demeaner: AnyDemeaner | None) -> AnyDemeaner:
     """Return the typed demeaner configuration, defaulting to within LSMR."""
-    return demeaner if demeaner is not None else LsmrDemeaner()
+    if demeaner is None:
+        return LsmrDemeaner()
+    if isinstance(demeaner, (MapDemeaner, LsmrDemeaner)):
+        return demeaner
+    raise TypeError(
+        "demeaner must be created with pf.MapDemeaner() or pf.LsmrDemeaner(); "
+        f"got {type(demeaner).__name__}. To select a backend, pass for example "
+        "demeaner=pf.MapDemeaner(backend='rust')."
+    )
 
 
 def _warn_if_experimental_torch_demeaner(demeaner: object) -> None:

@@ -2414,6 +2414,18 @@ def test_estimation_type_errors_name_the_option(key, value, message):
         pf.feols("Y ~ X1", **kwargs)
 
 
+@pytest.mark.parametrize("fml", ["Y ~ X1", "Y ~ X1 | f1"])
+@pytest.mark.parametrize("estimator", [pf.feols, pf.fepois])
+def test_estimation_rejects_untyped_demeaner(estimator, fml):
+    data = pf.get_data(N=50, model="Fepois")
+    with pytest.raises(
+        TypeError,
+        match=r"demeaner must be created with pf\.MapDemeaner\(\) or "
+        r"pf\.LsmrDemeaner\(\); got str\..*backend='rust'",
+    ):
+        estimator(fml, data=data, demeaner="rust")
+
+
 @pytest.mark.parametrize(
     ("options", "error", "message"),
     [
