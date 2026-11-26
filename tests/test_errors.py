@@ -2606,3 +2606,22 @@ def test_etable_names_bad_significance_code():
     fit = pf.feols("Y ~ X1", pf.get_data(N=50))
     with pytest.raises(TypeError, match=r"signif_code\[0\] must be numeric"):
         pf.etable(fit, signif_code=["invalid", 0.01, 0.05])
+
+
+@pytest.mark.parametrize(
+    "report",
+    [
+        pf.etable,
+        pf.summary,
+        pf.iplot,
+        pf.coefplot,
+        pf.qplot,
+        partial(pf.bonferroni, param="X1"),
+        partial(pf.rwolf, param="X1", reps=9, seed=1),
+        partial(pf.wyoung, param="X1", reps=9, seed=1),
+    ],
+    ids=lambda report: getattr(report, "func", report).__name__,
+)
+def test_reporting_functions_reject_empty_model_list(report):
+    with pytest.raises(ValueError, match=r"models must contain at least one fitted"):
+        report([])
