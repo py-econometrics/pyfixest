@@ -140,6 +140,10 @@ def iplot(
         not available for objects of type `FixestMulti`, i.e. multiple estimation.
     seed: int, optional
         The seed for the random number generator. Default is None. Only required / used when `joint` is True.
+    ax : matplotlib.axes.Axes, optional
+        The axes to draw on. Only used if `plot_backend` is "matplotlib", in which
+        case `figsize` is ignored and the figure that owns `ax` is returned.
+        Default is None, which creates a new figure.
 
     Returns
     -------
@@ -323,6 +327,10 @@ def coefplot(
         not available for objects of type `FixestMulti`, i.e. multiple estimation.
     seed: int, optional
         The seed for the random number generator. Default is None. Only required / used when `joint` is True.
+    ax : matplotlib.axes.Axes, optional
+        The axes to draw on. Only used if `plot_backend` is "matplotlib", in which
+        case `figsize` is ignored and the figure that owns `ax` is returned.
+        Default is None, which creates a new figure.
 
     Returns
     -------
