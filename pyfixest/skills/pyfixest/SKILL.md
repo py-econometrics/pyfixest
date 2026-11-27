@@ -17,7 +17,7 @@ matches the installed version. Open a file when this page is not enough:
 - `references/formula-syntax.md`: every formula operator, `i()` arguments, varying slopes, IV, multiple estimation.
 - `references/inference.md`: each `vcov` option and the models that support it, HAC, `pf.ssc()`, bootstrap, multiple testing.
 - `references/coming-from-fixest.md`: R `fixest` spellings mapped to pyfixest, and behaviour that differs; for porting R code.
-- `references/migrating-to-0.70.md`: deprecated or removed spellings and attributes; for pre-0.70 code or a `DeprecationWarning`.
+- `references/migrating-to-0.70.md`: deprecated or removed spellings and attributes; for pre-0.70 code or a `PyfixestDeprecationWarning`.
 
 ## Quick start
 

@@ -19,6 +19,7 @@ from pyfixest.errors import (
     IVIdentificationError,
     MissingModelDataError,
     NanInClusterVarError,
+    PyfixestDeprecationWarning,
     UnderDeterminedIVError,
     VcovTypeNotSupportedError,
 )
@@ -536,7 +537,7 @@ def test_misplaced_iv_syntax_errors(estimator, fml, reason):
     # Missing formula columns ensure validation precedes materialization.
     data = pd.DataFrame({"unused": [1.0, 2.0]})
     with warnings.catch_warnings():
-        warnings.simplefilter("error", DeprecationWarning)
+        warnings.simplefilter("error", PyfixestDeprecationWarning)
         with pytest.raises(FormulaSyntaxError, match=reason) as caught:
             estimator(fml=fml, data=data)
     assert "Use `Y ~ X1 + [X2 ~ Z1] | f1` or `Y ~ X1 | f1 | X2 ~ Z1`." in str(
@@ -1234,7 +1235,7 @@ def test_optional_dependency_fallbacks(data, monkeypatch):
         ),
         (
             lambda d: feols("Y + Y2 ~ X1", data=d),
-            DeprecationWarning,
+            PyfixestDeprecationWarning,
             "Specifiying multiple dependent variables",
         ),
         (
@@ -1246,7 +1247,7 @@ def test_optional_dependency_fallbacks(data, monkeypatch):
             lambda d: feols("Y ~ X1 + X2", data=d.dropna()).decompose(
                 param="X1", only_coef=True
             ),
-            FutureWarning,
+            PyfixestDeprecationWarning,
             "The 'param' argument is deprecated",
         ),
         (
@@ -1623,7 +1624,7 @@ def test_gelbach_errors():
         fit.decompose(param="x1", decomp_var="x1")
 
     with pytest.warns(
-        FutureWarning,
+        PyfixestDeprecationWarning,
         match=r"The 'param' argument is deprecated. Please use 'decomp_var' instead.",
     ):
         fit.decompose(param="x1")

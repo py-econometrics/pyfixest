@@ -3,6 +3,7 @@ import warnings
 from collections import Counter
 from collections.abc import ValuesView
 
+from pyfixest.errors import PyfixestDeprecationWarning
 from pyfixest.estimation.FixestMulti_ import FixestMulti
 from pyfixest.estimation.models.feiv_ import Feiv
 from pyfixest.estimation.models.feols_ import Feols
@@ -50,7 +51,7 @@ def _relabel_expvar(
     """
     warnings.warn(
         "The function `_relabel_expvar` is deprecated, please rely on the `labels` and `cat_template` arguments of `pf.etable()` instead. ",
-        DeprecationWarning,
+        PyfixestDeprecationWarning,
         stacklevel=2,
     )
 
@@ -85,7 +86,7 @@ def _rename_categorical(
     """
     warnings.warn(
         "The function `_relabel_expvar` is deprecated, please rely on the `labels` and `cat_template` arguments of `pf.etable()` instead. ",
-        DeprecationWarning,
+        PyfixestDeprecationWarning,
         stacklevel=2,
     )
 
@@ -148,7 +149,7 @@ def rename_categoricals(
     warnings.warn(
         "The function `_relabel_expvar` is deprecated as we have adjusted the naming of variables interacted via the i() operator with pyfixest 0.50. "
         "For regression tables, please rely on the `labels` and `cat_template` arguments of `pf.etable()` instead. ",
-        DeprecationWarning,
+        PyfixestDeprecationWarning,
         stacklevel=2,
     )
 
@@ -162,7 +163,7 @@ def _rename_event_study_coefs(col_name: str):
     warnings.warn(
         "The function `_relabel_expvar` is deprecated as we have adjusted the naming of variables interacted via the i() operator with pyfixest 0.50. "
         "For regression tables, please rely on the `labels` and `cat_template` arguments of `pf.etable()` instead. ",
-        DeprecationWarning,
+        PyfixestDeprecationWarning,
         stacklevel=2,
     )
 
@@ -205,7 +206,7 @@ def rename_event_study_coefs(coef_names_list: list):
     warnings.warn(
         "The function `_relabel_expvar` is deprecated as we have adjusted the naming of variables interacted via the i() operator with pyfixest 0.50. "
         "For regression tables, please rely on the `labels` and `cat_template` arguments of `pf.etable()` instead. ",
-        DeprecationWarning,
+        PyfixestDeprecationWarning,
         stacklevel=2,
     )
 

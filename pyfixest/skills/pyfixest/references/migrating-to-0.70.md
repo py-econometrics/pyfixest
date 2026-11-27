@@ -11,7 +11,7 @@ pytest `filterwarnings = ["error::DeprecationWarning", "error::FutureWarning"]`.
 
 ## Formula spellings
 
-Deprecated (`DeprecationWarning`):
+Deprecated (`PyfixestDeprecationWarning`, a `FutureWarning`):
 
 ```text
 Y ~ X1 | f1^f2                ->  Y ~ X1 | f1:f2

@@ -96,7 +96,7 @@ pf.feols("Y ~ X1 | f1", data, vcov={"CRV1": "f1"}, ssc=pf.ssc(k_adj=False, G_adj
 - `ssc=` is set when fitting; `fit.vcov(...)` keeps the fit's `ssc`. Refit to
   change it.
 - A dict such as `{"k_adj": False}` also works. The old names `adj`,
-  `fixef_k`, `cluster_adj` and `cluster_df` emit a `DeprecationWarning`.
+  `fixef_k`, `cluster_adj` and `cluster_df` emit a `PyfixestDeprecationWarning`.
 - `feols` p-values use a t distribution with `N - k` degrees of freedom, or
   `G - 1` when clustered (the smallest `G` for multiway clustering). GLMs use
   the normal distribution. `fit.variance_covariance.df_t` holds the value.

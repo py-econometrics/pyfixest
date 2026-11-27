@@ -10,6 +10,7 @@ import pandas as pd
 from formulaic import Formula
 from formulaic.utils.context import capture_context as _capture_context
 
+from pyfixest.errors import PyfixestDeprecationWarning
 from pyfixest.utils.dev_utils import _create_rng
 
 if TYPE_CHECKING:
@@ -168,7 +169,7 @@ def ssc(
         Accepts only the deprecated names `adj` (now `k_adj`), `fixef_k` (now
         `k_fixef`), `cluster_adj` (now `G_adj`) and `cluster_df` (now `G_df`).
         Each takes the same values as its replacement and emits a
-        `DeprecationWarning`. Any other keyword raises a `ValueError`.
+        `PyfixestDeprecationWarning`. Any other keyword raises a `ValueError`.
 
     Details
     -------
@@ -250,7 +251,7 @@ def ssc(
         if old_name in kwargs:
             warnings.warn(
                 f"The '{old_name}' argument is deprecated. Use '{new_name}' instead.",
-                DeprecationWarning,
+                PyfixestDeprecationWarning,
                 stacklevel=2,
             )
             if new_name == "k_adj" and "k_adj" not in kwargs:
