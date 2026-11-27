@@ -34,7 +34,7 @@ Use the component that owns the information your code needs:
 | Quantile solver state (`_it`, `_x_final`, etc.) | `fit.solution` |
 | Collinear regressors or instruments (`_collin_*`) | `fit.collinearity`, `fit.collinearity_instruments` |
 | Coefficients, standard errors and confidence intervals | `fit.coeftable` |
-| Covariance matrix and inference settings | `fit.variance_covariance` |
+| Variance-covariance matrix and variance estimator | `fit.variance_covariance` |
 | Fit statistics and fitted values | `fit.fitstat`, `fit.fitted_values` |
 | Sandwich components, when available | `fit.sandwich` |
 | IV first stage and diagnostics | `fit.first_stage` |

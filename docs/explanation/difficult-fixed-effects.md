@@ -34,7 +34,7 @@ In all these settings, estimation requires solving the same underlying linear al
 ## From FWL to Demeaning
 
 Before we dive into algorithmic strategies for solving fixed effect problems, we first want to (re-) introduce the **Frisch-Waugh-Lovell (FWL) theorem**: in a
-regression of $y$ on covariates $X$ and a set of dummy variables $D$
+regression of $y$ on regressors $X$ and a set of dummy variables $D$
 (the fixed effects), the coefficient $\hat{\beta}$ on $X$ is identical
 when we either estimate the full model, or first regress $y$ and each column of $X$ on $D$, collect the resulting regression residuals, and fit a final regression of the residuals of $Y$ on the residuals of $X$.
 
@@ -48,9 +48,9 @@ $$
 
 where $\mu$ is either $Y$ or a column of $X$ and $\alpha$ are the fixed effect coefficients.
 
-For a single fixed effect (e.g., only worker FEs), this demeaning step is trivial: $D$ is a single one-hot encoded matrix and the least-squares solution is simply the vector of group means. Subtracting these means from $\mu$ gives the residual - this is the classical "within transformation" from panel econometrics, and it can be computed in a single pass over the data. In other words, we have a "closed form solution" and no iteration is needed.
+For a single fixed effect (e.g., only worker fixed effects), this demeaning step is trivial: $D$ is a single one-hot encoded matrix and the least-squares solution is simply the vector of level means. Subtracting these means from $\mu$ gives the residual - this is the classical "within transformation" from panel econometrics, and it can be computed in a single pass over the data. In other words, we have a "closed form solution" and no iteration is needed.
 
-With two or more fixed effects, $D = [D_W \; D_F \; \ldots]$ is a concatenation of multiple dummy matrices and the within transformation for a single fixed effect no longer suffices. To see why, consider worker and firm fixed effects. Subtracting worker means removes variation *between* workers, but if a worker is employed at more than one firm, her worker mean is a mixture of outcomes at different firms. The residual after demeaning by worker therefore still carries information about firm effects - it is "contaminated" by firm variation. The same logic applies in reverse: demeaning by firm leaves traces of worker effects whenever a firm employs more than one worker.
+With two or more fixed effects, $D = [D_W \; D_F \; \ldots]$ is a concatenation of multiple dummy matrices and removing means for a single fixed effect no longer suffices. To see why, consider worker and firm fixed effects. Subtracting worker means removes variation *between* workers, but if a worker is employed at more than one firm, her worker mean is a mixture of values of $\mu$ at different firms. The residual after demeaning by worker therefore still carries information about firm effects - it is "contaminated" by firm variation. The same logic applies in reverse: demeaning by firm leaves traces of worker effects whenever a firm employs more than one worker.
 
 Special data structures form an exception. Suppose we have a fully balanced panel, where every worker is observed at every firm exactly once. Then each worker mean is computed over the same set of firms, and each firm mean is computed over the same set of workers. As a result, demeaning by worker removes the worker-specific component while subtracting the same average firm effect for everyone. It therefore does not leave behind a worker-specific mixture of firm effects. A second demeaning step by firm then removes the remaining firm-specific component exactly. In this special case, a simple two-step procedure (double demeaning) is sufficient. This is also the idea behind the Mundlak (1978) transform used in [duckreg](https://github.com/py-econometrics/duckreg).
 
@@ -82,10 +82,10 @@ Removing the fixed effects in the first two steps of the FWL procedure reduces t
 $$G \, \hat{\alpha} = D^\top \mu$$
 
 
-where $D$ is the $n \times m$ dummy matrix that encodes all FE levels
+where $D$ is the $n \times m$ dummy matrix that encodes all fixed-effect levels
 and $G = D^\top D$ is the **Gramian** - a symmetric positive
 semi-definite matrix of dimension $m \times m$, where $m$ is the total
-number of FE levels across all fixed effects.
+number of levels across all fixed effects.
 
 For fixed effects problems, the Gramian $G$ has a natural **block structure**. To illustrate this, we will consider a small example (adapted from the
 [`within` documentation](https://github.com/py-econometrics/within)) of
@@ -104,8 +104,8 @@ Workers W2 (at F1) and W3 (at F2) stay at their firms.
 | 6 | W3 | F2 | Y2 | 4.5 |
 
 Fixed Effect 1 (workers) has $m_1 = 3$ levels, fixed effect 2 (firms) has $m_2 = 2$
-levels, fixed effect 3 (years) has $m_3 = 2$ levels, giving $m = 7$ total FE
-levels. The Gramian has $Q = 3$ **diagonal blocks** and
+levels, fixed effect 3 (years) has $m_3 = 2$ levels, giving $m = 7$ total
+fixed-effect levels. The Gramian has $Q = 3$ **diagonal blocks** and
 $\binom{3}{2} = 3$ **cross-tabulation blocks**:
 
 $$
@@ -142,7 +142,7 @@ workers stay within a single firm.
 
 ## The Method of Alternating Projections
 
-Recall that we need to solve $G \hat{\alpha} = D^\top \mu$ for the FE
+Recall that we need to solve $G \hat{\alpha} = D^\top \mu$ for the fixed-effect
 coefficients $\hat{\alpha}$, or equivalently, find the residual
 $r = \mu - D \hat{\alpha}$ that has all fixed effects projected out. The method of alternating projections (MAP) approaches this iteratively: it sweeps through each fixed effect and subtracts
 group means from the current residual. In terms of the Gramian, this is
@@ -162,7 +162,7 @@ We also note that the MAP algorithm **never directly touches the cross-tabulatio
 relationship between workers and firms *indirectly*, through the
 residuals that get passed from one sweep to the next.
 
-Why does convergence depend on the graph? The alternating demeaning algorithm works by passing information back and forth between worker and firm effects. In the worker-mean step, each worker mean is computed over the firms at which that worker is observed. If many workers move across firms, each worker mean averages over several firm effects, so no single firm dominates that average. Subtracting worker means then removes mainly the worker-specific component while leaving a residual that still contains useful information about firms. The subsequent firm-mean step can exploit that information, and the algorithm makes substantial progress from one iteration to the next.
+Why does convergence depend on the graph? The method of alternating projections works by passing information back and forth between worker and firm effects. In the worker-mean step, each worker mean is computed over the firms at which that worker is observed. If many workers move across firms, each worker mean averages over several firm effects, so no single firm dominates that average. Subtracting worker means then removes mainly the worker-specific component while leaving a residual that still contains useful information about firms. The subsequent firm-mean step can exploit that information, and the algorithm makes substantial progress from one iteration to the next.
 
 In the case of balanced panels, this transmission is perfect: every worker is observed at every firm, so each worker mean averages over the same set of firms, and each firm mean averages over the same set of workers. A single pass by worker and then by firm is therefore enough.
 
@@ -172,9 +172,9 @@ If a worker never changes firms, demeaning by worker uses only data from that on
 
 The [`within`](https://github.com/py-econometrics/within) crate takes a
 different route. Rather than repeatedly demeaning by one fixed effect at
-a time, it treats residualization as the sparse linear-algebra problem
+a time, it treats demeaning as the sparse linear-algebra problem
 introduced above. For each target vector $\mu$ - the dependent variable
-$y$ or one of the covariates to be partialled out - the fixed-effect
+$y$ or one of the regressors to be demeaned - the fixed-effect
 coefficients satisfy
 
 $$
@@ -370,8 +370,8 @@ The benchmarks above all involve the standard worker + firm + year
 specification - which essentially forms a bipartite graph between workers and firms
 (as year is low-dimensional and trivially absorbed). But many empirical
 applications add a third high-dimensional fixed effect. In AKM wage
-regressions, occupation is a natural candidate: labour economists often want to separate how much of a worker's wage comes from *who they are* (worker FE), *where they work* (firm FE), and *what they do*
-(occupation FE).
+regressions, occupation is a natural candidate: labour economists often want to separate how much of a worker's wage comes from *who they are* (worker fixed effect), *where they work* (firm fixed effect), and *what they do*
+(occupation fixed effect).
 
 Adding occupation turns the bipartite graph into a **tripartite**
 structure. The new fixed effect can be "easy" or "hard" depending on how it
@@ -388,12 +388,12 @@ There are two ways occupation can nest:
 
 - **Firm nesting:** Each firm concentrates on a single occupation
   (think a law firm where everyone is a lawyer). Then knowing the firm
-  almost perfectly predicts the occupation, and the occupation FE
-  column is nearly a copy of the firm FE column.
+  almost perfectly predicts the occupation, and the occupation fixed-effect
+  column is nearly a copy of the firm fixed-effect column.
 - **Worker nesting:** Workers carry their occupation across job changes
   (a nurse remains a nurse regardless of which hospital they join).
-  Then the occupation FE column is nearly a copy of the worker FE
-  column.
+  Then the occupation fixed-effect column is nearly a copy of the worker
+  fixed-effect column.
 
 In either case, the solver must separate two nearly identical columns -
 exactly the type of problem that makes vanilla MAP slow.

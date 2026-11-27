@@ -418,11 +418,11 @@ class Feglm(Feols):
 def _glm_input_checks(tol: float, maxiter: int) -> None:
     if not isinstance(tol, (int, float)):
         raise TypeError(f"iwls_tol must be numeric; got {tol!r}.")
-    if tol <= 0 or tol >= 1:
+    if not 0 < tol < 1:
         raise ValueError(
             f"iwls_tol must be greater than 0 and less than 1; got {tol!r}."
         )
-    if not isinstance(maxiter, int):
+    if isinstance(maxiter, bool) or not isinstance(maxiter, int):
         raise TypeError(f"iwls_maxiter must be an integer; got {maxiter!r}.")
     if maxiter <= 0:
         raise ValueError(f"iwls_maxiter must be greater than 0; got {maxiter!r}.")

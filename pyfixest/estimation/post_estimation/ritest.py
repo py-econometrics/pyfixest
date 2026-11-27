@@ -432,6 +432,11 @@ def _decode_resampvar(resampvar: str) -> tuple[str, float, str, str]:
             f"ritest() could not read the null value in resampvar={resampvar!r}. "
             "Pass a coefficient name or a hypothesis such as 'x=0', 'x>0', or 'x<0'."
         ) from exc
+    if not np.isfinite(h0_value_float):
+        raise ValueError(
+            f"ritest() needs a finite null value in resampvar={resampvar!r}. "
+            "Pass a coefficient name or a hypothesis such as 'x=0', 'x>0', or 'x<0'."
+        )
     if not resampvar_:
         raise ValueError(
             f"ritest() needs a coefficient name; got resampvar={resampvar!r}. "

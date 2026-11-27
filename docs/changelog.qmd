@@ -34,6 +34,11 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
 - `help(pyfixest)` and the README now say where to find the documentation,
   `llms.txt`, the packaged agent skill and the 0.60 migration guide
   ([#2047](https://github.com/py-econometrics/pyfixest/pull/2047)).
+- The `ssc()` reference now gives the actual defaults, `k_fixef="nonnested"`
+  and `G_df="min"`, and describes the accepted options and deprecated argument
+  names. The `Ssc` and `feols()` references no longer give `"none"` as the
+  `k_fixef` default
+  ([#2133](https://github.com/py-econometrics/pyfixest/pull/2133)).
 
 ### Bug Fixes
 
@@ -41,6 +46,21 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
   in the heteroskedasticity-robust sandwich covariance, matching R
   `quantreg::summary.rq(se="ker")` instead of collapsing algebraically to IID
   standard errors. See [#1744](https://github.com/py-econometrics/pyfixest/issues/1744).
+- `etable()`, `summary()`, `iplot()`, `coefplot()`, `qplot()`, `bonferroni()`,
+  `rwolf()` and `wyoung()` raise a `ValueError` naming `models` when passed an
+  empty list. Before, `summary([])` returned `None` and the others failed with
+  an unrelated `IndexError`, `KeyError` or `ValueError`
+  ([#2111](https://github.com/py-econometrics/pyfixest/issues/2111)).
+- `ritest()` now raises a `ValueError` for non-finite null values such as
+  `resampvar="X1=nan"` or `"X1=inf"` instead of running the test
+  ([#2106](https://github.com/py-econometrics/pyfixest/issues/2106)).
+- `collin_tol=nan` and `iwls_tol=nan` now raise a `ValueError`, and Boolean
+  `maxiter` / `iwls_maxiter` values in `quantreg()`, `feglm()`, and `fepois()`
+  now raise a `TypeError`
+  ([#2107](https://github.com/py-econometrics/pyfixest/issues/2107)).
+- `wald_test()` now raises a `ValueError` for non-finite `q` values instead of
+  returning a `NaN` or infinite test statistic
+  ([#2104](https://github.com/py-econometrics/pyfixest/issues/2104)).
 - Time-series Newey–West inference with a missing `time_id` value raises a
   `ValueError` naming the column and the number of affected rows. Before, it
   aborted the Python process. HAC errors name the `time_id` and `panel_id`
@@ -106,6 +126,16 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
 - Fits no longer emit pandas 3.1's `Pandas4Warning` about the deprecated
   `inplace=` keyword, and `copy_data=False` no longer resets the index of the
   data you pass in ([#2069](https://github.com/py-econometrics/pyfixest/pull/2069)).
+- The `GelbachDecomposition.etable()` and `.coefplot()` docstring examples import
+  `gelbach_data` from `pyfixest.utils.dgps` instead of calling the nonexistent
+  `pf.gelbach_data()`. The `AttributeError` for `pf.make_table`, removed in an
+  earlier release, now names `pyfixest` instead of `pyfixest.report`
+  ([#2132](https://github.com/py-econometrics/pyfixest/pull/2132)).
+- `feols()`, `feglm()`, and `fepois()` raise `TypeError` when `demeaner` is not
+  `None`, a `MapDemeaner`, or an `LsmrDemeaner`. Before, `demeaner="rust"` was
+  ignored by `feols()` without fixed effects and failed with an unrelated
+  `AttributeError` in `feols()` with fixed effects and in `feglm()`/`fepois()`
+  ([#2109](https://github.com/py-econometrics/pyfixest/issues/2109)).
 
 ## PyFixest 0.70.0
 

@@ -17,11 +17,10 @@ def get_cargo_version() -> str:
     content = cargo_toml.read_text()
     match = re.search(r'^version\s*=\s*"([^"]+)"', content, re.MULTILINE)
     if not match:
-        print(
+        sys.exit(
             "ERROR: Could not find version in Cargo.toml. Set [package].version "
             "before tagging the release."
         )
-        sys.exit(1)
     return match.group(1)
 
 
@@ -55,11 +54,10 @@ def main() -> None:
 
     github_ref = os.environ.get("GITHUB_REF", "")
     if not github_ref.startswith("refs/tags/"):
-        print(
+        sys.exit(
             f"Not a tag ref: {github_ref!r}. Run the release check with "
             "GITHUB_REF set to refs/tags/v<version>."
         )
-        sys.exit(1)
 
     tag = github_ref.removeprefix("refs/tags/")
     tag_version = tag.removeprefix("v")
@@ -68,11 +66,10 @@ def main() -> None:
     python_version = cargo_to_python_version(cargo_version)
 
     if tag_version != python_version:
-        print(
+        sys.exit(
             f"MISMATCH: tag={tag_version!r} != Cargo.toml={python_version!r}. "
             "Check the release tag and [package].version before publishing."
         )
-        sys.exit(1)
 
     github_output = os.environ.get("GITHUB_OUTPUT")
     if github_output:

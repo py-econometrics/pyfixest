@@ -26,7 +26,7 @@ fit = pf.feols("Y ~ X1 + X2 | f1", data, vcov={"CRV1": "f1"})
 | `\| f1[x]`, `\| f1[[x]]` | same |
 | `y ~ x \| f \| d ~ z` | `y ~ x + [d ~ z] \| f` |
 | `y ~ x \| d ~ z` | `y ~ x + [d ~ z]` |
-| `\| d1 + d2 ~ z1 + z2` | not supported: one endogenous variable per model |
+| `\| d1 + d2 ~ z1 + z2` | not supported: one endogenous regressor per model |
 | `c(y1, y2) ~ x` | `sw(y1, y2) ~ x` |
 | `sw()`, `csw()`, `sw0()`, `csw0()`, `mvsw()` | same |
 | `..ctrl`, `setFixest_fml()`, `xpd()`, `.[x]`, `..("^x")` | build the string in Python |
@@ -138,7 +138,7 @@ multi.all_fitted_models["Y2 ~ 1 + X1"]  # est[lhs = "Y2"]; keys are canonical fo
   and identifier names; `predict()` needs the fitted dtype.
 - **Stepwise operators** combine with other operators: `csw(x1, x2):z` is
   allowed.
-- **Indefinite covariance matrices** are not repaired (no `vcov_fix`), so a
+- **Indefinite variance-covariance matrices** are not repaired (no `vcov_fix`), so a
   negative variance gives a `NaN` standard error.
 - **`feglm(family="gaussian")`** matches `feols()` exactly, including the
   small-sample correction.

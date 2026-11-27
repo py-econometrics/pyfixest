@@ -22,14 +22,14 @@ data.head()
 
 ## Basic Syntax
 
-In the simplest case, we regress covariates `X1` and `X2` on `Y`.
+In the simplest case, we regress the dependent variable `Y` on `X1` and `X2`.
 
 ```{python}
 fit1 = pf.feols("Y ~ X1 + X2", data=data)
 fit1.summary()
 ```
 
-In the covariate part of the formula, transformations supported by `formulaic`
+On the right-hand side of the main equation, transformations supported by `formulaic`
 are also supported by `PyFixest`. To name just a few important ones,
 you can create categorical variables via the `C()` operator:
 
@@ -79,12 +79,12 @@ For details on fixed effects regression, take a look at the [OLS with Fixed Effe
 
 Fixed effects must be data columns or interactions of data columns. Their names
 must be valid Python identifiers, cannot be Python keywords, and must use
-Python's normalized identifier spelling. Rename FE columns containing spaces
-or punctuation before estimation. FE transforms such as `I(f1 + f2)` and `C(f1)`
+Python's normalized identifier spelling. Rename fixed-effect columns containing spaces
+or punctuation before estimation. Fixed-effect transforms such as `I(f1 + f2)` and `C(f1)`
 are unsupported; create the transformed column in `data` first.
 
-Outcome, covariate, and instrument names can still be quoted with backticks,
-for example ``"Y ~ `my covariate` | firm"``.
+Dependent-variable, regressor, and instrument names can still be quoted with backticks,
+for example ``"Y ~ `my regressor` | firm"``.
 
 ### Varying slopes
 
@@ -116,12 +116,12 @@ pf.feols("Y ~ X1 | f1[[X2]]", data=data).coef()
 ## Instrumental Variables (IV) Syntax
 
 For IV estimation, `PyFixest` 0.70 uses Formulaic's bracketed multistage syntax.
-The endogenous variable and its instruments go
+The endogenous regressor and its instruments go
 in a square-bracket block on the right-hand side. Fixed effects stay behind the
 `|`, exactly as in a model without instruments:
 
 ```python
-"Y ~ exogenous_controls + [endogenous ~ instruments] | fixed_effects"
+"Y ~ exogenous_regressors + [endogenous ~ instruments] | fixed_effects"
 ```
 
 Here is a minimal example with fixed effects:
@@ -193,7 +193,7 @@ fit_bin.summary()
 
 ## Multiple Estimation Syntax
 
-Last, `PyFixest` provides syntactic sugar to fit multiple estimations in one go. This not only economizes on lines-of-code, but also allows for performance optimizations via caching. When several models are fit on the same sample and share the same fixed-effect structure, `PyFixest` can reuse already-demeaned columns across models. For the LSMR demeaner backend, it can also reuse the fixed-effect preconditioner across models with the same structure. If you fit many regression models on a fixed set of fixed effects and many overlapping covariates or dependent variables, and performance is poor, we highly recommend you to try out multiple estimations.
+Last, `PyFixest` provides syntactic sugar to fit several models in one call. This not only economizes on lines-of-code, but also allows for performance optimizations via caching. When several models are fit on the same estimation sample and share the same fixed-effect structure, `PyFixest` can reuse already-demeaned columns across models. For the LSMR demeaner with the `within` backend, it can also reuse the fixed-effect preconditioner across models with the same structure. If you fit many regression models on a fixed set of fixed effects and many overlapping regressors or dependent variables, and performance is poor, we highly recommend you to try multiple estimation.
 
 For multiple estimations, we provide 5 custom operators: `sw`, `csw`, `sw0`, `csw0` and `mvsw`. Use `sw()` on the left-hand side for multiple dependent variables.
 
@@ -267,7 +267,7 @@ pf.etable(fit_combo)
 ### Multiple Estimation, caching and performance
 
 The speedup from multiple-estimation syntax is most visible when models have the
-same fixed effects and overlapping covariates. Below, we therefore benchmark
+same fixed effects and overlapping regressors. Below, we therefore benchmark
 
 ```text
 y ~ csw(x1, x2, ..., x16) | indiv_id + firm_id + year

@@ -2415,11 +2415,39 @@ def test_estimation_type_errors_name_the_option(key, value, message):
 
 
 @pytest.mark.parametrize(
+    ("demeaner", "type_name"),
+    [
+        ("rust", "str"),
+        (pf.MapDemeaner, "type"),
+        (pf.BaseDemeaner(), "BaseDemeaner"),
+    ],
+)
+@pytest.mark.parametrize("fml", ["Y ~ X1", "Y ~ X1 | f1"])
+@pytest.mark.parametrize("estimator", [pf.feols, pf.fepois])
+def test_estimation_rejects_untyped_demeaner(estimator, fml, demeaner, type_name):
+    data = pf.get_data(N=50, model="Fepois")
+    with pytest.raises(
+        TypeError,
+        match=r"demeaner must be created with pf\.MapDemeaner\(\) or "
+        rf"pf\.LsmrDemeaner\(\); got {type_name}\. To select a demeaner backend, "
+        r".*backend='rust'",
+    ):
+        estimator(fml, data=data, demeaner=demeaner)
+
+
+@pytest.mark.parametrize(
     ("options", "error", "message"),
     [
         ({"quantile": []}, ValueError, r"quantile must include at least one value"),
         ({"quantile": [0.25, 2.0]}, ValueError, r"quantile\[1\].*got 2.0"),
         ({"maxiter": "20"}, TypeError, r"maxiter must be a positive integer"),
+        ({"maxiter": True}, TypeError, r"maxiter must be a positive integer.*got True"),
+        (
+            {"maxiter": False},
+            TypeError,
+            r"maxiter must be a positive integer.*got False",
+        ),
+        ({"collin_tol": float("nan")}, ValueError, r"collin_tol.*got nan"),
     ],
 )
 def test_quantreg_explains_the_rejected_option(options, error, message):
@@ -2430,6 +2458,18 @@ def test_quantreg_explains_the_rejected_option(options, error, message):
 def test_feglm_reports_the_public_iteration_option():
     with pytest.raises(ValueError, match=r"iwls_maxiter.*got 0"):
         pf.feglm("Y ~ X1", data=pf.get_data(N=20), family="gaussian", iwls_maxiter=0)
+
+
+def test_estimation_rejects_nan_tolerances_and_bool_iwls_maxiter():
+    data = pf.get_data(N=20)
+    with pytest.raises(ValueError, match=r"collin_tol.*got nan"):
+        pf.feols("Y ~ X1", data=data, collin_tol=float("nan"))
+    with pytest.raises(ValueError, match=r"iwls_tol.*got nan"):
+        pf.feglm("Y ~ X1", data=data, family="gaussian", iwls_tol=float("nan"))
+    with pytest.raises(TypeError, match=r"iwls_maxiter must be an integer.*got True"):
+        pf.feglm("Y ~ X1", data=data, family="gaussian", iwls_maxiter=True)
+    with pytest.raises(TypeError, match=r"iwls_maxiter must be an integer.*got False"):
+        pf.feglm("Y ~ X1", data=data, family="gaussian", iwls_maxiter=False)
 
 
 def test_invalid_weights_report_the_column_and_count():
@@ -2472,10 +2512,36 @@ def test_wald_rejects_nonfinite_restrictions():
         fit.wald_test(R=np.array([[1.0, np.nan]]))
 
 
+@pytest.mark.parametrize(
+    ("R", "q"),
+    [
+        (np.array([[1.0, 0.0]]), np.nan),
+        (np.array([[1.0, 0.0]]), np.inf),
+        (np.array([[1.0, 0.0]]), -np.inf),
+        (np.eye(2), np.array([0.0, np.nan])),
+        (np.eye(2), np.array([0.0, np.inf])),
+    ],
+)
+def test_wald_rejects_nonfinite_null_values(R, q):
+    fit = pf.feols("Y ~ X1", pf.get_data(N=50))
+    with pytest.raises(ValueError, match=r"q must contain finite null values"):
+        fit.wald_test(R=R, q=q, distribution="chi2")
+
+
 def test_ritest_explains_invalid_null_hypotheses():
     fit = pf.feols("Y ~ X1", pf.get_data(N=50))
     with pytest.raises(ValueError, match=r"resampvar='X1=nope'.*'x=0'"):
         fit.ritest("X1=nope", reps=4)
+
+
+@pytest.mark.parametrize("resampvar", ["X1=nan", "X1=inf", "X1=-inf", "X1>inf"])
+def test_ritest_rejects_nonfinite_null_values(resampvar):
+    fit = pf.feols("Y ~ X1", pf.get_data(N=50))
+    with pytest.raises(
+        ValueError,
+        match=rf"finite null value in resampvar='{resampvar}'.*'x=0'",
+    ):
+        fit.ritest(resampvar, reps=4)
 
 
 def test_ritest_names_non_string_resampvar():
@@ -2540,3 +2606,22 @@ def test_etable_names_bad_significance_code():
     fit = pf.feols("Y ~ X1", pf.get_data(N=50))
     with pytest.raises(TypeError, match=r"signif_code\[0\] must be numeric"):
         pf.etable(fit, signif_code=["invalid", 0.01, 0.05])
+
+
+@pytest.mark.parametrize(
+    "report",
+    [
+        pf.etable,
+        pf.summary,
+        pf.iplot,
+        pf.coefplot,
+        pf.qplot,
+        partial(pf.bonferroni, param="X1"),
+        partial(pf.rwolf, param="X1", reps=9, seed=1),
+        partial(pf.wyoung, param="X1", reps=9, seed=1),
+    ],
+    ids=lambda report: getattr(report, "func", report).__name__,
+)
+def test_reporting_functions_reject_empty_model_list(report):
+    with pytest.raises(ValueError, match=r"models must contain at least one fitted"):
+        report([])

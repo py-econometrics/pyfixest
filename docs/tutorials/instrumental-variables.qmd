@@ -91,7 +91,7 @@ digraph IV2 {
 }
 ```
 
-`PyFixest` estimates the IV using two-stage least squares (2SLS) estimator where it first projects $T$ onto $Z$ (and all other exogenous variables) to obtain $\hat{T}$, then uses $\hat{T}$ to estimate the causal effect of $T$ on $Y$. Because $\hat{T}$ is not a function of $U$, we can think of the dashed path from the unobserved variable as blocked or removed.
+`PyFixest` estimates the IV using two-stage least squares (2SLS) estimator where it first projects $T$ onto $Z$ (and the exogenous regressors) to obtain $\hat{T}$, then uses $\hat{T}$ to estimate the causal effect of $T$ on $Y$. Because $\hat{T}$ is not a function of $U$, we can think of the dashed path from the unobserved variable as blocked or removed.
 
 ## IV formula syntax in PyFixest 0.70
 
@@ -99,10 +99,10 @@ Starting with PyFixest 0.70, write an IV specification with Formulaic's
 bracketed multistage syntax:
 
 ```
-Y ~ exogenous_controls + [endogenous ~ instruments] | fixed_effects
+Y ~ exogenous_regressors + [endogenous ~ instruments] | fixed_effects
 ```
 
-For example, an IV regression with exogenous controls and fixed effects is
+For example, an IV regression with exogenous regressors and fixed effects is
 specified as follows:
 
 ```python
@@ -122,7 +122,7 @@ for the full set of formula-parsing changes in 0.70.
 ::: {.callout-note}
 ## Fixed Effects with IV
 
-When panel data are available, endogeneity may also stem from time-invariant unobserved heterogeneity — unit-specific characteristics (e.g., ability, culture, geography) that are fixed over time but correlated with both treatment and outcome. `PyFixest` addresses this simultaneously by applying a within-transformation (demeaning) to absorb unit fixed effects before running 2SLS, following the FE-IV approach described in @wooldridge2010 [Ch. 11]. Crucially, after demeaning, the instrument must retain within-unit variation over time — time-invariant instruments are eliminated along with the fixed effects and cannot be used for identification. When both fixed effects and an instrument are specified, `PyFixest` therefore isolates the clean variation in treatment that is both within-unit and driven by the instrument, blocking confounding from time-invariant unobservables and time-varying endogenous confounders simultaneously.
+When panel data are available, endogeneity may also stem from time-invariant unobserved heterogeneity — unit-specific characteristics (e.g., ability, culture, geography) that are fixed over time but correlated with both treatment and outcome. `PyFixest` addresses this simultaneously by applying demeaning to absorb unit fixed effects before running 2SLS, following the FE-IV approach described in @wooldridge2010 [Ch. 11]. Crucially, after demeaning, the instrument must retain within-unit variation over time — time-invariant instruments are eliminated along with the fixed effects and cannot be used for identification. When both fixed effects and an instrument are specified, `PyFixest` therefore isolates the clean variation in treatment that is both within-unit and driven by the instrument, blocking confounding from time-invariant unobservables and time-varying endogenous confounders simultaneously.
 :::
 
 This tutorial walks through three applications, all addressing endogeneity from **selection bias — a form of Omitted Variable Bias (OVB) where unobserved confounders drive both selection into treatment and the outcome.** Application 1 operates in an observational setting, exploiting quasi-random variation from individual-level selection. Application 2 arises in an experimental setting where encouragement is randomly assigned but treatment take-up remains subject to self-selection. Application 3 returns to an observational setting, exploiting regional-level sorting via a shift-share instrument.
@@ -356,7 +356,7 @@ OLS attenuates the negative wage effect (or may even show a positive coefficient
 
 ## IV Diagnostics in PyFixest
 
-Weak instruments - instruments that are only loosely correlated with the endogenous variable - lead to biased and unreliable IV estimates. PyFixest provides two key diagnostic tools to detect this problem.
+Weak instruments, which are only loosely correlated with the endogenous regressor, can lead to biased and unreliable IV estimates. PyFixest provides two key diagnostic tools to detect this problem.
 
 ### The First-Stage F-Statistic
 
@@ -381,7 +381,7 @@ $$
 F_{\text{eff}} = \frac{\hat{\pi}' Q_{ZZ} \hat{\pi}}{\text{tr}(\hat{\Sigma} \, Q_{ZZ})}
 $$
 
-where $\hat{\pi}$ are the first-stage coefficients on the excluded instruments, $Q_{ZZ} = Z'Z$, and $\hat{\Sigma}$ is the robust variance-covariance matrix of $\hat{\pi}$.
+where $\hat{\pi}$ are the first-stage coefficients on the instruments, $Q_{ZZ} = Z'Z$, and $\hat{\Sigma}$ is the robust variance-covariance matrix of $\hat{\pi}$.
 
 The `.IV_Diag()` method computes both the standard F-statistic and the effective F-statistic in one call:
 

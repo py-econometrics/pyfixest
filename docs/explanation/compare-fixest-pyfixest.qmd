@@ -10,14 +10,14 @@ This vignette compares estimation results from `fixest` with `pyfixest` via the 
 
 ## Intentional formula differences
 
-### Covariate powers
+### Powers on the right-hand side {#covariate-powers}
 
-For covariates, PyFixest prioritizes
+On the right-hand side of the main equation, PyFixest prioritizes
 [Formulaic's formula conventions](https://matthew.wardrop.casa/formulaic/latest/guides/grammar/)
 over `fixest`'s arithmetic-power convention. Outside a Python expression such
 as `I(...)`, both `^` and `**` expand interactions up to the specified order:
 
-| Covariate formula | PyFixest interpretation |
+| Formula | PyFixest interpretation |
 |---|---|
 | `Y ~ X1 + X1^2` | `Y ~ X1`; no squared term is added |
 | `Y ~ X1 + X1**2` | `Y ~ X1`; no squared term is added |
@@ -27,7 +27,7 @@ as `I(...)`, both `^` and `**` expand interactions up to the specified order:
 In particular, a single-factor power such as `X1^2` reduces to `X1` under
 these formula rules. It does **not** square the values of `X1`, and adding it
 alongside `X1` has no effect. This also applies when the model has fixed effects.
-In contrast, `fixest` 0.14.0 interprets covariate `X1^2` as the arithmetic
+In contrast, `fixest` 0.14.0 interprets `X1^2` as the arithmetic
 transformation `I(X1^2)`, and `(X1 + X2)^2` as `I((X1 + X2)^2)`.
 This is an intentional syntax difference; see
 [#1765](https://github.com/py-econometrics/pyfixest/issues/1765).
@@ -131,7 +131,7 @@ r_fit_weights = fixest.feols(
 
 
 
-Let's compare how close the covariance matrices are:
+Let's compare how close the variance-covariance matrices are:
 
 
 ```{python}
@@ -148,7 +148,7 @@ And for WLS:
 fit_weights.variance_covariance.vcov - stats.vcov(r_fit_weights)
 ```
 
-We conclude by comparing all estimation results via the `tidy` methods:
+We conclude by comparing the coefficient tables returned by `tidy()`:
 
 ```{python}
 fit.tidy()
@@ -195,7 +195,7 @@ r_fit_weights = fixest.feols(
 )
 ```
 
-As before, we compare the variance covariance matrices:
+As before, we compare the variance-covariance matrices:
 
 
 ```{python}
@@ -206,7 +206,7 @@ fit.variance_covariance.vcov - stats.vcov(r_fit)
 fit_weights.variance_covariance.vcov - stats.vcov(r_fit_weights)
 ```
 
-We conclude by comparing all estimation results via the `tidy` methods:
+We conclude by comparing the coefficient tables returned by `tidy()`:
 
 ```{python}
 fit.tidy()
@@ -257,7 +257,7 @@ fit.variance_covariance.vcov - stats.vcov(r_fit)
 fit_weights.variance_covariance.vcov - stats.vcov(r_fit_weights)
 ```
 
-We conclude by comparing all estimation results via the `tidy` methods:
+We conclude by comparing the coefficient tables returned by `tidy()`:
 
 ```{python}
 fit.tidy()
@@ -323,7 +323,7 @@ fit_hetero.variance_covariance.vcov - stats.vcov(fit_r_hetero)
 fit_crv.variance_covariance.vcov - stats.vcov(fit_r_crv)
 ```
 
-We conclude by comparing all estimation results via the `tidy` methods:
+We conclude by comparing the coefficient tables returned by `tidy()`:
 
 
 ```{python}
