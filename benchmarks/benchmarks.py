@@ -28,16 +28,24 @@ except ImportError:
     HAS_MPS = False
     HAS_CUDA = False
 
-# Backends that accept a backend= argument when called through pyfixest runners
-_PYFIXEST_BACKENDS = {
-    "numba",
-    "rust",
-    "within",
-    "torch_cpu",
-    "torch_mps",
-    "torch_cuda",
-    "torch_cuda32",
+# Typed demeaner for each backend name the pyfixest runners accept. The torch
+# presets match the legacy `demeaner_backend` strings they replaced.
+_PYFIXEST_DEMEANERS = {
+    "numba": lambda pf: pf.MapDemeaner(backend="numba"),
+    "rust": lambda pf: pf.MapDemeaner(backend="rust"),
+    "within": lambda pf: pf.LsmrDemeaner(),
+    "torch_cpu": lambda pf: pf.LsmrDemeaner(backend="torch", device="cpu"),
+    "torch_mps": lambda pf: pf.LsmrDemeaner(
+        backend="torch", device="mps", precision="float32"
+    ),
+    "torch_cuda": lambda pf: pf.LsmrDemeaner(backend="torch", device="cuda"),
+    "torch_cuda32": lambda pf: pf.LsmrDemeaner(
+        backend="torch", device="cuda", precision="float32"
+    ),
 }
+
+# Backends that accept a backend= argument when called through pyfixest runners
+_PYFIXEST_BACKENDS = set(_PYFIXEST_DEMEANERS)
 
 # =============================================================================
 # Helpers
@@ -69,14 +77,12 @@ def _make_demeaner(backend: str):
     """Create a typed demeaner from a backend name string."""
     import pyfixest as pf
 
-    if backend in {"numba", "rust"}:
-        return pf.MapDemeaner(backend=backend)
-    if backend == "within":
-        return pf.LsmrDemeaner()
-    raise ValueError(
-        f"benchmarks.py has no demeaner for backend {backend!r}; "
-        "only 'numba', 'rust', and 'within' are mapped."
-    )
+    if backend not in _PYFIXEST_DEMEANERS:
+        raise ValueError(
+            f"benchmarks.py has no demeaner for backend {backend!r}; "
+            f"mapped backends are {sorted(_PYFIXEST_DEMEANERS)}."
+        )
+    return _PYFIXEST_DEMEANERS[backend](pf)
 
 
 def run_pyfixest_feols(data: pd.DataFrame, formula: str, backend: str) -> float:
