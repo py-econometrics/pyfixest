@@ -349,11 +349,14 @@ class ModelMatrix:
         ]
         if drop_singletons and intercept_columns:
             fixed_effects = self._data.loc[:, intercept_columns]
-            self._drop(
-                detect_singletons(fixed_effects.to_numpy()),
-                'in a singleton fixed-effect level. Set fixef_rm="none" to keep them.',
-                stage="singleton",
+            is_singleton = detect_singletons(fixed_effects.to_numpy())
+            n_singletons = int(is_singleton.sum())
+            reason = (
+                'in a singleton fixed-effect level. Set fixef_rm="none" to keep it.'
+                if n_singletons == 1
+                else 'in singleton fixed-effect levels. Set fixef_rm="none" to keep them.'
             )
+            self._drop(is_singleton, reason, stage="singleton")
 
     def _drop(
         self, is_dropped: NDArray[np.bool_], reason: str, *, stage: DropStageOptions
