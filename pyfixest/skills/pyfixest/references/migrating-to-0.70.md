@@ -97,8 +97,8 @@ Deprecated (warns):
 ```text
 fit.confint(joint=True)                       ->  fit.confint(inference_type="simult", seed=1)
 pf.ssc(adj=, fixef_k=, cluster_adj=, cluster_df=)  ->  pf.ssc(k_adj=, k_fixef=, G_adj=, G_df=)
-pf.feols(..., reps=, seed=)                   ->  drop them: no effect (deprecated in 0.70.1)
-pf.quantreg(..., separation_check=)           ->  drop it: no effect (deprecated in 0.70.1)
+pf.feols(..., reps=, seed=)                   ->  drop them: deprecated; no effect
+pf.quantreg(..., separation_check=)           ->  drop it: deprecated; no effect
 ```
 
 Removed or changed (raises or returns something new):
