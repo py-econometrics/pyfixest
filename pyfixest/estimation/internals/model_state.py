@@ -65,7 +65,8 @@ class EstimationOptions:
         Whether singleton fixed-effect levels were dropped
         (``fixef_rm="singleton"``).
     drop_intercept : bool
-        Whether the intercept was removed from the design.
+        Whether the intercept column was removed after Formulaic constructed
+        the model matrix.
     weights : str or None
         Name of the observation-weight column, or ``None`` for an unweighted
         fit.

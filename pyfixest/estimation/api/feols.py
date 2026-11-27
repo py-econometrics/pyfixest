@@ -105,7 +105,14 @@ def feols(
         Tolerance for collinearity check, by default 1e-10.
 
     drop_intercept : bool, optional
-        Whether to drop the intercept from the model, by default False.
+        Whether to drop the intercept column after Formulaic constructs the
+        model matrix, by default False. Because the column is removed after
+        categorical encoding, categorical regressors such as `C(...)` and
+        `i(...)` still omit their reference level, constraining the reference
+        level's mean to zero. This differs from `- 1` or `0 +` in the formula;
+        use `- 1` or `0 +` (for example, `"Y ~ C(f2) - 1"`) to fit a model
+        without an intercept that retains every level of a categorical
+        regressor.
 
     copy_data : bool, optional
         Whether to copy the data before estimation, by default True.
