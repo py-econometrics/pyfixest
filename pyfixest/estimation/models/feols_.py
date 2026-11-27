@@ -933,7 +933,18 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
             )
 
         time_arr = time.to_numpy()
-        panel_arr = data[panel_id].to_numpy() if panel_id is not None else None
+        if panel_id is not None:
+            panel = data[panel_id]
+            if (
+                pd.api.types.is_object_dtype(panel.dtype)
+                or pd.api.types.is_string_dtype(panel.dtype)
+                or isinstance(panel.dtype, pd.CategoricalDtype)
+            ):
+                panel_arr, _ = pd.factorize(panel, sort=True)
+            else:
+                panel_arr = panel.to_numpy()
+        else:
+            panel_arr = None
         if panel_arr is None and detail == "NW":
             missing_time = int(pd.isna(time_arr).sum())
             if missing_time:

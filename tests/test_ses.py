@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 import pytest
 
 from pyfixest.estimation import feols, fepois
@@ -253,3 +254,66 @@ def test_hac_rejects_fweights(vcov):
         weights="weights",
         weights_type="aweights",
     )
+
+
+@pytest.mark.parametrize("vcov", ["NW", "DK"])
+@pytest.mark.parametrize("panel_dtype", ["object", "string", "category"])
+def test_panel_hac_accepts_string_panel_id(vcov, panel_dtype):
+    """Panel NW and DK accept string/object/categorical panel_id and match integer codes."""
+    rng = np.random.default_rng(42)
+    n_units, n_times = 12, 8
+    unit_codes = np.repeat(np.arange(n_units), n_times)
+    years = np.tile(np.arange(n_times), n_units)
+    x = rng.normal(size=n_units * n_times)
+    y = 1.0 + 2.0 * x + rng.normal(size=n_units * n_times)
+    data = pd.DataFrame(
+        {
+            "Y": y,
+            "X1": x,
+            "year": years,
+            "unit_int": unit_codes,
+            "unit_label": pd.Series(
+                [f"unit_{u}" for u in unit_codes], dtype=panel_dtype
+            ),
+        }
+    )
+
+    fit_int = feols(
+        "Y ~ X1",
+        data=data,
+        vcov=vcov,
+        vcov_kwargs={"time_id": "year", "panel_id": "unit_int", "lag": 2},
+    )
+    fit_str = feols(
+        "Y ~ X1",
+        data=data,
+        vcov=vcov,
+        vcov_kwargs={"time_id": "year", "panel_id": "unit_label", "lag": 2},
+    )
+
+    np.testing.assert_allclose(
+        fit_str.se().to_numpy(), fit_int.se().to_numpy(), rtol=1e-12
+    )
+    np.testing.assert_allclose(fit_str._vcov, fit_int._vcov, rtol=1e-12)
+
+    # Post-estimation vcov() update with string panel_id also matches.
+    fit_post = feols("Y ~ X1", data=data).vcov(
+        vcov, vcov_kwargs={"time_id": "year", "panel_id": "unit_label", "lag": 2}
+    )
+    np.testing.assert_allclose(
+        fit_post.se().to_numpy(), fit_int.se().to_numpy(), rtol=1e-12
+    )
+
+    # Duplicate (panel_id, time_id) pairs with string labels still raise ValueError.
+    dup = data.copy()
+    dup.loc[0, "year"] = dup.loc[1, "year"]
+    with pytest.raises(
+        ValueError,
+        match=r"duplicate pairs for panel_id='unit_label' and time_id='year'",
+    ):
+        feols(
+            "Y ~ X1",
+            data=dup,
+            vcov=vcov,
+            vcov_kwargs={"time_id": "year", "panel_id": "unit_label", "lag": 2},
+        )
