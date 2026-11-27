@@ -115,7 +115,7 @@ fit_iv = pf.feols("Y ~ X2 + [X1 ~ Z1] | f1 + f2", data=data)
 The former fixest-style syntax, `Y ~ X2 | f1 + f2 | X1 ~ Z1`, still works in
 0.70, but raises a `DeprecationWarning` and will become an error in a future
 release. Update formulas to the bracketed syntax above. See the
-[Formula Parsing on `formulaic` section of the changelog](/changelog.qmd#formula-parsing-on-formulaic)
+[Formulas Parsed by `formulaic` section of the changelog](/changelog.qmd#formulas-parsed-by-formulaic)
 for the full set of formula-parsing changes in 0.70.
 :::
 
@@ -147,7 +147,7 @@ ivf_df = pf.get_ivf_data()
 ivf_df.head()
 ```
 
-We create a synthetic dataset with $N = 2{,}000$ observations. The **true causal effect** of `num_children` on `earnings` is $\beta = -0.15$ — this is the treatment effect the IV estimator should recover (full DGP in the [Appendix](#appendix-dgp-design-notes)).
+We create a synthetic dataset with $N = 2{,}000$ observations. The **true causal effect** of `num_children` on `earnings` is $\beta = -0.15$ — this is the treatment effect the IV estimator should recover (full DGP in [`pf.get_ivf_data()`](/reference/utils.dgps.get_ivf_data.qmd)).
 
 ### Naive OLS
 
