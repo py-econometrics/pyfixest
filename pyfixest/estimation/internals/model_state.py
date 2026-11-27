@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, get_args
+from typing import TYPE_CHECKING, Any, ClassVar, get_args
 
 import numpy as np
 from numpy.typing import NDArray
@@ -407,15 +407,36 @@ class DroppedRowCounts:
     singleton: int = 0
     separation: int = 0
 
+    # The total and the empty-sample message share this list in
+    # DropStageOptions order.
+    _STAGE_LABELS: ClassVar[tuple[tuple[str, str], ...]] = (
+        ("missing", "missing values"),
+        ("infinite", "infinite values"),
+        ("zero_weight", "zero weights"),
+        ("singleton", "singleton fixed-effect levels"),
+        ("separation", "separation"),
+    )
+
     @property
     def total(self) -> int:
         """Number of dropped rows over all stages."""
+        return sum(getattr(self, field) for field, _label in self._STAGE_LABELS)
+
+    def _empty_sample_explanation(self) -> str:
+        """Format the cause and remedy for a sample known to be empty."""
+        if not self.total:
+            return (
+                "The model received 0 input rows. "
+                "Pass data with observations for this model."
+            )
+        stages = ", ".join(
+            f"{label}={getattr(self, field)}"
+            for field, label in self._STAGE_LABELS
+            if getattr(self, field)
+        )
         return (
-            self.missing
-            + self.infinite
-            + self.zero_weight
-            + self.singleton
-            + self.separation
+            f"Filtering removed all {self.total} input rows ({stages}). "
+            "Check these inputs before refitting."
         )
 
 

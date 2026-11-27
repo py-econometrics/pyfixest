@@ -427,27 +427,9 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
         )
 
     def _raise_empty_sample(self, *, dropped: DroppedRowCounts) -> None:
-        if dropped.total:
-            stages = {
-                "missing values": dropped.missing,
-                "infinite values": dropped.infinite,
-                "zero weights": dropped.zero_weight,
-                "singleton fixed-effect levels": dropped.singleton,
-                "separation": dropped.separation,
-            }
-            reasons = ", ".join(
-                f"{reason}={count}" for reason, count in stages.items() if count
-            )
-            explanation = (
-                f"Filtering removed all {dropped.total} input rows ({reasons})."
-            )
-            remedy = "Check these inputs before refitting."
-        else:
-            explanation = "The model received 0 input rows."
-            remedy = "Pass data with observations for this model."
         raise EmptyEstimationSampleError(
             f"No observations are available for {self.model.model_name!r}. "
-            f"{explanation} {remedy}"
+            f"{dropped._empty_sample_explanation()}"
         )
 
     def _validate_response(self) -> None:

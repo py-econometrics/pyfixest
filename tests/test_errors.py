@@ -638,9 +638,15 @@ def test_all_variables_multicollinear():
     [
         ("empty", "0 input rows"),
         ("missing", "missing values=4"),
+        ("infinite", "infinite values=4"),
         ("zero_weight", "zero weights=4"),
         ("singleton", "singleton fixed-effect levels=4"),
         ("separation", "separation=4"),
+        (
+            "missing_and_singleton",
+            "Filtering removed all 4 input rows "
+            "(missing values=2, singleton fixed-effect levels=2)",
+        ),
     ],
 )
 def test_empty_estimation_sample_reports_filtering(stage, message):
@@ -657,17 +663,24 @@ def test_empty_estimation_sample_reports_filtering(stage, message):
         data = data.iloc[:0]
     elif stage == "missing":
         data["y"] = np.nan
+    elif stage == "infinite":
+        data["x"] = np.inf
     elif stage == "zero_weight":
         data["w"] = 0.0
         kwargs["weights"] = "w"
     elif stage == "singleton":
+        formula = "y ~ x | g"
+    elif stage == "missing_and_singleton":
+        data.loc[:1, "y"] = np.nan
         formula = "y ~ x | g"
     else:
         data["y"] = 0.0
         data["g"] = [1, 1, 2, 2]
         formula, estimator = "y ~ x | g", pf.fepois
 
-    with pytest.raises(ValueError, match=f"No observations.*{message}"):
+    with pytest.raises(
+        EmptyEstimationSampleError, match=rf"No observations.*{re.escape(message)}"
+    ):
         estimator(formula, data=data, **kwargs)
 
 
