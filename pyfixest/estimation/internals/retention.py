@@ -46,7 +46,7 @@ _RETAINED_STATE_LABELS: dict[str, str] = {
     "_u_hat": "the residuals",
     "within_data": "the demeaned data",
     "observation_weights": "the observation weights",
-    "working_state": "the state of the final IWLS iteration",
+    "working_state": "the final IWLS iteration values",
 }
 
 
