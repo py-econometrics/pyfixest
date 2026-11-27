@@ -170,7 +170,7 @@ def test_varying_slopes_singletons_against_fixest(
     fml = f"y ~ x | {fixed_effects}"
 
     if n_dropped:
-        with pytest.warns(UserWarning, match="1 singleton"):
+        with pytest.warns(UserWarning, match="Dropped 1 row in a singleton"):
             fit = pf.feols(fml, data=data, vcov="iid", demeaner=DEMEANER)
     else:
         fit = pf.feols(fml, data=data, vcov="iid", demeaner=DEMEANER)
@@ -428,7 +428,9 @@ def test_varying_slopes_separation_against_fixest(
     fml = f"y ~ x | {fixed_effects}"
 
     if n_separated:
-        with pytest.warns(UserWarning, match=f"{n_separated} observations removed"):
+        with pytest.warns(
+            UserWarning, match=f"Dropped {n_separated} rows because of separation"
+        ):
             fit = pf.fepois(
                 fml,
                 data=data,
@@ -465,7 +467,7 @@ def test_varying_slopes_one_signed_separation_differs_from_fixest():
     data = _separation_data(mixed_signs=False)
     fml = "y ~ x | g[[z]]"
 
-    with pytest.warns(UserWarning, match="20 observations removed"):
+    with pytest.warns(UserWarning, match="Dropped 20 rows because of separation"):
         fit = pf.fepois(
             fml,
             data=data,

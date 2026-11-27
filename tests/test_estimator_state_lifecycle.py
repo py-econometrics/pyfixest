@@ -236,9 +236,7 @@ def test_glm_separation_replaces_formula_data_with_filtered_state() -> None:
         }
     )
 
-    with pytest.warns(
-        UserWarning, match="2 observations removed because of separation"
-    ):
+    with pytest.warns(UserWarning, match="Dropped 2 rows because of separation"):
         fit = pf.fepois(
             "y ~ x | fe",
             data=data,
@@ -268,7 +266,7 @@ def test_zero_weight_rows_are_dropped_and_counted() -> None:
     data.loc[data.index[:5], "weights"] = 0.0
     data.loc[data.index[5], "Y"] = np.nan
 
-    with pytest.warns(UserWarning, match="5 rows with zero weight dropped"):
+    with pytest.warns(UserWarning, match="Dropped 5 rows with zero weight"):
         fit = pf.feols("Y ~ X1 | f1", data=data, weights="weights")
     expected = pf.feols(
         "Y ~ X1 | f1", data=data[data["weights"] != 0], weights="weights"

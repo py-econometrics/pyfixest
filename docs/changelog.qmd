@@ -42,6 +42,11 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
 
 ### Bug Fixes
 
+- The warnings for dropped collinear regressors, singleton rows and separated
+  rows now name what was dropped in one line, with correct singular and plural.
+  The singleton warning says that `fixef_rm="none"` keeps the rows, and the
+  separation warning points to `fit.sample_info.dropped_by_stage`
+  ([#2169](https://github.com/py-econometrics/pyfixest/issues/2169)).
 - `etable()`, `summary()`, `iplot()`, `coefplot()`, `qplot()`, `bonferroni()`,
   `rwolf()` and `wyoung()` raise a `ValueError` naming `models` when passed an
   empty list. Before, `summary([])` returned `None` and the others failed with

@@ -489,7 +489,7 @@ def test_iv_identification_valid_designs(
         data["C"] *= control_scale
     fe_suffix = f" | {fixed_effects}" if fixed_effects else ""
     expected_warning = (
-        pytest.warns(UserWarning, match="dropped due to multicollinearity")
+        pytest.warns(UserWarning, match="collinear regressors? (was|were) dropped")
         if fixed_effects
         else nullcontext()
     )
@@ -1211,12 +1211,12 @@ def test_optional_dependency_fallbacks(data, monkeypatch):
         (
             lambda d: feols("Y ~ X1 + I(2 * X1)", data=d),
             UserWarning,
-            "dropped due to multicollinearity",
+            "collinear regressors? (was|were) dropped",
         ),
         (
             lambda d: fepois("Y ~ X1 + I(2 * X1)", data=get_data(model="Fepois")),
             UserWarning,
-            "dropped due to multicollinearity",
+            "collinear regressors? (was|were) dropped",
         ),
         (
             lambda d: fepois(
@@ -1230,7 +1230,7 @@ def test_optional_dependency_fallbacks(data, monkeypatch):
                 ),
             ),
             UserWarning,
-            "observations removed because of separation",
+            "rows? because of separation",
         ),
         (
             lambda d: feols("Y + Y2 ~ X1", data=d),

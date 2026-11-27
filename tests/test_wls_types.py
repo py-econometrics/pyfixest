@@ -227,7 +227,7 @@ def test_fweights_glm_sample_sizes_after_separation():
     )
     expanded = aggregated.loc[aggregated.index.repeat(aggregated["count"])].copy()
 
-    with pytest.warns(UserWarning, match="observations removed because of separation"):
+    with pytest.warns(UserWarning, match="rows because of separation"):
         fit_weighted = pf.feglm(
             "y ~ x | fe",
             data=aggregated,
@@ -238,7 +238,7 @@ def test_fweights_glm_sample_sizes_after_separation():
             separation_check=["fe"],
             iwls_tol=1e-11,
         )
-    with pytest.warns(UserWarning, match="observations removed because of separation"):
+    with pytest.warns(UserWarning, match="rows because of separation"):
         fit_expanded = pf.feglm(
             "y ~ x | fe",
             data=expanded,
