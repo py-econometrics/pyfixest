@@ -15,8 +15,6 @@ freeze: auto
 PyFixest now experimentally supports quantile regression!
 
 ```{python}
-%load_ext autoreload
-
 import pyfixest as pf
 data = pf.get_data()
 ```
@@ -28,8 +26,7 @@ Just as in `statsmodels`, the function that runs a quantile regression is `quant
 Below, we loop over 10 different quantiles.
 
 ```{python}
-%%capture
-fits = pf.quantreg(
+fits =pf.quantreg(
   fml = "Y~X1 + X2",
   data = data,
   quantile=[0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
@@ -53,7 +50,7 @@ For big data sets with many observations, it is often sensible to use an interio
 You can access the "preprocessing frisch-newton" algorithm by setting the `method` argument to `"pfn"`:
 
 ```{python}
-%%capture
+#| output: false
 fit_fn = pf.quantreg(
   fml = "Y ~ X1",
   method = "fn",     # standard frisch newton interior point solver
@@ -65,7 +62,9 @@ fit_pfn = pf.quantreg(
   seed = 92,         # set a seed for reproducibility
   data = data,
 )
+```
 
+```{python}
 pf.etable([fit_fn, fit_pfn])
 ```
 
