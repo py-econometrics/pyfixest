@@ -69,7 +69,7 @@ class LPDID(DID):
             cluster=cluster,
         )
         if not (isinstance(xfml, str) or xfml is None):
-            raise TypeError("xfml must be a string or None.")
+            raise TypeError(f"xfml must be a string or None; got {xfml!r}.")
 
         data = data.sort_values([idname, tname])
         data[f"{yname}_lag"] = data.groupby(idname)[yname].shift(1)

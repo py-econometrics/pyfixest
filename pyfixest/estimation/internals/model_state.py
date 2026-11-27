@@ -844,8 +844,8 @@ class VcovSpec:
             repeated = sorted({x for x in clustervar if clustervar.count(x) > 1})
             if repeated:
                 raise ValueError(
-                    f"vcov={vcov!r} repeats the clustering columns {repeated!r}. "
-                    "Name each clustering column once, as in vcov={'CRV1': 'f1+f2'}."
+                    f"vcov={vcov!r} repeats the cluster variables {repeated!r}. "
+                    "Name each cluster variable once, as in vcov={'CRV1': 'f1+f2'}."
                 )
             if any("^" in x for x in clustervar):
                 raise ValueError(

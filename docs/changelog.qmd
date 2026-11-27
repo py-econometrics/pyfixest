@@ -132,6 +132,11 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
   ignored by `feols()` without fixed effects and failed with an unrelated
   `AttributeError` in `feols()` with fixed effects and in `feglm()`/`fepois()`
   ([#2109](https://github.com/py-econometrics/pyfixest/issues/2109)).
+- Argument errors in the estimation functions, `event_study()`, `lpdid()`,
+  `ccv()`, `ritest()`, the demeaners, `get_data()` and the plot and
+  decomposition methods now show the value they received. Messages use
+  consistent terms, such as "cluster variable" and "observation weights"
+  ([#2166](https://github.com/py-econometrics/pyfixest/issues/2166)).
 
 ## PyFixest 0.70.0
 

@@ -56,7 +56,10 @@ def set_figsize(figsize: tuple[int, int] | None, plot_backend: str) -> tuple[int
             )
         return (500, 300)
     else:
-        raise ValueError("plot_backend must be either 'lets_plot' or 'matplotlib'.")
+        raise ValueError(
+            "plot_backend must be either 'lets_plot' or 'matplotlib'; "
+            f"got {plot_backend!r}."
+        )
 
 
 def iplot(
@@ -505,7 +508,10 @@ def _coefplot(plot_backend, *, figsize, **plot_kwargs):
     elif plot_backend == "matplotlib":
         return _coefplot_matplotlib(figsize=figsize, **plot_kwargs)
     else:
-        raise ValueError("plot_backend must be either 'lets_plot' or 'matplotlib'.")
+        raise ValueError(
+            "plot_backend must be either 'lets_plot' or 'matplotlib'; "
+            f"got {plot_backend!r}."
+        )
 
 
 def _coefplot_lets_plot(

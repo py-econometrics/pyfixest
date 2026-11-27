@@ -40,6 +40,16 @@ def omitted_attributes(policy: RetentionPolicy) -> tuple[str, ...]:
     return tuple(dict.fromkeys(names))
 
 
+_RETAINED_STATE_LABELS: dict[str, str] = {
+    "_data": "the estimation sample",
+    "model_matrix": "the model matrix",
+    "_u_hat": "the residuals",
+    "within_data": "the demeaned data",
+    "observation_weights": "the observation weights",
+    "working_state": "the state of the final IWLS iteration",
+}
+
+
 def require_retained(model, operation: str, *names: str) -> None:
     """Fail before `operation` touches attributes omitted by the retention policy."""
     policy = model.options.retention
@@ -55,7 +65,10 @@ def require_retained(model, operation: str, *names: str) -> None:
         remedy = "Refit with store_data=True and lean=False."
         if policy.store_data and policy.lean:
             remedy = "Refit with lean=False."
+        needed = " and ".join(
+            _RETAINED_STATE_LABELS.get(name, name) for name in missing
+        )
         raise MissingModelDataError(
-            f"{operation} requires retained model state omitted by the storage "
-            f"options: {', '.join(missing)}. {remedy}"
+            f"`{operation}` needs {needed}, which this fitted model did not "
+            f"retain. {remedy}"
         )
