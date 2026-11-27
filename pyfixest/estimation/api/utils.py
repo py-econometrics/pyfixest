@@ -1,12 +1,18 @@
 from __future__ import annotations
 
+import warnings
 from collections.abc import Mapping
 from typing import Any
 
 import pandas as pd
 
+from pyfixest.errors import PyfixestDeprecationWarning
 from pyfixest.estimation.internals.model_state import VcovSpec
-from pyfixest.utils.dev_utils import DataFrameType, _narwhals_to_pandas
+from pyfixest.utils.dev_utils import (
+    DataFrameType,
+    _find_stack_level,
+    _narwhals_to_pandas,
+)
 from pyfixest.utils.utils import Ssc
 
 
@@ -38,6 +44,16 @@ def _resolve_vcov(
     """Parse the requested variance estimator before any model is fitted."""
     return VcovSpec.from_user_input(
         "iid" if vcov is None else vcov, vcov_kwargs=vcov_kwargs
+    )
+
+
+def _warn_argument_without_effect(*, function: str, argument: str) -> None:
+    """Warn that a deprecated argument of an estimation function is ignored."""
+    warnings.warn(
+        f"The `{argument}` argument of `{function}()` is deprecated, has no "
+        "effect, and will be removed in a future release. Remove it from the call.",
+        PyfixestDeprecationWarning,
+        stacklevel=_find_stack_level(),
     )
 
 

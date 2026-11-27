@@ -9,6 +9,7 @@ from pyfixest.estimation.api.utils import (
     _estimation_input_checks,
     _resolve_ssc,
     _resolve_vcov,
+    _warn_argument_without_effect,
 )
 from pyfixest.estimation.config import EstimationConfig, QuantileProcess
 from pyfixest.estimation.formula.parse import Formula
@@ -125,35 +126,33 @@ def quantreg(
         The maximum number of iterations. If None, maxiter = the number of observations in the model
         (as in R's quantreg package via nit(3) = n).
 
-    vcov : Union[VcovTypeOptions, dict[str, str]]
-        Variance estimator. Currently supported are
-        "iid", "nid", and cluster robust errors, "iid" by default.
-        All of "iid", "hetero"and "cluster" robust error are based on a kernel-based estimator as in Powell (1991).
-        The "nid" method implements the robust sandwich estimator proposed in Hendricks and Koenker (1993).
-        Any of "HC1 / HC2 / HC3 also works and is equivalent to "hetero".
-        Cluster robust inference
-        following Parente and Santos Silva (2016) can be specified via a dictionary with the keys "type" and "cluster".
-        Only one-way clustering is supported.
+    vcov : VcovTypeOptions or dict[str, str], optional
+        Variance estimator. Default is "nid", the robust sandwich estimator of
+        Hendricks and Koenker (1993). Also supported are "iid", "hetero" (to which
+        "HC1", "HC2", and "HC3" are equivalent), and one-way cluster-robust
+        inference following Parente and Santos Silva (2016), requested with a
+        dictionary such as {"CRV1": "cluster_var"}. "iid", "hetero", and the
+        cluster-robust estimator are kernel-based, as in Powell (1991). None means
+        "iid".
 
-    ssc : dict[str, Union[str, bool]], optional
-        A dictionary specifying the small-sample correction for inference.
-        If None, uses default settings from `pf.ssc()`. Note that by default, R's quantreg and Stata's qreg2 do not use
-        small-sample corrections. To match their behavior, set
-        `ssc = pf.ssc(k_adj=False, G_adj=False)`.
+    ssc : Ssc or Mapping[str, Any], optional
+        The small-sample correction for inference, created with `ssc()`. Default is
+        None, which uses the defaults of `ssc()`.
 
     collin_tol : float, optional
-        Tolerance for collinearity check, by default 1e-10.
+        Tolerance for collinearity check, by default 1e-09.
 
     separation_check : list[str], optional
-        Methods to identify and drop separated observations. Not used in quantile regression.
+        Deprecated; has no effect. Passing a value other than None emits a
+        `PyfixestDeprecationWarning`.
 
     drop_intercept : bool, optional
         Whether to drop the intercept from the model, by default False.
 
     copy_data : bool, optional
-        Whether to copy the data before estimation, by default True.
-        If set to False, the data is not copied, which can save memory but
-        may lead to unintended changes in the input data outside of `quantreg`.
+        Whether to copy the data before estimation, by default True. If False, the
+        data is not copied, which can save memory but may lead to unintended changes
+        in the input data.
 
     store_data : bool, optional
         Whether the fitted model retains the data, by default True. Set to
@@ -204,6 +203,10 @@ def quantreg(
 
     Fixed effects are not yet supported. Multiway clustering is not supported
     for the cluster-robust variance estimator.
+
+    R's quantreg and Stata's qreg2 do not apply small-sample corrections by
+    default. To match their behavior, pass
+    `ssc=pf.ssc(k_adj=False, G_adj=False)`.
 
     Examples
     --------
@@ -265,6 +268,8 @@ def quantreg(
         fsplit=fsplit,
         separation_check=separation_check,
     )
+    if separation_check is not None:
+        _warn_argument_without_effect(function="quantreg", argument="separation_check")
 
     options = QuantregEstimationOptions(
         ssc=ssc,

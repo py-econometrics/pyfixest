@@ -17,8 +17,20 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
 
 ## Unreleased
 
+### Deprecations
+
+- `feols(reps=, seed=)` and `quantreg(separation_check=)` have no effect and are
+  deprecated. A non-default value now emits a `PyfixestDeprecationWarning`. The
+  arguments stay in the signatures, and estimates do not change
+  ([#2134](https://github.com/py-econometrics/pyfixest/pull/2134)).
+
 ### Documentation
 
+- The `feols()`, `feglm()`, `fepois()` and `quantreg()` references give the
+  actual `collin_tol` default, 1e-09, and the `quantreg()` `vcov` default,
+  `"nid"`, with its cluster syntax. Shared arguments now have the same
+  description in each
+  ([#2134](https://github.com/py-econometrics/pyfixest/pull/2134)).
 - PyFixest now ships an agent skill for coding agents in
   `pyfixest/skills/pyfixest/SKILL.md`, rewritten for the current API. The
   [Agent Skill](/skills.md) page shows where to find it and its content
