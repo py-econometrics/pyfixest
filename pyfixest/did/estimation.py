@@ -158,12 +158,14 @@ def event_study(
 
         fit.vcov(vcov={"CRV1": cluster})
         fit.model = replace(fit.model, method="twfe")
-        # ritest(), update(), and SAVI have not supported event-study fits.
+        # ritest(), update(), SAVI, and dfm_heterogeneity_test() do not support
+        # event-study fits.
         fit.capabilities = replace(
             fit.capabilities,
             randomization_inference=False,
             sherman_morrison_update=False,
             anytime_valid_inference=False,
+            effect_heterogeneity_test=False,
         )
 
     elif estimator == "saturated":
@@ -181,12 +183,14 @@ def event_study(
         fit.vcov(vcov={"CRV1": cluster})
 
         fit.model = replace(fit.model, method="saturated")
-        # ritest(), update(), and SAVI have not supported event-study fits.
+        # ritest(), update(), SAVI, and dfm_heterogeneity_test() do not support
+        # event-study fits.
         fit.capabilities = replace(
             fit.capabilities,
             randomization_inference=False,
             sherman_morrison_update=False,
             anytime_valid_inference=False,
+            effect_heterogeneity_test=False,
         )
         fit.iplot = saturated.iplot.__get__(fit, type(fit))  # type: ignore
         test_treatment_heterogeneity = saturated.test_treatment_heterogeneity.__get__(
@@ -317,6 +321,7 @@ def _mark_as_did2s(fit: Feols) -> None:
         sherman_morrison_update=False,
         crv3_inference=False,
         anytime_valid_inference=False,
+        effect_heterogeneity_test=False,
     )
 
 

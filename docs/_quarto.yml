@@ -197,6 +197,7 @@ quartodoc:
         - estimation.models.feols_.Feols.update
         - estimation.models.feols_.Feols.evalue
         - estimation.models.feols_.Feols.pvalue_savi
+        - estimation.models.feols_.Feols.dfm_heterogeneity_test
     - title: Summarize and Visualize
       desc: |
         Summary tables and coefficient plots for fitted models.
@@ -239,6 +240,7 @@ quartodoc:
         - estimation.state.SandwichComponents
         - estimation.state.VarianceCovariance
         - estimation.state.WaldTest
+        - estimation.state.EffectHeterogeneityTest
         - estimation.state.FirstStage
         - estimation.state.FirstStageDiagnostics
         - estimation.state.QuantregSolution

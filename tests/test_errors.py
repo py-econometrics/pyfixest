@@ -2217,6 +2217,122 @@ def test_savi_confint_rejects_weights_and_fixed_effects(unsupported_savi_design)
         fit.confint(inference_type="savi")
 
 
+def _dfm_data() -> pd.DataFrame:
+    rng = np.random.default_rng(5678)
+    n = 400
+    return pd.DataFrame(
+        {
+            "Y": rng.standard_normal(n),
+            "Y_count": rng.poisson(2.0, n),
+            "D": rng.binomial(1, 0.5, n),
+            "D3": rng.choice([0, 1, 2], n),
+            "X1": rng.standard_normal(n),
+            "X2": rng.standard_normal(n),
+            "Z1": rng.standard_normal(n),
+            "f1": rng.integers(0, 5, n),
+            "time": np.arange(n),
+            "w": rng.uniform(0.5, 1.5, n),
+        }
+    )
+
+
+@pytest.mark.parametrize(
+    ("fit_model", "treatment", "error", "match"),
+    [
+        (
+            lambda df: feols("Y ~ D + X2 + [X1 ~ Z1]", data=df),
+            "D",
+            NotImplementedError,
+            r"fit\.capabilities\.effect_heterogeneity_test is False",
+        ),
+        (
+            lambda df: fepois("Y_count ~ D + X1", data=df),
+            "D",
+            NotImplementedError,
+            r"fit\.capabilities\.effect_heterogeneity_test is False",
+        ),
+        (
+            lambda df: pf.quantreg("Y ~ D + X1", data=df, quantile=0.5),
+            "D",
+            NotImplementedError,
+            r"fit\.capabilities\.effect_heterogeneity_test is False",
+        ),
+        (
+            lambda df: feols("Y ~ D + X1 | f1", data=df),
+            "D",
+            NotImplementedError,
+            "fixed effects",
+        ),
+        (
+            lambda df: feols("Y ~ D + X1", data=df, weights="w"),
+            "D",
+            NotImplementedError,
+            "weighted",
+        ),
+        (
+            lambda df: feols("Y ~ D + X1", data=df, vcov={"CRV1": "f1"}),
+            "D",
+            NotImplementedError,
+            r"vcov='CRV1'",
+        ),
+        (
+            lambda df: feols(
+                "Y ~ D + X1",
+                data=df,
+                vcov="NW",
+                vcov_kwargs={"time_id": "time", "lag": 2},
+            ),
+            "D",
+            NotImplementedError,
+            r"vcov='NW'",
+        ),
+        (
+            lambda df: feols("Y ~ D + X1", data=df, lean=True),
+            "D",
+            MissingModelDataError,
+            r"Refit with lean=False",
+        ),
+        (
+            lambda df: feols("Y ~ D + X1", data=df, store_data=False),
+            "D",
+            MissingModelDataError,
+            r"store_data=True",
+        ),
+        (
+            lambda df: feols("Y ~ X1 + X2", data=df),
+            "D",
+            ValueError,
+            r"could not find treatment='D'",
+        ),
+        (
+            lambda df: feols("Y ~ D3 + X1", data=df),
+            "D3",
+            ValueError,
+            r"coded 0/1",
+        ),
+        (
+            lambda df: feols("Y ~ D", data=df),
+            "D",
+            ValueError,
+            r"at least one regressor",
+        ),
+        (
+            lambda df: feols(
+                "Y ~ D + X1 + X2", data=df.iloc[:6].assign(D=[1, 1, 0, 0, 0, 0])
+            ),
+            "D",
+            ValueError,
+            r"at least 3 observations per arm.*treated arm has 2",
+        ),
+    ],
+)
+def test_dfm_heterogeneity_test_errors(fit_model, treatment, error, match):
+    """Unsupported fits and invalid treatments raise from dfm_heterogeneity_test()."""
+    fit = fit_model(_dfm_data())
+    with pytest.raises(error, match=match):
+        fit.dfm_heterogeneity_test(treatment=treatment)
+
+
 def test_savi_input_validation():
     fit = feols("Y ~ X1 + X2", pf.get_data())
     with pytest.raises(ValueError, match="mixture_precision must be positive"):

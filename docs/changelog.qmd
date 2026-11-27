@@ -17,6 +17,14 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
 
 ## Unreleased
 
+### New Features
+
+- `Feols.dfm_heterogeneity_test()` tests whether the treatment effect varies
+  with the model's regressors, following Ding, Feller, and Miratrix (2019). It
+  fits a separate OLS regression in each treatment arm and jointly tests the
+  differences between their slopes
+  ([#1370](https://github.com/py-econometrics/pyfixest/pull/1370)).
+
 ### Documentation
 
 - PyFixest now ships an agent skill for coding agents in
