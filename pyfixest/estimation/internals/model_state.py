@@ -859,10 +859,16 @@ class VcovSpec:
                 f"vcov must be a string or a dict such as {{'CRV1': 'f1'}}; got {type(vcov).__name__}."
             )
         if vcov not in _VCOV_STRINGS:
+            robust_hint = (
+                " Heteroskedasticity-robust inference is vcov='hetero'."
+                if vcov == "robust"
+                else ""
+            )
             raise ValueError(
                 f"vcov must be one of {_VCOV_STRINGS}; got {vcov!r}. "
                 "Cluster-robust inference is requested with a dict such as "
                 "vcov={'CRV1': 'cluster_var'}, or {'CRV1': 'a + b'} for multiway clustering."
+                + robust_hint
             )
 
         if vcov in ("NW", "DK"):
