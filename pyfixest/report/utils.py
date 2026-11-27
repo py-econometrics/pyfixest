@@ -163,7 +163,7 @@ def _rename_event_study_coefs(col_name: str):
     warnings.warn(
         "The function `_relabel_expvar` is deprecated as we have adjusted the naming of variables interacted via the i() operator with pyfixest 0.50. "
         "For regression tables, please rely on the `labels` and `cat_template` arguments of `pf.etable()` instead. ",
-        PyfixestDeprecationWarning,
+        DeprecationWarning,
         stacklevel=2,
     )
 

@@ -133,7 +133,8 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
   `AttributeError` in `feols()` with fixed effects and in `feglm()`/`fepois()`
   ([#2109](https://github.com/py-econometrics/pyfixest/issues/2109)).
 - Deprecated formula spellings (`f1^f2`, the fixest-style IV syntax,
-  `Y + Y2 ~ X1`), the old `ssc()` argument names, `confint(joint=True)`,
+  `Y + Y2 ~ X1`), the old `ssc()` argument names,
+  `FixestMulti.FixestFormulaDict`, `confint(joint=True)`,
   `decompose(param=...)` and the `rename_categoricals()` and
   `rename_event_study_coefs()` helpers now warn with
   `PyfixestDeprecationWarning`. It is a `FutureWarning`, so Python shows it by

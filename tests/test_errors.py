@@ -1244,6 +1244,11 @@ def test_optional_dependency_fallbacks(data, monkeypatch):
             "Quantile Regression implementation is experimental",
         ),
         (
+            lambda d: feols("Y ~ csw(X1, X2)", data=d).FixestFormulaDict,
+            PyfixestDeprecationWarning,
+            "`FixestFormulaDict` is deprecated",
+        ),
+        (
             lambda d: feols("Y ~ X1 + X2", data=d.dropna()).decompose(
                 param="X1", only_coef=True
             ),
