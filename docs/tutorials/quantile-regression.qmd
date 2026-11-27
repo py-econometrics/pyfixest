@@ -142,7 +142,7 @@ fit_crv = pf.quantreg("Y ~ X1 + X2 + f1", data = data, quantile = 0.5, vcov = {"
 
 ## Performance
 
-Here we benchmark the performance of the algorithms accessible via the `multi_method` argument.
+Here we benchmark the performance of the solvers accessible via the `multi_method` argument.
 
 ### Quantile Regression Process
 

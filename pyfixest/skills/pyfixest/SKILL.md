@@ -33,7 +33,8 @@ pf.etable([fit], type="md")  # prints a Markdown table
 ```
 
 Dropped rows include rows with a missing value and the row of each singleton.
-Only singletons raise a warning; rows with missing values are dropped silently.
+Singletons (as well as infinite values, zero weights, and separated Poisson
+observations) raise a warning; rows with missing values are dropped silently.
 The sample size is `fit.sample_info.n_obs`, and
 `fit.sample_info.dropped_by_stage` holds the number of dropped rows per stage.
 
