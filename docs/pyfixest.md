@@ -24,7 +24,7 @@ toc: false
 
 `PyFixest` is a Python package for fast high-dimensional fixed effects regression.
 
-The package aims to mimic the syntax and functionality of [Laurent Bergé's](https://sites.google.com/site/laurentrberge/) formidable [fixest](https://github.com/lrberge/fixest) package as closely as Python allows. If you know `fixest` well, the goal is that you won't have to read the docs to get started! In particular, this means that all of `fixest's` defaults are mirrored by `PyFixest`.
+The package aims to mimic the syntax and functionality of [Laurent Bergé's](https://sites.google.com/site/laurentrberge/) formidable [fixest](https://github.com/lrberge/fixest) package as closely as Python allows. If you know `fixest` well, the goal is that you won't have to read the docs to get started! In particular, `PyFixest` mirrors `fixest`'s defaults wherever possible.
 
 For questions on `PyFixest`, head over to our [GitHub discussions](https://github.com/py-econometrics/pyfixest/discussions), or join our [Discord server](https://discord.gg/gBAydeDMVK).
 
@@ -36,6 +36,7 @@ For questions on `PyFixest`, head over to our [GitHub discussions](https://githu
   - Fast **quantile regression** via an interior-point solver
   - **Difference-in-differences** estimators, including TWFE, `Did2s`, local projections, and Sun-Abraham event studies
   - Regression **decomposition** following [Gelbach (2016)](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=1425737)
+  - **Varying slopes** for fixed effects with `f[x]` and `f[[x]]`
   - Multiple estimation syntax
 - **Inference**
   - Several **robust**, **cluster-robust**, and **HAC variance-covariance** estimators
@@ -43,6 +44,9 @@ For questions on `PyFixest`, head over to our [GitHub discussions](https://githu
   - **Multiple hypothesis corrections** and simultaneous confidence intervals
   - Fast **randomization inference**
   - The **causal cluster variance estimator (CCV)**
+  - **Safe anytime-valid inference (SAVI)** for sequential monitoring, with
+    anytime-valid p-values, e-values, and confidence sequences following
+    [Lindon et al. (2026)](https://doi.org/10.1080/01621459.2026.2692052)
 - **Post-Estimation & Reporting**
   - **Publication-ready tables** with [Great Tables](https://posit-dev.github.io/great-tables/user-guide/introduction.html) or LaTeX booktabs via the [maketables library](https://github.com/py-econometrics/maketables)
 
@@ -113,14 +117,20 @@ pf.feols("Y ~ X1 | f1 + f2", data=data).summary()
 
     Estimation:  OLS
     Dep. var.: Y, Fixed effects: f1+f2
-    Inference:  CRV1
+    Inference:  iid
     Observations:  997
 
     | Coefficient   |   Estimate |   Std. Error |   t value |   Pr(>|t|) |   2.5% |   97.5% |
     |:--------------|-----------:|-------------:|----------:|-----------:|-------:|--------:|
-    | X1            |     -0.919 |        0.065 |   -14.057 |      0.000 | -1.053 |  -0.786 |
+    | X1            |     -0.919 |        0.060 |   -15.322 |      0.000 | -1.037 |  -0.802 |
     ---
-    RMSE: 1.441   R2: 0.609   R2 Within: 0.2
+    RMSE: 1.441 R2: 0.609 R2 Within: 0.2
+
+Use `f1[X2]` to let the slope on `X2` vary across levels of `f1`:
+
+```python
+pf.feols("Y ~ X1 | f1[X2] + f2", data=data).summary()
+```
 
 `PyFixest` also supports multiple estimation syntax:
 
@@ -133,7 +143,7 @@ For more examples, see the [quickstart](https://pyfixest.org/getting-started.htm
 
 ## Benchmarks
 
-The DGPs follow the "simple" and "difficult" designs from the [fixest benchmarks](https://github.com/kylebutts/fixest_benchmarks). The figure timings for regressions with `k=10` regressors and plots the median runtime across three runs for PyFixest MAP, PyFixest within, PyFixest torch on CUDA GPU, fixest, and FixedEffectModels.jl.
+The DGPs follow the "simple" and "difficult" designs from the [fixest benchmarks](https://github.com/kylebutts/fixest_benchmarks). The figure shows timings for regressions with `k=10` regressors and plots the median runtime across three runs for PyFixest MAP, PyFixest within, PyFixest torch on CUDA GPU, fixest, and FixedEffectModels.jl.
 
 <img src="explanation/figures/base-benchmarks/bench_readme.png" width="100%" alt="Fixed-effects OLS benchmark for k=10 comparing PyFixest MAP, PyFixest within, PyFixest torch GPU, fixest, and FixedEffectModels.jl">
 

@@ -72,7 +72,7 @@ But how much do differences in education matter? We have computed 6 additional m
 vary between $0.059$ and $0.075$. Which of these numbers should we report?
 
 Additionally, note that while we have only computed 6 models with additional regressors, the number of possible models is much larger.
-If I did the math correctly, simply by additively and incrementally adding regressors, we could have computed $57$ different models (not all of which would have included `education` as a regressor).
+With six additional regressors, there are $2^6 = 64$ possible subsets of them, and each subset defines a different model (not all of which would have included `education` as a regressor).
 
 As it turns out, different models **will lead to different point estimates**. The order of incrementally adding regressors **might** impact our conclusion. To illustrate this, we keep the same ordering as before, but start with `ethnicity` as our first variable:
 
@@ -118,7 +118,7 @@ We can then compute the contribution of an individual regressor $\hat{\delta}_{k
         \hat{\Gamma} = (X_{1}'X_{1})^{-1} X_{1}'X_{2}
     $$
 
-    In words, we regress the focal regressor $X_{1}$ on each regressor in $X_{2}$. In practice, we can easily do this in one line of code via `scipy.linalg.lstsq()`.
+    In words, we regress each regressor in $X_{2}$ on the focal regressor $X_{1}$. In practice, we can easily do this in one line of code via `scipy.linalg.lstsq()`.
 
 - Step 2: We can compute the total effect **explained** by the additional regressors, which we denote by $\delta$, as
 
@@ -126,7 +126,7 @@ We can then compute the contribution of an individual regressor $\hat{\delta}_{k
         \hat{\delta} = \sum_{k=1}^{k_2} \hat{\Gamma}_{k} \hat{\beta}_{2,k}
     $$
 
-    where $\hat{\Gamma}_{k}$ are the coefficients from an auxiliary regression $X_1$ on regressor $X_{2,k}$ and $\hat{\beta}_{2,k}$ is the associated estimate on $X_{2,k}$ from the **full** model.
+    where $\hat{\Gamma}_{k}$ are the coefficients from an auxiliary regression of regressor $X_{2,k}$ on $X_1$ and $\hat{\beta}_{2,k}$ is the associated estimate on $X_{2,k}$ from the **full** model.
 
     The individual **contribution of regressor $k$** is then defined as
 

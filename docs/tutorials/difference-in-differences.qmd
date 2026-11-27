@@ -190,7 +190,7 @@ fit_dynamic_twfe.iplot(
     figsize=[1200, 400],
     yintercept=0,
     xintercept=13.5,
-    labels=rename_event_study_coefs(fit_dynamic_twfe._coefnames),
+    labels=rename_event_study_coefs(list(fit_dynamic_twfe.coef().index)),
 )
 ```
 
@@ -211,7 +211,7 @@ $$
 
 These intervals can be constructed by using a carefully chosen critical value $c$ that [accounts for the covariance between coefficients using the multiplier bootstrap](https://www.annualreviews.org/docserver/fulltext/statistics/10/1/annurev-statistics-040120-022239.pdf?expires=1724543273&id=id&accname=guest&checksum=0D11ADF816FFFA0AE21BD7EDC6DB1801#page=14). In pointwise inference, the critical value is $c = z_{1 - \alpha/2} = 1.96$ for $\alpha = 0.05$; the corresponding critical value for simultaneous inference is typically larger. These are also known as `sup-t` bands in the literature (see lec 3 of the NBER SI methods lectures linked above).
 
-This is implemented in the `confint(joint=True)` method in the `feols` class. If we pass the `joint='both'` argument to `iplot`, we get the simultaneous confidence intervals (for all event study coefficients) in addition to the pointwise confidence intervals. Note that simultaneous inference for all event study coefficients may be overly conservative, especially when the number of coefficients is large; one may instead choose to perform joint inference for [all pre-treatment coefficients and all post-treatment coefficients separately](https://gist.github.com/apoorvalal/8a7687d3620577fd5214f1d43fc740b3).
+This is implemented in the `confint(inference_type="simult")` method of the `Feols` class. If we pass the `joint='both'` argument to `iplot`, we get the simultaneous confidence intervals (for all event study coefficients) in addition to the pointwise confidence intervals. Note that simultaneous inference for all event study coefficients may be overly conservative, especially when the number of coefficients is large; one may instead choose to perform joint inference for [all pre-treatment coefficients and all post-treatment coefficients separately](https://gist.github.com/apoorvalal/8a7687d3620577fd5214f1d43fc740b3).
 
 
 ```{python}
@@ -222,7 +222,7 @@ fit_dynamic_twfe.iplot(
     yintercept=0,
     xintercept=13.5,
     joint="both",
-    labels=rename_event_study_coefs(fit_dynamic_twfe._coefnames),
+    labels=rename_event_study_coefs(list(fit_dynamic_twfe.coef().index)),
 )
 ```
 
@@ -352,7 +352,7 @@ fit_twfe.iplot(
     figsize=figsize,
     xintercept=18.5,
     yintercept=0,
-    labels=rename_event_study_coefs(fit_twfe._coefnames),  # rename coefficients
+    labels=rename_event_study_coefs(list(fit_twfe.coef().index)),  # rename coefficients
 ).show()
 ```
 
