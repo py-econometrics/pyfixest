@@ -31,11 +31,11 @@ For questions on `PyFixest`, head over to our [GitHub discussions](https://githu
   - **Difference-in-differences** estimators, including TWFE, `Did2s`, local projections, and Sun-Abraham event studies
   - Regression **decomposition** following [Gelbach (2016)](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=1425737)
   - **Varying slopes** for fixed effects with `f[x]` and `f[[x]]`
-  - Multiple estimation syntax
+  - **Multiple estimation** with stepwise operators
 - **Inference**
   - Several **robust**, **cluster-robust**, and **HAC variance-covariance** estimators
   - **Wild cluster bootstrap** inference via [wildboottest](https://github.com/py-econometrics/wildboottest)
-  - **Multiple hypothesis corrections** and simultaneous confidence intervals
+  - **Multiple testing** corrections and simultaneous confidence intervals
   - Fast **randomization inference**
   - The **causal cluster variance estimator (CCV)**
   - **Safe anytime-valid inference (SAVI)** for sequential monitoring, with
@@ -125,7 +125,7 @@ Use `f1[X2]` to let the slope on `X2` vary across levels of `f1`:
 pf.feols("Y ~ X1 | f1[X2] + f2", data=data).summary()
 ```
 
-`PyFixest` also supports multiple estimation syntax:
+`PyFixest` also supports multiple estimation with stepwise operators:
 
 ```python
 fit = pf.feols("sw(Y, Y2) ~ X1 | csw0(f1, f2)", data=data, vcov={"CRV1": "group_id"})

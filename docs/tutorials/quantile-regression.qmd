@@ -46,7 +46,7 @@ We observe some heterogeneity in the intercept, but all other variants are homog
 
 ## Solvers
 
-By default, `pf.quantreg` uses an interior-point solver as in [Koenker and Ng (2004)](http://www.econ.uiuc.edu/~roger/research/sparse/fn3.pdf) (`methd = "fn"`). This is different to e.g. `statsmodels`, which implements an iterated weighted least squares solver.
+By default, `pf.quantreg` uses an interior-point solver as in [Koenker and Ng (2004)](http://www.econ.uiuc.edu/~roger/research/sparse/fn3.pdf) (`methd = "fn"`). This is different to e.g. `statsmodels`, which implements an iteratively reweighted least squares (IWLS) solver.
 
 For big data sets with many observations, it is often sensible to use an interior-point solver with pre-processing (as in [Portnoy and Koenker (1997)](https://experts.illinois.edu/en/publications/the-gaussian-hare-and-the-laplacian-tortoise-computability-of-squ), see [Chernozhukov et al (2019)](https://arxiv.org/abs/1909.05782) for details), which can speed up the estimation time significantly. Because the pre-processing step requires taking a random sample, the method assumes that observations are independent. Additionally, for the purpose of reproducibility, it is advisable to set a seed.
 

@@ -1,6 +1,6 @@
 ---
 title: "Formula Syntax"
-description: "In this tutorial, we showcase all of PyFixest formulas syntax; including syntax for fitting models with fixed effects, interactions, and multiple-estimation operators."
+description: "In this tutorial, we showcase all of PyFixest formulas syntax; including syntax for fitting models with fixed effects, interactions, and stepwise operators."
 categories: [Core Estimation]
 format:
   html:
@@ -18,7 +18,7 @@ data = pf.get_data()
 data.head()
 ```
 
-`PyFixest` specifies different regression models by Wilkinson Formulas via the `formulaic` package. Wilkinson formulas should be familiar to you if you have used R's `lm()` or `statsmodels` formula API. Many additional ideas implemented in `PyFixest`  have been developed in the `fixest` package (most notably multiple estimation syntax, the i-operator, sample splitting). By default, all formula options presented here are supported by all models available via the `pf.feols()`, `pf.feglm()`, and `pf.fepois()` APIs.
+`PyFixest` specifies different regression models by Wilkinson Formulas via the `formulaic` package. Wilkinson formulas should be familiar to you if you have used R's `lm()` or `statsmodels` formula API. Many additional ideas implemented in `PyFixest`  have been developed in the `fixest` package (most notably multiple estimation, the i-operator, sample splitting). By default, all formula options presented here are supported by all models available via the `pf.feols()`, `pf.feglm()`, and `pf.fepois()` APIs.
 
 ## Basic Syntax
 
@@ -75,7 +75,7 @@ We can interact two fixed effects via the `:` operator. If you are coming from
 fit7 = pf.feols("Y ~ X1 + X2 | f1:f2", data=data)
 ```
 
-For details on fixed effects regression, take a look at the [OLS with Fixed Effects](ols-fixed-effects.qmd) vignette.
+For details on fixed effects regression, take a look at the [OLS with Fixed Effects](ols-fixed-effects.qmd) tutorial.
 
 Fixed effects must be data columns or interactions of data columns. Their names
 must be valid Python identifiers, cannot be Python keywords, and must use
@@ -142,11 +142,11 @@ in a future release. See the [formula-parsing changelog](/changelog.qmd#formula-
 for details.
 
 For all the details on IV estimation, take a look at the
-[Instrumental Variables](instrumental-variables.qmd) vignette.
+[Instrumental Variables](instrumental-variables.qmd) tutorial.
 
-## The `i()` operator for interacting fixed effects
+## The `i()` operator for categorical regressors
 
-For interacting fixed effects, we include a specialised operator `i()`
+To enter and interact categorical regressors, we include a specialised operator `i()`.
 
 If you simply wrap a variable into `i()`, it will be treated just as the `C()` operator (see above).
 
@@ -191,11 +191,11 @@ fit_bin = pf.feols(
 fit_bin.summary()
 ```
 
-## Multiple Estimation Syntax
+## Multiple Estimation
 
 Last, `PyFixest` provides syntactic sugar to fit several models in one call. This not only economizes on lines-of-code, but also allows for performance optimizations via caching. When several models are fit on the same estimation sample and share the same fixed-effect structure, `PyFixest` can reuse already-demeaned columns across models. For the LSMR demeaner with the `within` backend, it can also reuse the fixed-effect preconditioner across models with the same structure. If you fit many regression models on a fixed set of fixed effects and many overlapping regressors or dependent variables, and performance is poor, we highly recommend you to try multiple estimation.
 
-For multiple estimations, we provide 5 custom operators: `sw`, `csw`, `sw0`, `csw0` and `mvsw`. Use `sw()` on the left-hand side for multiple dependent variables.
+For multiple estimation, we provide 5 stepwise operators: `sw`, `csw`, `sw0`, `csw0` and `mvsw`. Use `sw()` on the left-hand side for multiple dependent variables.
 
 ### Multiple dependent variables
 
@@ -257,7 +257,7 @@ pf.etable(fit_mvsw)
 
 ### Combining operators
 
-Multiple estimation operators can be combined. For example, `y ~ csw(x1, x2) + sw(z1, z2)` expands to `y ~ x1 + z1`, `y ~ x1 + z2`, `y ~ x1 + x2 + z1`, `y ~ x1 + x2 + z2`.
+Stepwise operators can be combined. For example, `y ~ csw(x1, x2) + sw(z1, z2)` expands to `y ~ x1 + z1`, `y ~ x1 + z2`, `y ~ x1 + x2 + z1`, `y ~ x1 + x2 + z2`.
 
 ```{python}
 fit_combo = pf.feols("Y ~ csw(X1, X2) + sw(Z1, X1:Z1)", data=data)
@@ -266,7 +266,7 @@ pf.etable(fit_combo)
 
 ### Multiple Estimation, caching and performance
 
-The speedup from multiple-estimation syntax is most visible when models have the
+The speedup from multiple estimation is most visible when models have the
 same fixed effects and overlapping regressors. Below, we therefore benchmark
 
 ```text
@@ -278,7 +278,7 @@ to demonstrate the speed gains possible with multiple estimation and caching.
 In the specified multiple estimation formula, we fit sixteen models via one`csw()` call. Those sixteen models fit can be sped up by caching already demeaned variables. The idea is very simple - after the first fit, `y` and `x1` are already demeaned, so we do not have to do it
 again in fit 2. After fit 2, `x2` is demeaned, so we do not need to do it again in fit 3, and so on.
 
-In contrast, if you fit the sixteen models one by one, you have to demean `y` and `x1` in all 16 specifications and set up the preconditioner for every fit.
+In contrast, if you fit the sixteen models one by one, you have to demean `y` and `x1` in all 16 models and set up the preconditioner for every fit.
 
 How much faster could the caching of already-demeaned variables potentially make the estimation?
 
@@ -287,7 +287,7 @@ For simplicity, let's assume that the demeaning step takes 100% of the runtime o
 In the 16 separate regression fits, in total we would have to demean `y` and
 `x1` 16 times, `x2` 15 times, ..., and `x16` once. So in total, we would have to
 demean `16 + 16 + 15 + 14 + ... + 1 = 152` columns across the sixteen separate
-fits. In contrast, in the multiple-estimation path, we only have to demean each
+fits. In contrast, in the multiple estimation path, we only have to demean each
 of the 17 unique columns (`y`, `x1`, ..., `x16`) once. If demeaning were 100% of
 the algorithm runtime and scaled perfectly linearly in the number of columns, the
 upper bound on the speedup from caching already-demeaned variables would be
@@ -299,9 +299,9 @@ inference, and post-processing.
 
 Note that in addition to caching already-demeaned variables, all model fits can also share preconditioners. As building a preconditioner can be costly (in particular the "additive" preconditioner), this can lead to large speedups when fitting many models on the same sample with the same fixed effects.
 
-To demonstrate realistic speed gains, we compare the multiple-estimation call specified above with
+To demonstrate realistic speed gains, we compare the multiple estimation call specified above with
 fitting the same sixteen formulas one by one using the `fixest` benchmark DGPs
-described in [When Are Fixed Effects Estimations Difficult?](../explanation/difficult-fixed-effects.md).
+described in [When Are Fixed Effects Problems Difficult?](../explanation/difficult-fixed-effects.md).
 
 ```{python}
 #| code-fold: true
@@ -399,14 +399,14 @@ for dgp_name in ["simple", "difficult"]:
 )
 ```
 
-Absolute timings depend on your machine, but the direction is the important part: multiple estimation avoids recomputing the same within-transform work for every formula.
+Absolute timings depend on your machine, but the direction is the important part: multiple estimation avoids repeating the same demeaning for every formula.
 
-## Regressions on Multiple Samples
+## Sample Splits
 
 Via the `split` and `fsplit` argument, you can easily separate identical models on different samples.
 
-- `split` estimates separate models by subgroup.
-- `fsplit` does the same but also keeps the full-sample fit.
+- `split` estimates a separate model on each sample split, defined by the values of a variable.
+- `fsplit` does the same but also fits the model on the full estimation sample.
 
 ```{python}
 fit_split = pf.feols("Y ~ X1 + X2 | f1", data=data, split="f2")
@@ -437,7 +437,7 @@ for fixed effects.
 
 ## Where to Go Next
 
-- [OLS with Fixed Effects](ols-fixed-effects.qmd): practical FE estimation patterns.
+- [OLS with Fixed Effects](ols-fixed-effects.qmd): practical fixed effects estimation patterns.
 - [Difference-in-Differences](difference-in-differences.qmd): event-study applications with `i()`.
 - [Regression Tables](regression-tables.qmd): organize and export many-model workflows.
 - [How-To: Translating Stata to PyFixest](../how-to/stata-2-pyfixest.qmd): syntax mapping and defaults.

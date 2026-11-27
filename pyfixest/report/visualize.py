@@ -134,7 +134,7 @@ def iplot(
         to mimic fixest encoding. But "{variable}--{value}" or "{variable}{value}" or just "{value}"
         are also possible.
     joint: str or bool, optional
-        Whether to plot simultaneous confidence bands for the coefficients. If True, simultaneous confidence bands
+        Whether to plot simultaneous confidence intervals for the coefficients. If True, simultaneous confidence intervals
         are plotted. If False, "standard" confidence intervals are plotted. If "both", both are plotted in
         one figure. Default is None, which returns the standard confidence intervals. Note that this option is
         not available for objects of type `FixestMulti`, i.e. multiple estimation.
@@ -317,7 +317,7 @@ def coefplot(
         Note that interaction terms will also be relabeled using the labels of the individual variables.
         The renaming is applied after the selection of the coefficients via `keep` and `drop`.
     joint: str or bool, optional
-        Whether to plot simultaneous confidence bands for the coefficients. If True, simultaneous confidence bands
+        Whether to plot simultaneous confidence intervals for the coefficients. If True, simultaneous confidence intervals
         are plotted. If False, "standard" confidence intervals are plotted. If "both", both are plotted in
         one figure. Default is None, which returns the standard confidence intervals. Note that this option is
         not available for objects of type `FixestMulti`, i.e. multiple estimation.
@@ -861,7 +861,7 @@ def _get_model_df(
     alpha : float
         The significance level for the confidence intervals.
     joint : Optional[Union[str, bool]]
-        Whether to plot simultaneous confidence bands for the coefficients. If True, simultaneous confidence bands
+        Whether to plot simultaneous confidence intervals for the coefficients. If True, simultaneous confidence intervals
         are plotted. If False, "standard" confidence intervals are plotted. If "both", both are plotted in
         one figure. Default is None, which returns the standard confidence intervals. Note that this option is
         not available for objects of type `FixestMulti`, i.e. multiple estimation.

@@ -11,7 +11,7 @@ itself depends on the structure of the fixed effects and the size of the dataset
 
 For a deep dive on *why* some fixed-effects problems are harder than others — and detailed
 benchmarks comparing all backends — see
-[When Are Fixed Effects Estimations Difficult?](../explanation/difficult-fixed-effects.md).
+[When Are Fixed Effects Problems Difficult?](../explanation/difficult-fixed-effects.md).
 
 ```{python}
 import pyfixest as pf
@@ -114,7 +114,7 @@ and builds the additive Schwarz preconditioner only when convergence stalls.
 `preconditioner="additive"` builds additive Schwarz up front, and
 `preconditioner="diagonal"` never escalates. For single fixed effects, PyFixest falls back to closed form
 demeaning (via the MAP algo, which converges in one iteration) and no
-preconditioner is computed or applied. For large multi-way FE problems, setting
+preconditioner is computed or applied. For large multi-way fixed effects problems, setting
 up the preconditioner can be a meaningful fraction of total runtime, so it is
 worth reusing the preconditioner across solves on the same design.
 
@@ -148,13 +148,13 @@ fit_reused = pf.feols(
 pf.etable([fit, fit_reused], digits = 6)
 ```
 
-When you use multiple-estimation syntax, `FixestMulti` shares compatible
+When you use multiple estimation, `FixestMulti` shares compatible
 `within` preconditioners across sibling models that are fit on the same sample with
 identical fixed-effect structure. This happens automatically; you only need to
 use `LsmrDemeaner(backend="within")` or a `within` preconditioner option such as
 `preconditioner="diagonal"`.
 
-For GLMs that rely on iterated weighted least squares (IWLS, in `fepois` and
+For GLMs that rely on iteratively reweighted least squares (IWLS, in `fepois` and
 `feglm`), the first solve builds a preconditioner or uses the supplied prebuilt
 handle. Subsequent solves reuse it while projecting with their current working
 weights. Demeaned columns are recomputed each time because the weights change.
@@ -200,5 +200,5 @@ pf.etable([fit, fit2], digits = 6)
 ```
 
 ::: {.callout-warning}
-`Preconditioner` instances are tied to specific fixed effect structures. `within` validates that the preconditioner's DOF count matches the new design; a dimension mismatch raises `ValueError`. It does *not* check whether the FE *structure* matches when the dimensions happen to coincide; reusing on a different-but-same-size FE design will still run but may converge more slowly or fail to converge. It is the user's responsibility to ensure that the preconditioner is reused on the same FE structure.
+`Preconditioner` instances are tied to specific fixed effect structures. `within` validates that the preconditioner's DOF count matches the new design; a dimension mismatch raises `ValueError`. It does *not* check whether the fixed effect *structure* matches when the dimensions happen to coincide; reusing on a different-but-same-size fixed effect design will still run but may converge more slowly or fail to converge. It is the user's responsibility to ensure that the preconditioner is reused on the same fixed effect structure.
 :::

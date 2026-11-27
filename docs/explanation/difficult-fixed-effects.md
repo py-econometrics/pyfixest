@@ -1,4 +1,4 @@
-# "When Are Fixed Effects Estimations Difficult?"
+# "When Are Fixed Effects Problems Difficult?"
 
 If you have ever fitted a fixed effects regression, you might have noticed that models with the same number of observations and fixed effects levels can take orders of magnitude longer to run. This happens because the runtime of a fixed effects problem is not only determined by the sheer size of the data, but also by the structure of the fixed effects. Problems that are known to be particularly "hard" are ubiquitous in economics and arise, for example, in matched employer-employee data, patient-doctor panels, or trade networks.
 

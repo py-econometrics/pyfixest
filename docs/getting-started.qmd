@@ -21,7 +21,7 @@ pip install -U pyfixest
 
 ## A First Regression: The Causal Returns to Education via Twin Studies
 
-We want to estimate the **causal returns of education on earnings** via a twin study. In this notebook, we focus on `PyFixest` estimation functionality and syntax. For details on the question at hand, please take a look at the [OLS with Fixed Effects](tutorials/ols-fixed-effects.qmd) vignette.
+We want to estimate the **causal returns of education on earnings** via a twin study. In this notebook, we focus on `PyFixest` estimation functionality and syntax. For details on the question at hand, please take a look at the [OLS with Fixed Effects](tutorials/ols-fixed-effects.qmd) tutorial.
 
 In a first step, we load a synthetic twin-study style data set:
 
@@ -59,7 +59,7 @@ fit_fe = pf.feols(
 )
 ```
 
-We compare both specifications side by side via `etable()`.
+We compare both models side by side via `etable()`.
 
 ```{python}
 pf.etable(
@@ -143,7 +143,7 @@ Now that we’ve fit our first regression, we can jump right into one of the nex
     </tr>
     <tr>
       <td style="border: 1px solid #d0d7de; padding: 8px;"><a href="tutorials/formula-syntax.qmd">Formula Syntax</a></td>
-      <td style="border: 1px solid #d0d7de; padding: 8px;">We explain <code>PyFixest</code>'s formula interface in all of its detail, including special operators as <code>i()</code> for interactions and multiple estimation syntax.</td>
+      <td style="border: 1px solid #d0d7de; padding: 8px;">We explain <code>PyFixest</code>'s formula interface in all of its detail, including special operators such as <code>i()</code> for categorical regressors and the stepwise operators for multiple estimation.</td>
     </tr>
     <tr>
       <td style="border: 1px solid #d0d7de; padding: 8px;"><a href="tutorials/standard-errors.qmd">Standard Errors &amp; Inference</a></td>
