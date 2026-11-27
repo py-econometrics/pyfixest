@@ -6,10 +6,10 @@ from dataclasses import dataclass, replace
 from importlib import import_module
 from numbers import Integral, Real
 from types import ModuleType
-from typing import ClassVar, Literal, cast, get_args
+from typing import ClassVar, Literal, Self, cast, get_args
 
 import numpy as np
-from within import Effect
+from within import Effect, PreconditionerConfig
 
 from pyfixest.core.demean import (
     Preconditioner,
@@ -134,6 +134,43 @@ class BaseDemeaner:
     def __post_init__(self) -> None:
         _validate_positive_int(self.fixef_maxiter, "fixef_maxiter")
 
+    # Internal protocol for the estimation internals: each member answers a
+    # question about the demeaner's own configuration, so callers never branch
+    # on the concrete demeaner class. The defaults below are the MAP behavior;
+    # `LsmrDemeaner` overrides the members that differ.
+
+    @property
+    def _tolerance_settings(self) -> str:
+        """Tolerance settings as they appear in convergence-failure messages."""
+        raise NotImplementedError
+
+    @property
+    def _effective_tol(self) -> float:
+        """The single stopping tolerance the backend is driven with."""
+        raise NotImplementedError
+
+    @property
+    def _is_experimental(self) -> bool:
+        """Whether using this configuration emits an experimental warning."""
+        return False
+
+    @property
+    def _supports_varying_slopes(self) -> bool:
+        """Whether the demeaner can absorb varying slopes such as ``f1[z]``."""
+        return False
+
+    def _with_preconditioner(self, preconditioner: Preconditioner | None) -> Self:
+        """Copy with ``preconditioner`` set, when the demeaner uses one."""
+        return self
+
+    def _without_prebuilt_preconditioner(self) -> Self:
+        """Copy whose preconditioner is rebuilt instead of reused."""
+        return self
+
+    def _with_cached_preconditioner(self, cached: Preconditioner) -> Self:
+        """Copy reusing ``cached`` when it carries a prebuilt handle."""
+        return self
+
 
 @dataclass(frozen=True, slots=True)
 class MapDemeaner(BaseDemeaner):
@@ -178,6 +215,14 @@ class MapDemeaner(BaseDemeaner):
         if tol is None or tol == self.fixef_tol:
             return self
         return replace(self, fixef_tol=tol)
+
+    @property
+    def _tolerance_settings(self) -> str:
+        return f"fixef_tol={self.fixef_tol:g}"
+
+    @property
+    def _effective_tol(self) -> float:
+        return self.fixef_tol
 
     def demean(
         self,
@@ -364,6 +409,58 @@ class LsmrDemeaner(BaseDemeaner):
         if tol is None or (tol == self.fixef_atol and tol == self.fixef_btol):
             return self
         return replace(self, fixef_atol=tol, fixef_btol=tol)
+
+    @property
+    def _tolerance_settings(self) -> str:
+        return f"fixef_atol={self.fixef_atol:g}, fixef_btol={self.fixef_btol:g}"
+
+    @property
+    def _effective_tol(self) -> float:
+        return max(self.fixef_atol, self.fixef_btol)
+
+    @property
+    def _is_experimental(self) -> bool:
+        return self.backend == "torch"
+
+    @property
+    def _supports_varying_slopes(self) -> bool:
+        return self.backend == "within"
+
+    def _with_preconditioner(self, preconditioner: Preconditioner | None) -> Self:
+        """Pass a preconditioner to reuse on the same sample.
+
+        A refit starts with an empty demean cache, so the fit's preconditioner
+        is reused only when it is passed in. It depends on the fixed-effect
+        codes, the weights, and the rows, which a same-sample refit keeps.
+        """
+        if preconditioner is None:
+            return self
+        return replace(self, preconditioner=preconditioner)
+
+    def _without_prebuilt_preconditioner(self) -> Self:
+        """Replace a prebuilt `Preconditioner` by the name of its configuration.
+
+        A prebuilt preconditioner is tied to the fixed-effect design it was
+        built on, so a refit on another sample must build its own. Variants
+        without a public name fall back to ``"auto"``, the default.
+        """
+        if not isinstance(self.preconditioner, Preconditioner):
+            return self
+        config = self.preconditioner.config
+        name: LsmrPreconditioner = (
+            "additive"
+            if isinstance(config, PreconditionerConfig.Additive)
+            else "diagonal"
+            if isinstance(config, PreconditionerConfig.Diagonal)
+            else "auto"
+        )
+        return replace(self, preconditioner=name)
+
+    def _with_cached_preconditioner(self, cached: Preconditioner) -> Self:
+        """Reuse ``cached`` when this demeaner carries a prebuilt handle."""
+        if isinstance(self.preconditioner, Preconditioner):
+            return replace(self, preconditioner=cached)
+        return self
 
     def demean(
         self,

@@ -16,7 +16,7 @@ from typing import TYPE_CHECKING, Any, get_args
 import numpy as np
 from numpy.typing import NDArray
 
-from pyfixest.demeaners import AnyDemeaner, LsmrDemeaner
+from pyfixest.demeaners import AnyDemeaner
 from pyfixest.estimation.internals.literals import (
     QuantregMethodOptions,
     SolverOptions,
@@ -126,10 +126,7 @@ class EstimationOptions:
         LSMR takes two tolerances; the backends that expose only one collapse
         them to their maximum, as `LsmrDemeaner` documents.
         """
-        demeaner = self.demeaner
-        if isinstance(demeaner, LsmrDemeaner):
-            return max(demeaner.fixef_atol, demeaner.fixef_btol)
-        return demeaner.fixef_tol
+        return self.demeaner._effective_tol
 
     @property
     def retention(self) -> RetentionPolicy:
