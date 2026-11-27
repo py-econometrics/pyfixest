@@ -362,8 +362,9 @@ def lpdid(
         The earliest event time to estimate, given as a negative number. For
         example, `pre_window=-20` estimates event times -20 through -2 (event
         time -1 is the reference). It must equal an event time that occurs in
-        the data. Default is the minimum event time in the data. Ignored if
-        `att=True`.
+        the data. Default is the minimum event time in the data. Unused during
+        estimation when `att=True` (still validated against observed event
+        times).
     post_window : int, optional
         The latest event time to estimate, given as a non-negative number. For
         example, `post_window=20` estimates event times 0 through 20 (with
