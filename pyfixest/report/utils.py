@@ -51,7 +51,7 @@ def _relabel_expvar(
     """
     warnings.warn(
         "The function `_relabel_expvar` is deprecated, please rely on the `labels` and `cat_template` arguments of `pf.etable()` instead. ",
-        PyfixestDeprecationWarning,
+        DeprecationWarning,
         stacklevel=2,
     )
 
@@ -86,7 +86,7 @@ def _rename_categorical(
     """
     warnings.warn(
         "The function `_relabel_expvar` is deprecated, please rely on the `labels` and `cat_template` arguments of `pf.etable()` instead. ",
-        PyfixestDeprecationWarning,
+        DeprecationWarning,
         stacklevel=2,
     )
 

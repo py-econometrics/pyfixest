@@ -132,19 +132,13 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
   ignored by `feols()` without fixed effects and failed with an unrelated
   `AttributeError` in `feols()` with fixed effects and in `feglm()`/`fepois()`
   ([#2109](https://github.com/py-econometrics/pyfixest/issues/2109)).
-- Every deprecation now warns with `PyfixestDeprecationWarning`. Before, the
-  deprecated formula spellings (`f1^f2` fixed-effect interactions, the
-  fixest-style IV syntax and `Y + Y2 ~ X1`), the `adj`, `fixef_k`,
-  `cluster_adj` and `cluster_df` arguments of `ssc()` and the
-  `rename_categoricals()` and `rename_event_study_coefs()` helpers warned with
-  `DeprecationWarning`, which Python hides unless the call is in `__main__`.
-  `FixestMulti.FixestFormulaDict`, `confint(joint=True)` and
-  `decompose(param=...)` warned with a plain `FutureWarning`.
-  `PyfixestDeprecationWarning` is a `FutureWarning`, so Python shows it by
-  default, also when the deprecated call sits in an imported module. To silence
-  it, call `warnings.filterwarnings("ignore", category=PyfixestDeprecationWarning)`
-  with the class imported from `pyfixest.errors`. Filters on
-  `DeprecationWarning` no longer match these warnings
+- Deprecated formula spellings (`f1^f2`, the fixest-style IV syntax,
+  `Y + Y2 ~ X1`), the old `ssc()` argument names, `confint(joint=True)`,
+  `decompose(param=...)` and the `rename_categoricals()` and
+  `rename_event_study_coefs()` helpers now warn with
+  `PyfixestDeprecationWarning`. It is a `FutureWarning`, so Python shows it by
+  default, also when the call sits in an imported module; filters on
+  `DeprecationWarning` no longer match
   ([#2167](https://github.com/py-econometrics/pyfixest/issues/2167)).
 
 ## PyFixest 0.70.0
