@@ -1724,7 +1724,7 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
         gb = fit.decompose(decomp_var = "x1", reps = 10, nthreads = 1, x1_vars = ["x21"])
         # combine covariates
         gb = fit.decompose(decomp_var = "x1", reps = 10, nthreads = 1, combine_covariates = {"g1": ["x21", "x22"], "g2": ["x23"]})
-        # supress inference
+        # suppress inference
         gb = fit.decompose(decomp_var = "x1", reps = 10, nthreads = 1, combine_covariates = {"g1": ["x21", "x22"], "g2": ["x23"]}, only_coef = True)
         # print results
         gb.etable()

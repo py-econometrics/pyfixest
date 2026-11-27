@@ -565,7 +565,7 @@ def test_single_fit_fepois(
     check_absolute_diff(py_deviance, r_deviance, _dev_tol, "py_deviance != r_deviance")
     check_absolute_diff(py_loglik, r_loglik, _dev_tol, "py_ll != r_loglik")
 
-    # cant match fixest yet
+    # can't match fixest yet
     if weights is None:
         check_absolute_diff(
             py_loglik_null, r_loglik_null, 1e-08, "py_loglik_null != r_loglik_null"

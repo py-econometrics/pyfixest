@@ -14,8 +14,8 @@ toc-title: "On this page"
 This guide will focus on how to replicate the regression results you would get in Stata
 with the Python package `pyfixest` and assumes you know how to do things like install
 Python packages and load data into Pandas.  For a broader introduction to doing
-econmetrics in Python you might check out Arthur Turrell's
-[Coding for Economist](https://aeturrell.github.io/coding-for-economists/intro.html),
+econometrics in Python you might check out Arthur Turrell's
+[Coding for Economists](https://aeturrell.github.io/coding-for-economists/intro.html),
 which includes a section on
 [Coming from Stata](https://aeturrell.github.io/coding-for-economists/coming-from-stata.html),
 or [Tidy Finance with Python](https://www.tidy-finance.org/python/) by Christopher
@@ -99,11 +99,11 @@ the results in `fit1` and `fit2`.  To show the results you can use some of the f
 methods and functions.
 
 ```{python}
-fit1.summary() # Basic summary statisticsmodels
+fit1.summary() # Basic summary statistics
 ```
 
 ```{python}
-fit1.tidy() # Estimates, std errors, t-values, etc. in a "tidy" tablemodels
+fit1.tidy() # Estimates, std errors, t-values, etc. in a "tidy" table
 ```
 
 ```{python}
@@ -200,7 +200,7 @@ fit5.summary()
 ```
 
 which matches Stata exactly.  You can read all about the small-sample corrections
-implememnted by `pyfixest` at
+implemented by `pyfixest` at
 [Small-sample corrections](../explanation/ssc.qmd).
 
 ## Clustered Standard Errors
@@ -274,7 +274,7 @@ reg Y X1 X2, vce(cluster f1 f2)
 ```
 
 this is because by default, `pyfixest` uses a small-sample correction that adjusts
-each clustering dimentsion by whichever dimension has the smallest number of clusters,
+each clustering dimension by whichever dimension has the smallest number of clusters,
 while in Stata the default is to adjust each dimension based on the number of clusters
 in that dimension. You can use the same correction as Stata through the `ssc` argument.
 

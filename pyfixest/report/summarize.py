@@ -97,7 +97,7 @@ def etable(
         For further available formatting rules, see `maketables.ETable`.
     custom_stats: dict, optional
         A dictionary of custom statistics that can be used in the coef_fmt string to be displayed
-        in the coefficuent cells analogously to "b", "se" etc. The keys are the names of the custom
+        in the coefficient cells analogously to "b", "se" etc. The keys are the names of the custom
         statistics, and the values are lists of lists, where each inner list contains the custom
         statistic values for all coefficients each model.
         Note that "b", "se", "t", or "p" are reserved and cannot be used as keys.
@@ -138,7 +138,7 @@ def etable(
         Whether to show the rows with fixed effects markers. Default is True.
     felabels: dict, optional
         A dictionary to relabel the fixed effects. Only needed if you want to relabel
-        the FE lines with a different label than the one specied for the respective
+        the FE lines with a different label than the one specified for the respective
         variable in the labels dictionary.
         The command is applied after the `keep` and `drop` commands.
     fe_present: str, optional

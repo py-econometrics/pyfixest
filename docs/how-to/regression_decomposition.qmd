@@ -13,7 +13,7 @@ A Gelbach decomposition measures how much of the relationship between a focal re
 
 For example, we might start analysing the gender wage gap with a simple regression model as `log(wage) on gender`. But arguably, men and women differ in many socio-economic characteristics: they might have different (average) levels of education or career experience, and they might work in different industries and select into different higher- or lower-paying industries. So which fraction of the gender wage gap can be explained by these observable characteristics?
 
-In this notebook, we will compute and decompose the gender wage gab based on a subset of the PSID data set using a method commonly known as the
+In this notebook, we will compute and decompose the gender wage gap based on a subset of the PSID data set using a method commonly known as the
 "Gelbach Decomposition" ([Gelbach, JoLE 2016](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=1425737)).
 
 We start with loading a subset of the PSID data provided by the AER R package.
@@ -86,7 +86,7 @@ pf.etable(fit_stepwise2, keep=["gender", "ethnicity", "education"])
 
 We obtain 5 new coefficients on `education` that vary between 0.074 and 0.059.
 
-So, which share of the "raw" gender wage gap can be attributed to differences in education between men and women? Should we report a statisics based on the 0.075 estimate? Or
+So, which share of the "raw" gender wage gap can be attributed to differences in education between men and women? Should we report a statistics based on the 0.075 estimate? Or
 on the 0.059 estimate? Which value should we pick?
 
 To help us with this problem, Gelbach (2016, JoLE) develops a decomposition procedure building on the omitted variable bias formula that produces a single value for the contribution of a given regressor, say education, to the gender wage gap.
@@ -135,7 +135,7 @@ We can then compute the contribution of an individual regressor $\hat{\delta}_{k
     $$
 
 
-After having obtained $\delta_{k}$ for each auxiliary variable $k$, we can easily aggregate multiple variables into a single groups of interest. For example, if $X_{2}$ contains a set of dummies from industry fixed effects, we could compute the explained part of "industry" by summing over all the dummies:
+After having obtained $\delta_{k}$ for each auxiliary variable $k$, we can easily aggregate multiple variables into a single group of interest. For example, if $X_{2}$ contains a set of dummies from industry fixed effects, we could compute the explained part of "industry" by summing over all the dummies:
 
 $$
         \hat{\delta}_{\textit{industry}} = \sum_{k \in \textit{industry dummies}} \hat{\Gamma}_{k} \hat{\beta}_{2,k}
@@ -165,7 +165,7 @@ As before, this produces a pretty big output table that reports
 - a **single scalar value** for the individual contributions of an additional regressor to overall **explained effect**
 
 For our example at hand, the additional regressors only explain a tiny fraction of the differences in log wages between men and women - 0.064 points.
-Of these, around one third can be attributed to ethnicity, 0.00064 to years of eduaction, etc.
+Of these, around one third can be attributed to ethnicity, 0.00064 to years of education, etc.
 
 Note that for now, we ask `etable()` to only report effects in levels. By switching to `panels = "all"`, we would also report normalized coefficient; but we decided not to do so here as otherwise the table would have turned out even longer than it already has.
 

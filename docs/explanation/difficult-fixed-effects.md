@@ -448,7 +448,7 @@ Increasing the number of occupation levels makes the problem harder
 as the occupation sub-graph thins out. With 10 occupations, each level is observed at many firms and held by
 many workers, so the occupation cross-tabulation blocks are dense and
 well-conditioned. With 5,000 occupations, each level appears in far
-fewer observations, and the cross-tabulation blocks become sparse. This is the same graph-thinning mechanism that makes low mobility hard, just in the occupation dimension. The bencmark varies `n_occupations` from 10 to 5,000 while holding all other parameters at their defaults.
+fewer observations, and the cross-tabulation blocks become sparse. This is the same graph-thinning mechanism that makes low mobility hard, just in the occupation dimension. The benchmark varies `n_occupations` from 10 to 5,000 while holding all other parameters at their defaults.
 
 <p align="center">
   <img src="figures/akm-occupation-benchmarks/bench_occsize.png" width="85%">

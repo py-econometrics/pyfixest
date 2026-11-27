@@ -209,7 +209,7 @@ class GelbachDecomposition:
 
         if self.combine_covariates is not None and not self.agg_first:
             warnings.warn(
-                "You have provided combine_covariates, but agg_first is False. We recommend setting agg_first=True as this might massively decrease the computation time (in particular when boostrapping CIs).",
+                "You have provided combine_covariates, but agg_first is False. We recommend setting agg_first=True as this might massively decrease the computation time (in particular when bootstrapping CIs).",
                 UserWarning,
                 stacklevel=_find_stack_level(),
             )

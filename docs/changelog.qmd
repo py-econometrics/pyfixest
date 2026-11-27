@@ -886,7 +886,7 @@ pf.etable([fit_gaussian, fit_logit, fit_probit])
 
 ### Breaking Changes for compatibility with `fixest` 0.13
 
-`fixest` 0.13 has recently been released to CRAN, with a range of breaking changes. We are following these in pyfixet 0.40.0.
+`fixest` 0.13 has recently been released to CRAN, with a range of breaking changes. We are following these in pyfixest 0.40.0.
 
 - The default inference method is now always "iid". Before, both `fixest` and `pyfixest` would default to cluster by the first fixest effect
   in the presence of fixed effect.
@@ -986,7 +986,7 @@ As can be seen, we by default now return normalized (and not just absolute) effe
 
 We are now also supporting frequency weights for the decomposition (currently without inference).
 
-Additionally, some house keeping and interal refactoring of the `GelbachDecomposition` class.
+Additionally, some house keeping and internal refactoring of the `GelbachDecomposition` class.
 
 ## PyFixest 0.30.0
 
@@ -1153,10 +1153,10 @@ pf.qplot(fit_qr, figsize = [7,3])
 - Input data frames to `pf.feols()` and `pf.fepois()` are now converted to `pandas` via [narwhals](https://github.com/narwhals-dev/narwhals).
   As a result, users can not provide `duckdb` or `ibis` tables as inputs, as well as `pandas` and `polars` data frames. `polars` and `pyarrow`
   are dropped as a dependencies.
-- Fixes a bug in the `wildboottest` method, which incorrectly used to run a regression on the demeaned dependend variable in case it was
+- Fixes a bug in the `wildboottest` method, which incorrectly used to run a regression on the demeaned dependent variable in case it was
   applied after a fixed effects regression. My apologies for that!
 - Fixes a bug in the `ritest` method, which would use randomization inference coefficients instead of t-statistics, leading to incorrect results.
-  This has consequences for the rwolf() function, which, in case of running ri-inference, would default to run the randomization-t. My apolgies!
+  This has consequences for the rwolf() function, which, in case of running ri-inference, would default to run the randomization-t. My apologies!
 - Adds a vignette on multiple testing corrections.
 - Adds a vignette on Gelbach's regression decomposition.
 
@@ -1181,7 +1181,7 @@ See the github changelog for details: [link](https://github.com/py-econometrics/
 - docs: add leostimpfle as a contributor for code @allcontributors (#478)
 - Feols: speed up the creation of interacted fixed effects via `fe1^fe2` syntax @leostimpfle (#475)
 - rename resampling iterations to 'reps' in all methods @s3alfisc (#474)
-- fix a lot of broken links throught the repo @s3alfisc (#472)
+- fix a lot of broken links through the repo @s3alfisc (#472)
 - Multiple readme fixes required after package was moved to py-econometrics project @s3alfisc (#450)
 
 ### Infrastructure
@@ -1207,7 +1207,7 @@ fit.ritest(resampvar="X1=0", reps = 1000)
 
 ## PyFixest 0.19.0
 
-- Fixes multiple smaller and larger performance regressions. The NYC-Taxi example regression now takes approximately 22 seconds to run (... if my laptopt is connected to a power charger)!
+- Fixes multiple smaller and larger performance regressions. The NYC-Taxi example regression now takes approximately 22 seconds to run (... if my laptop is connected to a power charger)!
 
 ```{python}
 #| eval: False
@@ -1238,11 +1238,11 @@ nyc["dofw"] = nyc["dofw"].astype(int)
 nyc["vendor_id"] = nyc["vendor_id"].astype("category")
 nyc["payment_type"] = nyc["payment_type"].astype("category")
 print(f"""
-    I am convering columns of type 'objects' to 'categories' and 'int'data types outside
+    I am converting columns of type 'objects' to 'categories' and 'int'data types outside
     of the regression, hence I am cheating a bit. This saves {np.round(time.time() - tic)} seconds.
     """
 )
-#    I am convering columns of type 'objects' to 'categories' and 'int'data types outside
+#    I am converting columns of type 'objects' to 'categories' and 'int'data types outside
 #    of the regression, hence I am cheating a bit. This saves 7.0 seconds.
 
 run = True
@@ -1300,7 +1300,7 @@ pf.etable([fit, fit_weighted], coef_fmt = "b(se) \n (t) \n (p)")
 
 ## PyFixest 0.18.0
 
-- Large Refactoring of Interal Processing of Model Formulas, in particular `FixestFormulaParser` and `model_matrix_fixest`. As a results, the code should be cleaner and more robust.
+- Large Refactoring of Internal Processing of Model Formulas, in particular `FixestFormulaParser` and `model_matrix_fixest`. As a results, the code should be cleaner and more robust.
 - Thanks to the refactoring, we can now bump the required `formulaic` version to the stable `1.0.0` release.
 - The `fml` argument of `model_matrix_fixest` is deprecated. Instead, `model_matrix_fixest`
   now asks for a `FixestFormula`, which is essentially a dictionary with information on model
@@ -1338,7 +1338,7 @@ fit2.coef()[0:8]
   fit.tidy()
   ```
 
-  The update should not inroduce any breaking changes. Thanks to [@Wenzhi-Ding](https://github.com/Wenzhi-Ding) for the PR!
+  The update should not introduce any breaking changes. Thanks to [@Wenzhi-Ding](https://github.com/Wenzhi-Ding) for the PR!
 
 - Adds support for simultaneous confidence intervals via a multiplier bootstrap. Thanks to [@apoorvalal](https://github.com/apoorvalal) for the contribution!
 
@@ -1552,7 +1552,7 @@ pf.etable([fit_twfe, fit_did2s])
 
 ## PyFixest 0.10.1
 
-- Adapts the internal fixed effects demeaning criteron to match `PyHDFE's default.
+- Adapts the internal fixed effects demeaning criterion to match `PyHDFE's default.
 - Adds Styfen as coauthor.
 
 ## PyFixest 0.10
