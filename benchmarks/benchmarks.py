@@ -28,8 +28,7 @@ except ImportError:
     HAS_MPS = False
     HAS_CUDA = False
 
-# Typed demeaner for each backend name the pyfixest runners accept. The torch
-# presets match the legacy `demeaner_backend` strings they replaced.
+# The torch presets match the legacy `demeaner_backend` strings they replaced.
 _PYFIXEST_DEMEANERS = {
     "numba": lambda pf: pf.MapDemeaner(backend="numba"),
     "rust": lambda pf: pf.MapDemeaner(backend="rust"),
@@ -44,7 +43,6 @@ _PYFIXEST_DEMEANERS = {
     ),
 }
 
-# Backends that accept a backend= argument when called through pyfixest runners
 _PYFIXEST_BACKENDS = set(_PYFIXEST_DEMEANERS)
 
 # =============================================================================
