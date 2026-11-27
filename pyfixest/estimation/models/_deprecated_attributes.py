@@ -164,11 +164,15 @@ class DeprecatedAttributes:
                     f"is not supported in {REMOVED_IN}; see the migration guide: "
                     "https://pyfixest.org/how-to/migrate-fit-attributes.html"
                 )
+            message = f"{type(self).__name__!r} object has no attribute {name!r}"
+            if name in STATSMODELS_SPELLINGS:
+                message += (
+                    f"; the pyfixest spelling of `{name}` is "
+                    f"`{STATSMODELS_SPELLINGS[name]}`."
+                )
             # An unrelated property's internal AttributeError is replaced by this
             # fallback too; properties should avoid raising AttributeError internally.
-            raise AttributeError(
-                f"{type(self).__name__!r} object has no attribute {name!r}"
-            )
+            raise AttributeError(message)
 
 
 def _cluster_counts(fit: Feols) -> list[int]:
@@ -206,6 +210,20 @@ def _alias(replacement: str, read: Callable[[Any], Any]) -> Alias:
 def _removed(replacement: str, reason: str) -> Removed:
     return Removed(replacement=replacement, reason=reason)
 
+
+# statsmodels result attributes that fitted models never had, with the pyfixest
+# spelling named in the `AttributeError`.
+STATSMODELS_SPELLINGS: Mapping[str, str] = {
+    "params": "fit.coef()",
+    "bse": "fit.se()",
+    "tvalues": "fit.tstat()",
+    "pvalues": "fit.pvalue()",
+    "conf_int": "fit.confint()",
+    "nobs": "fit.sample_info.n_obs",
+    "rsquared": "fit.fitstat.r2",
+    "rsquared_adj": "fit.fitstat.adj_r2",
+    "fittedvalues": "fit.predict()",
+}
 
 REMOVED_PRIVATE_ATTRIBUTES = frozenset(
     {

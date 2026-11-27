@@ -42,6 +42,12 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
 
 ### Bug Fixes
 
+- Reading a statsmodels result attribute on a fitted model, such as `fit.params`,
+  `fit.bse` or `fit.nobs`, still raises an `AttributeError`, and the message now
+  names the pyfixest spelling, such as `fit.coef()`, `fit.se()` or
+  `fit.sample_info.n_obs`. `vcov="robust"` raises a `ValueError` that points to
+  `vcov="hetero"`
+  ([#2168](https://github.com/py-econometrics/pyfixest/issues/2168)).
 - `etable()`, `summary()`, `iplot()`, `coefplot()`, `qplot()`, `bonferroni()`,
   `rwolf()` and `wyoung()` raise a `ValueError` naming `models` when passed an
   empty list. Before, `summary([])` returned `None` and the others failed with

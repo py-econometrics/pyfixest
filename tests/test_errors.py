@@ -2625,3 +2625,35 @@ def test_etable_names_bad_significance_code():
 def test_reporting_functions_reject_empty_model_list(report):
     with pytest.raises(ValueError, match=r"models must contain at least one fitted"):
         report([])
+
+
+@pytest.mark.parametrize(
+    "name, spelling",
+    [
+        ("params", "fit.coef()"),
+        ("bse", "fit.se()"),
+        ("tvalues", "fit.tstat()"),
+        ("pvalues", "fit.pvalue()"),
+        ("conf_int", "fit.confint()"),
+        ("nobs", "fit.sample_info.n_obs"),
+        ("rsquared", "fit.fitstat.r2"),
+        ("rsquared_adj", "fit.fitstat.adj_r2"),
+        ("fittedvalues", "fit.predict()"),
+    ],
+)
+def test_statsmodels_attributes_name_the_pyfixest_spelling(data, name, spelling):
+    fit = pf.feols("Y ~ X1 + X2 | f1", data)
+    with pytest.raises(
+        AttributeError, match=re.escape(f"has no attribute {name!r}")
+    ) as exc:
+        getattr(fit, name)
+    assert f"`{spelling}`" in str(exc.value)
+    assert not hasattr(fit, name)
+
+
+def test_vcov_robust_names_hetero(data):
+    with pytest.raises(ValueError, match=r"got 'robust'.*vcov='hetero'"):
+        pf.feols("Y ~ X1", data, vcov="robust")
+    with pytest.raises(ValueError, match="got 'sandwich'") as exc:
+        pf.feols("Y ~ X1", data, vcov="sandwich")
+    assert "Heteroskedasticity-robust" not in str(exc.value)
