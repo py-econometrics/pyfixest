@@ -28,7 +28,6 @@ except ImportError:
     HAS_MPS = False
     HAS_CUDA = False
 
-# The torch presets match the legacy `demeaner_backend` strings they replaced.
 _PYFIXEST_DEMEANERS = {
     "numba": lambda pf: pf.MapDemeaner(backend="numba"),
     "rust": lambda pf: pf.MapDemeaner(backend="rust"),
