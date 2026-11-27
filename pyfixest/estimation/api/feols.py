@@ -269,9 +269,9 @@ def feols(
     created with [ssc()](/reference/utils.utils.ssc.qmd). The default is
     `pf.ssc(k_adj=True, k_fixef="nonnested", G_adj=True, G_df="min")`.
 
-    `feols()` supports a range of multiple estimation syntax, i.e. you can estimate
+    `feols()` supports multiple estimation, i.e. you can estimate
     multiple models in one call. The following example estimates two models, one with
-    fixed effects for `f1` and one with fixed effects for `f2` using the `sw()` syntax.
+    fixed effects for `f1` and one with fixed effects for `f2` using the `sw()` stepwise operator.
 
     ```{python}
     fit = pf.feols("Y ~ X1 + X2 | sw(f1, f2)", data)
@@ -287,7 +287,7 @@ def feols(
     pf.etable(fit)
     ```
 
-    Other supported multiple estimation syntax include `sw0()`, `csw()` and `csw0()`.
+    Other supported stepwise operators include `sw0()`, `csw()` and `csw0()`.
     While `sw()` adds variables in a "stepwise" fashion, `csw()` does so cumulatively.
 
     ```{python}
@@ -295,7 +295,7 @@ def feols(
     pf.etable(fit)
     ```
 
-    The `sw0()` and `csw0()` syntax are similar to `sw()` and `csw()`, but start
+    The `sw0()` and `csw0()` operators are similar to `sw()` and `csw()`, but start
     with a model that excludes the variables specified in `sw()` and `csw()`:
 
     ```{python}
@@ -312,14 +312,14 @@ def feols(
     pf.etable(fit)
     ```
 
-    It is possible to combine different multiple estimation operators:
+    It is possible to combine different stepwise operators:
 
     ```{python}
     fit = pf.feols("sw(Y, Y2) ~ X1 | sw(f1, f2)", data)
     pf.etable(fit)
     ```
 
-    As in `fixest`, the arguments of a multiple estimation operator may span
+    As in `fixest`, the arguments of a stepwise operator may span
     several lines, for example in a triple-quoted string with one argument per
     line, and a space may separate the operator from its parenthesis, as in
     `csw (X1, X2)`:

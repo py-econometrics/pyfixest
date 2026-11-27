@@ -24,7 +24,7 @@ $$
 Y_{it} = \beta X_{it} + \alpha_i + \psi_t + \varepsilon_{it}
 $$
 
-where $\alpha_i$ is an individual fixed effect (constant across time) and $\psi_t$ is a time fixed effect (constant across individuals). Fixed effects are not limited to panel data - any categorical grouping variable can serve as a fixed effect (for example, wage regressions with worker and firm FE) - more on that topic later!).
+where $\alpha_i$ is an individual fixed effect (constant across time) and $\psi_t$ is a time fixed effect (constant across individuals). Fixed effects are not limited to panel data - any categorical grouping variable can serve as a fixed effect (for example, wage regressions with worker and firm fixed effects) - more on that topic later!).
 
 `PyFixest` efficiently estimates fixed effects models by applying the [Frisch-Waugh-Lovell](https://mattblackwell.github.io/gov2002-book/least_squares.html#residual-regression) , which, among other things, avoids the need to create hundreds of dummy variables.
 
@@ -68,7 +68,7 @@ fit_fe.summary()
 
 ### Compare Side by Side
 
-The FE estimate (~0.08) is smaller than the "naive" OLS estimate. Indeed, part of the correlation between education and wages is that higher ability students obtain more years of education.
+The estimate with fixed effects (~0.08) is smaller than the "naive" OLS estimate. Indeed, part of the correlation between education and wages is that higher ability students obtain more years of education.
 
 ```{python}
 pf.etable(
@@ -94,14 +94,14 @@ panel = pf.get_worker_panel(N_workers=500, N_firms=50, N_years=11, seed=42)
 panel.head()
 ```
 
-### One-Way FE: Worker Fixed Effects Only
+### One-Way Fixed Effects: Worker Only
 
 ```{python}
 fit_worker = pf.feols("log_wage ~ experience + tenure + female | worker_id", data=panel)
 fit_worker.summary()
 ```
 
-### Two-Way FE: Worker + Firm Fixed Effects
+### Two-Way Fixed Effects: Worker + Firm
 
 ```{python}
 fit_twoway = pf.feols("log_wage ~ experience + tenure + female | worker_id + firm_id", data=panel)
@@ -117,7 +117,7 @@ fit_full.summary()
 
 Here is an interesting historical fact: the first paper (to our knowledge) that fitted a three-way high-dimensional fixed effects model in an unbalanced panel was published in 2013, only four years before the transformer was invented!. Before that, economists simply did not know how to fit 3-way fixed effects regression models on unbalanced panels efficiently. See Guimarães, Portugal, and Torres, ["The Sources of Wage Variation: A Three-Way High-Dimensional Fixed Effects Regression Model"](https://ideas.repec.org/p/ptu/wpaper/w201309.html), who more or less fit the model above on Portuguese data.
 
-### Compare All Specifications
+### Compare All Models
 
 ```{python}
 pf.etable(

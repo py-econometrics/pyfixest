@@ -36,11 +36,11 @@ For questions on `PyFixest`, head over to our [GitHub discussions](https://githu
   - Fast **quantile regression** via an interior-point solver
   - **Difference-in-differences** estimators, including TWFE, `Did2s`, local projections, and Sun-Abraham event studies
   - Regression **decomposition** following [Gelbach (2016)](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=1425737)
-  - Multiple estimation syntax
+  - **Multiple estimation** with stepwise operators
 - **Inference**
   - Several **robust**, **cluster-robust**, and **HAC variance-covariance** estimators
   - **Wild cluster bootstrap** inference via [wildboottest](https://github.com/py-econometrics/wildboottest)
-  - **Multiple hypothesis corrections** and simultaneous confidence intervals
+  - **Multiple testing** corrections and simultaneous confidence intervals
   - Fast **randomization inference**
   - The **causal cluster variance estimator (CCV)**
 - **Post-Estimation & Reporting**
@@ -122,7 +122,7 @@ pf.feols("Y ~ X1 | f1 + f2", data=data).summary()
     ---
     RMSE: 1.441   R2: 0.609   R2 Within: 0.2
 
-`PyFixest` also supports multiple estimation syntax:
+`PyFixest` also supports multiple estimation with stepwise operators:
 
 ```python
 fit = pf.feols("sw(Y, Y2) ~ X1 | csw0(f1, f2)", data=data, vcov={"CRV1": "group_id"})

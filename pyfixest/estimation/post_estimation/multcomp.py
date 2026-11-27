@@ -16,7 +16,7 @@ ModelInputType = FixestMulti | list[Feols | Fepois | Feiv]
 
 def bonferroni(models: ModelInputType, param: str) -> pd.DataFrame:
     """
-    Compute Bonferroni adjusted p-values for multiple hypothesis testing.
+    Compute Bonferroni adjusted p-values for multiple testing.
 
     For each model, it is assumed that tests to adjust are of the form
     "param = 0".
@@ -76,7 +76,7 @@ def rwolf(
     sampling_method: str = "wild-bootstrap",
 ) -> pd.DataFrame:
     """
-    Compute Romano-Wolf adjusted p-values for multiple hypothesis testing.
+    Compute Romano-Wolf adjusted p-values for multiple testing.
 
     For each model, it is assumed that tests to adjust are of the form
     "param = 0". This function uses the `wildboottest()` method for running the
@@ -188,7 +188,7 @@ def wyoung(
     sampling_method: str = "wild-bootstrap",
 ) -> pd.DataFrame:
     """
-    Compute the Westfall-Young adjusted p-values for multiple hypothesis testing.
+    Compute the Westfall-Young adjusted p-values for multiple testing.
 
     For each model, it is assumed that tests to adjust are of the form
     "param = 0". This function uses the `wildboottest()` method for running the

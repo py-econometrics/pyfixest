@@ -50,7 +50,7 @@ To examine the impact of observable on the relationship between wage and gender,
 - year
 - ethnicity
 
-We can do so by using **multiple estimation syntax**:
+We can do so with **multiple estimation** and the stepwise operators:
 
 ```{python}
 fit_stepwise1 = pf.feols(
