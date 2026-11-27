@@ -134,8 +134,8 @@ For multi-way clustering:
 - **Two-way**: `df_t = min(G_1 - 1, G_2 - 1)`
 - **Three-way**: `df_t = min(G_1 - 1, G_2 - 1, G_3 - 1)` *(not currently supported)*
 
-See [this implementation](https://github.com/py-econometrics/pyfixest/blob/864da9c0d1797aff70e3f5b420e4c73f7256642d/pyfixest/estimation/feols_.py#L851) for details.
+See [this implementation](https://github.com/py-econometrics/pyfixest/blob/master/pyfixest/estimation/internals/vcov_utils.py) for details.
 
 # In Code
 
-All of the above logic is implemented [here](https://github.com/py-econometrics/pyfixest/blob/69acf9d22eab4300853d80264ee6d01bc4bdcb35/pyfixest/utils/utils.py#L108).
+All of the above logic is implemented in [`get_ssc()`](/reference/utils.utils.get_ssc.qmd).
