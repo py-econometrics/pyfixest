@@ -68,7 +68,6 @@ fml_fe = f"lnw ~ {covars} | id"
 ```
 
 ```{python}
-%%capture
 fit_pooled = pf.feols(fml=fml_pooled, data=balanced_sasp, vcov={"CRV1": "id"})
 fit_fe = pf.feols(fml=fml_fe, data=balanced_sasp, vcov={"CRV1": "id"})
 ```

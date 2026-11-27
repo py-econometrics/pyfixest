@@ -78,10 +78,6 @@ _converter_ctx = (
 ).context()
 _converter_ctx.__enter__()
 
-# IPython magic commands for autoreloading
-%load_ext autoreload
-%autoreload 2
-
 # Get data using pyfixest
 data = pf.get_data(model="Feols", N=10_000, seed=99292)
 ```

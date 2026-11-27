@@ -26,11 +26,6 @@ import pandas as pd
 import pyfixest as pf
 from pyfixest.report.utils import rename_event_study_coefs
 from pyfixest.utils.dgps import get_sharkfin
-
-%load_ext watermark
-%watermark --iversions
-%load_ext autoreload
-%autoreload 2
 ```
 
 

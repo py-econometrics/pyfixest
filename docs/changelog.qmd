@@ -5,6 +5,7 @@ freeze: auto
 # Changelog
 
 ```{python}
+#| include: false
 import pyfixest as pf
 from pyfixest.report.utils import rename_categoricals
 
@@ -911,7 +912,7 @@ We also install all package by default from the free and open source conda-forge
 `rpy2`that we need for testing `pyfixest` against `fixest`, we temporarily have dropped support for the dev and docs environments for windows. A fix is
 work in progress.
 
-## New Features
+### New Features
 
 ### CuPy and SciPy Backends via LSMR
 

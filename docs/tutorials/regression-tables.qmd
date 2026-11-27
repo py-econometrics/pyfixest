@@ -32,9 +32,6 @@ from IPython.display import FileLink, display
 
 import pyfixest as pf
 
-%load_ext autoreload
-%autoreload 2
-
 data = pf.get_data()
 
 fit1 = pf.feols("Y ~ X1 + X2 | f1", data=data)

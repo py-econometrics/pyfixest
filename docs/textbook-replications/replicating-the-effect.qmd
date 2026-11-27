@@ -17,9 +17,6 @@ This notebook replicates code examples from Nick Huntington-Klein's book on caus
 from causaldata import Mroz, gapminder, organ_donations, restaurant_inspections
 
 import pyfixest as pf
-
-%load_ext watermark
-%watermark --iversions
 ```
 
 
