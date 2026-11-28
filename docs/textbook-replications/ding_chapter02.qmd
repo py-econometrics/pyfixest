@@ -1,0 +1,85 @@
+---
+title: "Linear Model and Extensions: Chapter 2"
+description: "Galton's regression from Chapter 2 of Peng Ding's open-access textbook, translated from R to PyFixest."
+jupyter: python3
+---
+
+In this notebook, we translate the R code for Chapter 2 of Peng Ding's open-access textbook [Linear Model and Extensions](https://arxiv.org/abs/2401.00649) to PyFixest. The book's R scripts and data sets are on the Harvard Dataverse ([doi:10.7910/DVN/DBDYVJ](https://doi.org/10.7910/DVN/DBDYVJ), CC0 1.0). Other chapters are tracked in [this GitHub issue](https://github.com/py-econometrics/pyfixest/issues/957).
+
+```{python}
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+
+import pyfixest as pf
+```
+
+## Chapter 2: OLS with a Univariate Covariate
+
+Chapter 2 fits a line through Galton's data on the heights of parents and their adult children: 934 children from 205 families. `midparentHeight` is the average of the father's height and 1.08 times the mother's height, and `childHeight` is the child's height, both in inches.
+
+```{python}
+# read the data from the Harvard Dataverse. The server rejects the default
+# user agent of Python's urllib, so we set our own.
+dataverse = "https://dataverse.harvard.edu/api/access/datafile/"
+storage_options = {"User-Agent": "pyfixest-docs"}
+
+# file GaltonFamilies.txt, the data set the book's chapter02.R reads
+galton = pd.read_csv(dataverse + "10123762", sep=r"\s+", storage_options=storage_options)
+galton.head()
+```
+
+## Fitting the Line by Hand
+
+The book computes the OLS line from five numbers: the two means, the two standard deviations, and the correlation. The slope is the correlation times the ratio of the standard deviations, and the line passes through the point of means.
+
+```{python}
+x = galton["midparentHeight"]
+y = galton["childHeight"]
+
+# center of the data
+center_x, center_y = x.mean(), y.mean()
+# standard deviations and correlation
+sd_x, sd_y = x.std(), y.std()
+rho_xy = x.corr(y)
+# OLS
+beta_fit = rho_xy * sd_y / sd_x
+alpha_fit = center_y - beta_fit * center_x
+print(f"intercept {alpha_fit:.6f}, slope {beta_fit:.6f}")
+```
+
+## The Same Line with PyFixest
+
+`pf.feols()` fits the same model from a formula. Its coefficients match the hand computation above and the values the book prints, 22.63624 and 0.6373609.
+
+```{python}
+fit = pf.feols("childHeight ~ midparentHeight", data=galton)
+fit.coef()
+```
+
+## Galton's Regression Plot
+
+The book plots the data with the fitted line. Like the book, we jitter the children's heights a little, because many heights repeat and the points would sit on top of each other. A fixed seed makes the plot the same on every render.
+
+```{python}
+rng = np.random.default_rng(957)
+# similar to R's jitter(): move each height by a small random amount
+y_jitter = y + rng.uniform(-0.1, 0.1, size=len(y))
+
+fig, ax = plt.subplots(figsize=(5, 5))
+ax.scatter(x, y_jitter, s=4, color="grey")
+ax.scatter(center_x, center_y, color="black")
+x_line = np.array([x.min(), x.max()])
+ax.plot(x_line, alpha_fit + beta_fit * x_line, color="black", alpha=0.6)
+ax.text(
+    0.95,
+    0.05,
+    f"fitted line: y={alpha_fit:.2f}+{beta_fit:.2f}x",
+    transform=ax.transAxes,
+    ha="right",
+)
+ax.set_xlabel("midparentHeight")
+ax.set_ylabel("childHeight")
+ax.set_title("Galton's regression")
+plt.show()
+```
