@@ -6,7 +6,87 @@ toc: true
 toc-title: "On this page"
 ---
 
-This vignette compares estimation results from `fixest` with `pyfixest` via the `rpy2` package.
+This vignette compares `pyfixest` with R's `fixest`: first a side-by-side syntax reference, then intentional formula differences, and finally numerical comparisons via the `rpy2` package.
+
+## Syntax comparison
+
+The tables below map common `fixest` syntax to `pyfixest` (assuming `import pyfixest as pf` in Python, `library(fixest)` in R, and a DataFrame `dat`). For a Stata-oriented reference, see [Translating Stata to PyFixest](../how-to/stata-2-pyfixest.qmd); for deeper formula details, see [Formula Syntax](../tutorials/formula-syntax.qmd).
+
+Two general differences apply across the tables:
+
+- **Default standard errors**: Unlike `fixest` (which clusters on the first fixed effect by default), `pyfixest` defaults to `"iid"` standard errors even when fixed effects are present. Pass `vcov={"CRV1": "..."}` explicitly to cluster.
+- **Unimplemented formula shortcuts**: Where `fixest` offers formula-level macros (`.[ctrls]`), regex wildcards (`..(...)`), or panel operators (`l()`, `f()`, `d()`), `pyfixest` relies on standard Python f-strings, list comprehensions, and pandas/polars DataFrame transforms.
+
+### Models
+
+| Task | `pyfixest` | `fixest` |
+|---|---|---|
+| Simple OLS | `pf.feols("wage ~ educ + age", data=dat)` | `feols(wage ~ educ + age, data = dat)` |
+| Categorical regressor | `pf.feols("wage ~ educ + i(treat)", data=dat)` (or `C(treat)`) | `feols(wage ~ educ + i(treat), data = dat)` |
+| Categorical regressor (reference level) | `pf.feols("wage ~ educ + i(treat, ref=1)", data=dat)` | `feols(wage ~ educ + i(treat, ref = 1), data = dat)` |
+| Fixed effects (iid SEs) | `pf.feols("wage ~ educ | countyfips", data=dat)` | `feols(wage ~ educ | countyfips, data = dat, vcov = "iid")` |
+| Fixed effects (clustered SEs) | `pf.feols("wage ~ educ | countyfips", data=dat, vcov={"CRV1": "countyfips"})` | `feols(wage ~ educ | countyfips, data = dat)` |
+| Observation weights | `pf.feols("wage ~ educ + i(treat)", data=dat, weights="w")` | `feols(wage ~ educ + i(treat), data = dat, weights = ~w)` |
+| Instrumental variables (2SLS) | `pf.feols("wage ~ marr + [educ ~ age] | countyfips", data=dat)` | `feols(wage ~ marr | countyfips | educ ~ age, data = dat)` |
+| Nonlinear model (Logit / Probit) | `pf.feglm("marr ~ age + black + hisp", data=dat, family="logit")` | `feglm(marr ~ age + black + hisp, data = dat, family = "logit")` |
+| Nonlinear model (Poisson) | `pf.fepois("count_y ~ age + black + hisp | statefips + year", data=dat, vcov={"CRV1": "statefips"})` | `fepois(count_y ~ age + black + hisp | statefips + year, data = dat)` |
+| Sample split | `pf.feols("wage ~ educ | countyfips", data=dat, split="hisp")` (or `fsplit="hisp"`) | `feols(wage ~ educ | countyfips, data = dat, split = ~hisp)` (or `fsplit = ~hisp`) |
+| Multiple dependent variables | `pf.feols("sw(wage, educ) ~ age + marr | countyfips + year", data=dat)` | `feols(c(wage, educ) ~ age + marr | countyfips + year, data = dat)` |
+| Stepwise estimation | `pf.feols("wage ~ educ + sw(age, marr)", data=dat)` (also `sw0`, `mvsw`) | `feols(wage ~ educ + sw(age, marr), data = dat)` (also `sw0`, `mvsw`) |
+| Cumulative stepwise estimation | `pf.feols("wage ~ educ + csw(age, marr)", data=dat)` (also `csw0`) | `feols(wage ~ educ + csw(age, marr), data = dat)` (also `csw0`) |
+| Cumulative stepwise fixed effects | `pf.feols("wage ~ educ | csw(year, statefips)", data=dat)` | `feols(wage ~ educ | csw(year, statefips), data = dat)` |
+| Macros (emulated via f-string) | `ctrls = ["age", "black", "hisp", "marr"]`<br>`pf.feols(f"wage ~ educ + {' + '.join(ctrls)}", data=dat)` | `ctrls = c("age", "black", "hisp", "marr")`<br>`feols(wage ~ educ + .[ctrls], data = dat)` |
+| Wildcards: starts with (emulated) | `pf.feols(f"wage ~ educ + {' + '.join(c for c in dat.columns if c.startswith('x'))}", data=dat)` | `feols(wage ~ educ + ..("^x"), data = dat)` |
+| Wildcards: ends with (emulated) | `pf.feols(f"wage ~ educ + {' + '.join(c for c in dat.columns if c.endswith('sp'))}", data=dat)` | `feols(wage ~ educ + ..("sp$"), data = dat)` |
+| Wildcards: contains (emulated) | `pf.feols(f"wage ~ educ + {' + '.join(c for c in dat.columns if 'ac' in c)}", data=dat)` | `feols(wage ~ educ + ..("ac"), data = dat)` |
+
+### Interactions
+
+| Task | `pyfixest` | `fixest` |
+|---|---|---|
+| Continuous × continuous (interaction only) | `pf.feols("wage ~ educ:age", data=dat)` | `feols(wage ~ educ:age, data = dat)` |
+| Continuous × continuous (full) | `pf.feols("wage ~ educ*age", data=dat)` | `feols(wage ~ educ*age, data = dat)` |
+| Polynomial (single term) | `pf.feols("wage ~ I(age**2)", data=dat)` | `feols(wage ~ I(age^2), data = dat)` |
+| Polynomial (full) | `pf.feols("wage ~ age + I(age**2)", data=dat)` (or `poly(age, degree=2, raw=True)`) | `feols(wage ~ poly(age, 2, raw = TRUE), data = dat)` |
+| Categorical × categorical (cells) | `pf.feols("wage ~ i(treat, C(hisp))", data=dat)` | `feols(wage ~ i(treat, i.hisp), data = dat)` |
+| Categorical × categorical (nested) | `pf.feols("wage ~ C(treat)/C(hisp)", data=dat)` | `feols(wage ~ factor(treat)/factor(hisp), data = dat)` |
+| Categorical × categorical (full) | `pf.feols("wage ~ C(treat)*C(hisp)", data=dat)` | `feols(wage ~ factor(treat)*factor(hisp), data = dat)` |
+| Categorical × continuous (slopes only) | `pf.feols("wage ~ i(treat, age)", data=dat)` (or `C(treat):age`) | `feols(wage ~ i(treat, age), data = dat)` (or `factor(treat):age`) |
+| Categorical × continuous (nested) | `pf.feols("wage ~ C(treat)/age", data=dat)` | `feols(wage ~ factor(treat)/age, data = dat)` |
+| Categorical × continuous (full) | `pf.feols("wage ~ C(treat)*age", data=dat)` | `feols(wage ~ factor(treat)*age, data = dat)` |
+| Interacted fixed effects | `pf.feols("wage ~ educ | statefips:year", data=dat)` | `feols(wage ~ educ | statefips^year, data = dat)` |
+| Varying slopes (with level intercepts) | `pf.feols("wage ~ educ | statefips[year]", data=dat)` | `feols(wage ~ educ | statefips[year], data = dat)` |
+| Varying slopes (slopes only) | `pf.feols("wage ~ educ | statefips[[year]]", data=dat)` | `feols(wage ~ educ | statefips[[year]], data = dat)` |
+
+In `pyfixest`, a numeric second variable in `i(treat, hisp)` is treated as continuous unless wrapped in `C()` (unlike `fixest`'s `i.hisp` prefix), and arithmetic powers inside `I(...)` use Python's `**` operator (see [Covariate powers](#covariate-powers) below).
+
+### Standard errors
+
+| Task | `pyfixest` | `fixest` |
+|---|---|---|
+| IID | `pf.feols("wage ~ educ", data=dat, vcov="iid")` (default) | `feols(wage ~ educ, data = dat, vcov = "iid")` |
+| Heteroskedasticity-robust (HC1) | `pf.feols("wage ~ educ", data=dat, vcov="HC1")` (or `"hetero"`) | `feols(wage ~ educ, data = dat, vcov = "HC1")` (or `"hetero"`) |
+| Heteroskedasticity-robust (HC3) | `pf.feols("wage ~ educ", data=dat, vcov="HC3")` (without absorbed FE) | `feols(wage ~ educ, data = dat, vcov = sandwich::vcovHC)` |
+| HAC (Newey-West) | `pf.feols("wage ~ educ", data=dat, vcov="NW", vcov_kwargs={"time_id": "year", "panel_id": "unit"})` | `feols(wage ~ educ, data = dat, vcov = "NW", panel.id = ~unit + year)` |
+| HAC (Driscoll-Kraay) | `pf.feols("wage ~ educ", data=dat, vcov="DK", vcov_kwargs={"time_id": "year", "panel_id": "unit"})` | `feols(wage ~ educ, data = dat, vcov = "DK", panel.id = ~unit + year)` |
+| One-way clustered | `pf.feols("wage ~ educ | countyfips", data=dat, vcov={"CRV1": "countyfips"})` | `feols(wage ~ educ | countyfips, data = dat, vcov = ~countyfips)` |
+| Two-way clustered | `pf.feols("wage ~ educ | countyfips + year", data=dat, vcov={"CRV1": "countyfips + year"})` | `feols(wage ~ educ | countyfips + year, data = dat, vcov = ~countyfips + year)` |
+| Interacted clustering (emulated) | `pf.feols("wage ~ educ | countyfips:year", data=dat.assign(cy=dat["countyfips"].astype(str) + "_" + dat["year"].astype(str)), vcov={"CRV1": "cy"})` | `feols(wage ~ educ | countyfips^year, data = dat, vcov = ~countyfips^year)` |
+| Conley spatial SEs | Not supported | `feols(wage ~ educ, data = dat, vcov = conley("25 mi"))` |
+
+For time-series Newey-West standard errors without a panel dimension, omit `"panel_id"` from `vcov_kwargs`; pass `"lag"` to set the lag length explicitly.
+
+### Panel
+
+`pyfixest` does not yet provide built-in formula panel operators (`l()`, `f()`, `d()`). Instead, sort the DataFrame by unit and period (`dat = dat.sort_values(["unit", "year"])`) and construct lagged, lead, or differenced columns before estimation:
+
+| Task | `pyfixest` (emulated via pandas) | `fixest` |
+|---|---|---|
+| Lag (1 period) | `dat["wage_l1"] = dat.groupby("unit")["wage"].shift(1)`<br>`pf.feols("wage ~ educ + wage_l1", data=dat)` | `feols(wage ~ educ + l(wage, 1), data = dat, panel.id = ~unit + year)` |
+| Lead (1 period) | `dat["wage_f1"] = dat.groupby("unit")["wage"].shift(-1)`<br>`pf.feols("wage ~ educ + wage_f1", data=dat)` | `feols(wage ~ educ + f(wage, 1), data = dat, panel.id = ~unit + year)` |
+| First difference | `dat["wage_d1"] = dat.groupby("unit")["wage"].diff()`<br>`pf.feols("wage ~ educ + wage_d1", data=dat)` | `feols(wage ~ educ + d(wage), data = dat, panel.id = ~unit + year)` |
+
+These `.shift()` and `.diff()` expressions assume contiguous periods within each unit; if a panel has time gaps, reindex the time grid before shifting.
 
 ## Intentional formula differences
 

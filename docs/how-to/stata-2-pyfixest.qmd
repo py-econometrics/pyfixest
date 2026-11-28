@@ -21,7 +21,81 @@ which includes a section on
 or [Tidy Finance with Python](https://www.tidy-finance.org/python/) by Christopher
 Scheuch, Stefan Voigt, Patrick Weiss, and Christoph Frey. You can also check out the fixest section
 of [stata2r](https://stata2r.github.io/fixest.html) as there is a lot of overlap between fixest and PyFixest
-syntax.
+syntax, as well as the [`pyfixest` vs `fixest` comparison](../explanation/compare-fixest-pyfixest.qmd).
+
+# Syntax Comparison
+
+The tables below map common Stata (`reg`, `reghdfe`, `ivreghdfe`, `logit`, `ppmlhdfe`) commands to `pyfixest` (assuming `import pyfixest as pf` and a DataFrame `dat`). Where Stata provides macros, variable-name wildcards, or panel time-series operators that are not part of `pyfixest`'s formula language, standard Python f-strings, list comprehensions, and pandas/polars DataFrame transforms give direct equivalents.
+
+## Models
+
+| Task | `pyfixest` | Stata |
+|---|---|---|
+| Simple OLS | `pf.feols("wage ~ educ + age", data=dat)` | `reg wage educ age` |
+| Categorical regressor | `pf.feols("wage ~ educ + i(treat)", data=dat)` (or `C(treat)`) | `reg wage educ i.treat` |
+| Categorical regressor (reference level) | `pf.feols("wage ~ educ + i(treat, ref=1)", data=dat)` | `reg wage educ ib1.treat` |
+| Fixed effects (iid SEs) | `pf.feols("wage ~ educ | countyfips", data=dat)` | `reghdfe wage educ, absorb(countyfips)` |
+| Fixed effects (clustered SEs) | `pf.feols("wage ~ educ | countyfips", data=dat, vcov={"CRV1": "countyfips"})` | `reghdfe wage educ, absorb(countyfips) vce(cluster countyfips)` |
+| Observation weights | `pf.feols("wage ~ educ + i(treat)", data=dat, weights="w")` | `reg wage educ i.treat [aw = w]` |
+| Instrumental variables (2SLS) | `pf.feols("wage ~ marr + [educ ~ age] | countyfips", data=dat)` | `ivreghdfe wage marr (educ = age), absorb(countyfips)` |
+| Nonlinear model (Logit / Probit) | `pf.feglm("marr ~ age + black + hisp", data=dat, family="logit")` | `logit marr age black hisp` |
+| Nonlinear model (Poisson) | `pf.fepois("count_y ~ age + black + hisp | statefips + year", data=dat, vcov={"CRV1": "statefips"})` | `ppmlhdfe count_y age black hisp, absorb(statefips year) vce(cluster statefips)` |
+| Sample split | `pf.feols("wage ~ educ | countyfips", data=dat, split="hisp")` (or `fsplit="hisp"`) | `bysort hisp: reghdfe wage educ, absorb(countyfips)` |
+| Multiple dependent variables | `pf.feols("sw(wage, educ) ~ age + marr | countyfips + year", data=dat)` | `foreach` loop |
+| Stepwise estimation | `pf.feols("wage ~ educ + sw(age, marr)", data=dat)` (also `sw0`, `mvsw`) | `foreach` loop |
+| Cumulative stepwise estimation | `pf.feols("wage ~ educ + csw(age, marr)", data=dat)` (also `csw0`) | `foreach` loop |
+| Cumulative stepwise fixed effects | `pf.feols("wage ~ educ | csw(year, statefips)", data=dat)` | `foreach` loop |
+| Macros (emulated via f-string) | `ctrls = ["age", "black", "hisp", "marr"]`<br>`pf.feols(f"wage ~ educ + {' + '.join(ctrls)}", data=dat)` | `local ctrls age black hisp marr`<br>``reg wage educ `ctrls'`` |
+| Wildcards: starts with (emulated) | `pf.feols(f"wage ~ educ + {' + '.join(c for c in dat.columns if c.startswith('x'))}", data=dat)` | `reg wage educ x*` |
+| Wildcards: ends with (emulated) | `pf.feols(f"wage ~ educ + {' + '.join(c for c in dat.columns if c.endswith('sp'))}", data=dat)` | `reg wage educ *sp` |
+| Wildcards: contains (emulated) | `pf.feols(f"wage ~ educ + {' + '.join(c for c in dat.columns if 'ac' in c)}", data=dat)` | `reg wage educ *ac*` |
+
+Pass `weights_type="fweights"` for Stata frequency weights (`[fw = w]`); analytic weights (`"aweights"`) are the default.
+
+## Interactions
+
+| Task | `pyfixest` | Stata |
+|---|---|---|
+| Continuous × continuous (interaction only) | `pf.feols("wage ~ educ:age", data=dat)` | `reg wage c.educ#c.age` |
+| Continuous × continuous (full) | `pf.feols("wage ~ educ*age", data=dat)` | `reg wage c.educ##c.age` |
+| Polynomial (single term) | `pf.feols("wage ~ I(age**2)", data=dat)` | `reg wage c.age#c.age` |
+| Polynomial (full) | `pf.feols("wage ~ age + I(age**2)", data=dat)` (or `poly(age, degree=2, raw=True)`) | `reg wage c.age##c.age` |
+| Categorical × categorical (cells) | `pf.feols("wage ~ i(treat, C(hisp))", data=dat)` | `reg wage i.treat#i.hisp` |
+| Categorical × categorical (nested) | `pf.feols("wage ~ C(treat)/C(hisp)", data=dat)` | `reg wage i.treat i.treat#i.hisp` |
+| Categorical × categorical (full) | `pf.feols("wage ~ C(treat)*C(hisp)", data=dat)` | `reg wage i.treat##i.hisp` |
+| Categorical × continuous (slopes only) | `pf.feols("wage ~ i(treat, age)", data=dat)` (or `C(treat):age`) | `reg wage i.treat#c.age` |
+| Categorical × continuous (nested) | `pf.feols("wage ~ C(treat)/age", data=dat)` | `reg wage i.treat i.treat#c.age` |
+| Categorical × continuous (full) | `pf.feols("wage ~ C(treat)*age", data=dat)` | `reg wage i.treat##c.age` |
+| Interacted fixed effects | `pf.feols("wage ~ educ | statefips:year", data=dat)` | `reghdfe wage educ, absorb(statefips#year)` |
+| Varying slopes (with level intercepts) | `pf.feols("wage ~ educ | statefips[year]", data=dat)` | `reghdfe wage educ, absorb(statefips##c.year)` |
+| Varying slopes (slopes only) | `pf.feols("wage ~ educ | statefips[[year]]", data=dat)` | `reghdfe wage educ, absorb(statefips#c.year)` |
+
+## Standard Errors
+
+| Task | `pyfixest` | Stata |
+|---|---|---|
+| IID | `pf.feols("wage ~ educ", data=dat, vcov="iid")` (default) | `reg wage educ` |
+| Heteroskedasticity-robust (HC1) | `pf.feols("wage ~ educ", data=dat, vcov="HC1")` (or `"hetero"`) | `reg wage educ, vce(robust)` |
+| Heteroskedasticity-robust (HC3) | `pf.feols("wage ~ educ", data=dat, vcov="HC3", ssc=pf.ssc(k_adj=False))` (without absorbed FE) | `reg wage educ, vce(hc3)` |
+| HAC (Newey-West) | `pf.feols("wage ~ educ", data=dat, vcov="NW", vcov_kwargs={"time_id": "year", "panel_id": "unit", "lag": 2})` | `newey wage educ, lag(2)` (after `xtset unit year`) |
+| HAC (Driscoll-Kraay) | `pf.feols("wage ~ educ", data=dat, vcov="DK", vcov_kwargs={"time_id": "year", "panel_id": "unit", "lag": 2})` | `xtscc wage educ, lag(2)` (after `xtset unit year`) |
+| One-way clustered | `pf.feols("wage ~ educ | countyfips", data=dat, vcov={"CRV1": "countyfips"})` | `reghdfe wage educ, absorb(countyfips) vce(cluster countyfips)` |
+| Two-way clustered | `pf.feols("wage ~ educ | countyfips + year", data=dat, vcov={"CRV1": "countyfips + year"}, ssc=pf.ssc(G_df="conventional"))` | `reghdfe wage educ, absorb(countyfips year) vce(cluster countyfips year)` |
+| Interacted clustering (emulated) | `pf.feols("wage ~ educ | countyfips:year", data=dat.assign(cy=dat["countyfips"].astype(str) + "_" + dat["year"].astype(str)), vcov={"CRV1": "cy"})` | `reghdfe wage educ, absorb(countyfips#year) vce(cluster countyfips#year)` |
+
+See the sections below for worked examples of `ssc=pf.ssc(k_adj=False)` (HC3) and `ssc=pf.ssc(G_df="conventional")` (two-way clustering).
+
+## Panel
+
+`pyfixest` does not yet provide built-in formula panel operators (`L.`, `F.`, `D.`). Instead, sort the DataFrame by unit and period (`dat = dat.sort_values(["unit", "year"])`) and construct lagged, lead, or differenced columns before estimation (assuming `xtset unit year` in Stata):
+
+| Task | `pyfixest` (emulated via pandas) | Stata |
+|---|---|---|
+| Lag (1 period) | `dat["wage_l1"] = dat.groupby("unit")["wage"].shift(1)`<br>`pf.feols("wage ~ educ + wage_l1", data=dat)` | `reg wage educ L1.wage` |
+| Lead (1 period) | `dat["wage_f1"] = dat.groupby("unit")["wage"].shift(-1)`<br>`pf.feols("wage ~ educ + wage_f1", data=dat)` | `reg wage educ F1.wage` |
+| First difference | `dat["wage_d1"] = dat.groupby("unit")["wage"].diff()`<br>`pf.feols("wage ~ educ + wage_d1", data=dat)` | `reg wage educ D.wage` |
+
+These `.shift()` and `.diff()` expressions assume contiguous periods within each unit; if a panel has time gaps, reindex the time grid before shifting.
 
 # Data
 
