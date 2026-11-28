@@ -1,3 +1,19 @@
+"""Parse fixest-style formulas into Formulaic stages and fixed-effect specs.
+
+Parser contract for fixed-effect subscripts
+-------------------------------------------
+In fixed-effects position (after `|`), every Python-evaluated Formulaic factor
+(`Factor.EvalMethod.PYTHON`) whose AST is `ast.Subscript` is reserved for
+varying-slope syntax (`levels[slopes]` or `levels[[slopes]]`), not ordinary
+Python indexing (such as `frame["f1"]` or `{frame["f1"]}`).
+
+Backtick-quoted names that contain brackets (such as `` `f1[0]` `` or
+`` `frame["f1"]` ``) parse as `Factor.EvalMethod.LOOKUP` factors and remain
+ordinary fixed-effect lookups rather than varying slopes. Materialization
+separately restricts fixed-effect level columns to existing data columns with
+valid Python identifier names.
+"""
+
 from __future__ import annotations
 
 import ast
@@ -120,7 +136,14 @@ class FixedEffectSpecification:
 
     @classmethod
     def from_term(cls, term: Term) -> FixedEffectSpecification:
-        """Convert one Formulaic fixed-effect term to a symbolic effect spec."""
+        """Convert one Formulaic fixed-effect term to a symbolic effect spec.
+
+        Every `Factor.EvalMethod.PYTHON` factor whose AST is `ast.Subscript`
+        is reserved for varying-slope syntax (`levels[slopes]` or
+        `levels[[slopes]]`), not Python indexing such as `frame["f1"]`.
+        Backtick-quoted names containing brackets (such as `` `f1[0]` ``) have
+        `Factor.EvalMethod.LOOKUP` and remain ordinary fixed-effect lookups.
+        """
         varying_slope_expressions: list[tuple[ast.Subscript, int]] = []
         for position, factor in enumerate(term.factors):
             factor_expression = _factor_ast(factor)
@@ -588,6 +611,9 @@ class Formula:
         """Fixed effects represented as symbolic `within::Effect` terms.
 
         Effects on the same levels are merged, so `f1 + f1[[z]]` is `f1[z]`.
+        Python subscript expressions (`ast.Subscript`) in fixed-effects
+        position are reserved for varying slopes rather than Python indexing;
+        backtick-quoted bracket names remain lookup factors.
         """
         if not self.is_fixed_effects:
             return ()

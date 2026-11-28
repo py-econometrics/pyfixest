@@ -113,6 +113,22 @@ intercept of a slope-only model:
 pf.feols("Y ~ X1 | f1[[X2]]", data=data).coef()
 ```
 
+Square-bracket subscript expressions after `|` (such as `f1[X2]`, `f1[[X2]]`,
+or `frame["f1"]`) are reserved for varying-slope syntax rather than Python
+indexing into a context object. To absorb an indexed series or a column whose
+name contains brackets, store it in `data` under a valid Python identifier
+name before estimation:
+
+```{python}
+data_indexed = data.assign(firm=data["f1"])
+pf.feols("Y ~ X1 | firm", data=data_indexed).coef()
+```
+
+Backtick-quoted names containing brackets (such as `` `f1[0]` ``) remain
+literal column lookups rather than varying slopes; they work for dependent
+variables, regressors, and instruments, while fixed-effect columns must still
+use valid Python identifier names during estimation.
+
 ## Instrumental Variables (IV) Syntax
 
 For IV estimation, `PyFixest` 0.70 uses Formulaic's bracketed multistage syntax.
