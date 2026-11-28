@@ -93,7 +93,7 @@ class GelbachResults:
             return self.relative_to_direct
         else:
             raise ValueError(
-                f"relative_to must be None, 'explained', or 'direct'. Got {relative_to}"
+                f"relative_to must be None, 'explained', or 'direct'; got {relative_to!r}."
             )
 
 
@@ -585,7 +585,7 @@ class GelbachDecomposition:
 
         if not self.only_coef:
             if not 0 < alpha < 1:
-                raise ValueError(f"alpha must be in (0, 1). Got {alpha}.")
+                raise ValueError(f"alpha must be in (0, 1); got {alpha!r}.")
             absolute_df = pd.concat(
                 [absolute_df, self._compute_ci(self._bootstrap_absolute_df, alpha)],
                 axis=1,
@@ -804,7 +804,9 @@ class GelbachDecomposition:
         from maketables import MTable
 
         if column_heads is not None and len(column_heads) != 3:
-            raise ValueError("The 'column_heads' parameter must be a list of length 3.")
+            raise ValueError(
+                f"column_heads must be a list of length 3; got {column_heads!r}."
+            )
 
         panels_arg_to_label = PANEL_ALIASES
 
@@ -833,7 +835,7 @@ class GelbachDecomposition:
 
         if panel_heads is not None and len(panel_heads) != len(panel_list):
             raise ValueError(
-                f"The 'panel_heads' parameter must have length {len(panel_list)} to match the number of panels panels. Got {len(panel_heads)}."
+                f"panel_heads must have length {len(panel_list)} to match the number of panels; got {panel_heads!r}."
             )
 
         digits = kwargs.get("digits", 3)

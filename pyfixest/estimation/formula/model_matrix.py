@@ -296,7 +296,7 @@ class ModelMatrix:
         )
         self._drop(
             ~is_finite_row,
-            "rows with infinite values",
+            "with an infinite value.",
             stage="infinite",
         )
         if self._weights_column_names is not None:
@@ -306,7 +306,7 @@ class ModelMatrix:
             ).any(axis=1)
             self._drop(
                 is_zero_weight,
-                "rows with zero weight",
+                "with zero weight.",
                 stage="zero_weight",
             )
         if self._fixed_effects_column_names is not None:
@@ -349,18 +349,21 @@ class ModelMatrix:
         ]
         if drop_singletons and intercept_columns:
             fixed_effects = self._data.loc[:, intercept_columns]
-            self._drop(
-                detect_singletons(fixed_effects.to_numpy()),
-                "singleton fixed effect(s)",
-                stage="singleton",
+            is_singleton = detect_singletons(fixed_effects.to_numpy())
+            n_singletons = int(is_singleton.sum())
+            reason = (
+                'in a singleton fixed-effect level. Set fixef_rm="none" to keep it.'
+                if n_singletons == 1
+                else 'in singleton fixed-effect levels. Set fixef_rm="none" to keep them.'
             )
+            self._drop(is_singleton, reason, stage="singleton")
 
     def _drop(
         self, is_dropped: NDArray[np.bool_], reason: str, *, stage: DropStageOptions
     ) -> None:
         """Drop the masked rows from `self._data` and count them under `stage`.
 
-        `reason` completes the warning "{n} {reason} dropped from the model."
+        `reason` completes the warning "Dropped {n} row(s) {reason}"
         """
         n_dropped = int(is_dropped.sum())
         if not n_dropped:
@@ -373,7 +376,8 @@ class ModelMatrix:
             counts, **{stage: getattr(counts, stage) + n_dropped}
         )
         self._data = self._data.loc[~is_dropped]
-        warnings.warn(f"{n_dropped} {reason} dropped from the model.")
+        rows = "row" if n_dropped == 1 else "rows"
+        warnings.warn(f"Dropped {n_dropped} {rows} {reason}")
 
     def without_rows(self, rows: list[int], *, stage: DropStageOptions) -> ModelMatrix:
         """Return a shallow copy without ``rows``, counted under ``stage``.

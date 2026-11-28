@@ -154,7 +154,7 @@ class QuantregMulti:
 
         else:
             raise ValueError(
-                f"Multi method needs to be of type 'cfm1' or 'cfm2' but is {self.multi_method}."
+                f"multi_method must be 'cfm1' or 'cfm2'; got {self.multi_method!r}."
             )
 
         for quantreg in self.all_quantregs.values():

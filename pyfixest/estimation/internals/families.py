@@ -154,8 +154,8 @@ def _check_y_nonneg(Y: np.ndarray) -> None:
     negative = int(np.count_nonzero(Y < 0))
     if negative:
         raise ValueError(
-            "The dependent variable must be weakly positive. Poisson permits zero "
-            f"but found {negative} negative values on the estimation sample. "
+            "The dependent variable of a Poisson model must be non-negative; "
+            f"found {negative} negative values on the estimation sample. "
             "Check the dependent variable before refitting."
         )
 

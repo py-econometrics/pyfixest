@@ -76,7 +76,7 @@ reg Y X1
 *        _cons |   .9185178   .1118212     8.21   0.000     .6990856     1.13795
 * ------------------------------------------------------------------------------
 
-reg y X1 X2
+reg Y X1 X2
 
 *       Source |       SS           df       MS      Number of obs   =       998
 * -------------+----------------------------------   F(2, 995)       =    106.99
@@ -439,7 +439,7 @@ reghdfe Y X1 X2, absorb(f1) cluster(f1)
 For multiple fixed effects you could do
 
 ```{python}
-fit11 = pf.feols("Y ~ X1 + X2 | f1 + f2", data=df)
+fit11 = pf.feols("Y ~ X1 + X2 | f1 + f2", data=df, vcov={"CRV1": "f1"})
 fit11.summary()
 ```
 
@@ -476,5 +476,6 @@ reghdfe Y X1 X2, absorb(f1 f2) cluster(f1)
 * * = FE nested within cluster; treated as redundant for DoF computation
 ```
 
-Note: To cluster standard errors by a specific group, use the `vcov` argument.
+Note: `pf.feols` uses iid standard errors by default, so the `vcov` argument is
+required to match the `cluster()` option in `reghdfe`, as in `fit11` above.
 See the `fit8` example above for how to specify two way clustering.

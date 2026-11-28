@@ -73,21 +73,21 @@ def _estimation_input_checks(
     if not isinstance(data, pd.DataFrame):
         data = _narwhals_to_pandas(data)
     if not isinstance(fixef_rm, str):
-        raise TypeError("fixef_rm must be a string")
+        raise TypeError(f"fixef_rm must be a string; got {fixef_rm!r}.")
     if not isinstance(collin_tol, float):
-        raise TypeError("collin_tol must be a float")
+        raise TypeError(f"collin_tol must be a float; got {collin_tol!r}.")
 
     if fixef_rm not in ["none", "singleton"]:
-        raise ValueError("fixef_rm must be either 'none' or 'singleton'.")
+        raise ValueError(
+            f"fixef_rm must be either 'none' or 'singleton'; got {fixef_rm!r}."
+        )
     if not 0 < collin_tol < 1:
         raise ValueError(
             f"collin_tol must be greater than 0 and less than 1; got {collin_tol!r}."
         )
 
     if not (isinstance(weights, str) or weights is None):
-        raise ValueError(
-            f"weights must be a string or None but you provided weights = {weights}."
-        )
+        raise ValueError(f"weights must be a string or None; got weights={weights!r}.")
     if weights is not None and weights not in data.columns:
         raise ValueError(
             f"weights must be a column in data; got weights={weights!r}."
@@ -104,11 +104,8 @@ def _estimation_input_checks(
 
     if weights_type not in ["aweights", "fweights"]:
         raise ValueError(
-            f"""
-            The `weights_type` argument must be of type `aweights`
-            (for analytical / precision weights) or `fweights`
-            (for frequency weights) but it is {weights_type}.
-            """
+            "weights_type must be 'aweights' (analytic weights) or "
+            f"'fweights' (frequency weights); got {weights_type!r}."
         )
 
     if reps is not None:
@@ -122,10 +119,10 @@ def _estimation_input_checks(
         raise TypeError("The function argument `seed` must be of type int.")
 
     if split is not None and not isinstance(split, str):
-        raise TypeError("The function argument split needs to be of type str.")
+        raise TypeError(f"split must be a string or None; got {split!r}.")
 
     if fsplit is not None and not isinstance(fsplit, str):
-        raise TypeError("The function argument fsplit needs to be of type str.")
+        raise TypeError(f"fsplit must be a string or None; got {fsplit!r}.")
 
     if split is not None and fsplit is not None and split != fsplit:
         raise ValueError(
@@ -149,12 +146,13 @@ def _estimation_input_checks(
     if separation_check is not None:
         if not isinstance(separation_check, list):
             raise TypeError(
-                "The function argument `separation_check` must be of type list."
+                f"separation_check must be a list; got {separation_check!r}."
             )
 
         if not all(x in ["fe", "ir"] for x in separation_check):
             raise ValueError(
-                "The function argument `separation_check` must be a list of strings containing 'fe' and/or 'ir'."
+                "separation_check must be a list of strings containing 'fe' "
+                f"and/or 'ir'; got {separation_check!r}."
             )
 
     for column in vcov.clustervar:

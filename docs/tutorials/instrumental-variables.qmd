@@ -9,7 +9,7 @@ toc: true
 toc-title: "On this page"
 bibliography: references.bib
 nocite: |
-  @wooldridge2010, @neal2020, @lundborg2017, @borusyak2022, @oleapflueger2013, @stockyogo2005
+  @wooldridge2010, @neal2020, @lundborg2017, @borusyak2022, @oleapflueger2013, @stockyogo2005, @staigerstock1997
 ---
 
 ::: {.callout-note}
@@ -115,7 +115,7 @@ fit_iv = pf.feols("Y ~ X2 + [X1 ~ Z1] | f1 + f2", data=data)
 The former fixest-style syntax, `Y ~ X2 | f1 + f2 | X1 ~ Z1`, still works in
 0.70, but raises a `PyfixestDeprecationWarning` (a `FutureWarning`) and will become an error in a future
 release. Update formulas to the bracketed syntax above. See the
-[Formula Parsing on `formulaic` section of the changelog](/changelog.qmd#formula-parsing-on-formulaic)
+[Formulas Parsed by `formulaic` section of the changelog](/changelog.qmd#formulas-parsed-by-formulaic)
 for the full set of formula-parsing changes in 0.70.
 :::
 
@@ -147,7 +147,7 @@ ivf_df = pf.get_ivf_data()
 ivf_df.head()
 ```
 
-We create a synthetic dataset with $N = 2{,}000$ observations. The **true causal effect** of `num_children` on `earnings` is $\beta = -0.15$ — this is the treatment effect the IV estimator should recover (full DGP in the [Appendix](#appendix-dgp-design-notes)).
+We create a synthetic dataset with $N = 2{,}000$ observations. The **true causal effect** of `num_children` on `earnings` is $\beta = -0.15$ — this is the treatment effect the IV estimator should recover (full DGP in [`pf.get_ivf_data()`](/reference/utils.dgps.get_ivf_data.qmd)).
 
 ### Naive OLS
 
@@ -360,7 +360,7 @@ Weak instruments, which are only loosely correlated with the endogenous regresso
 
 ### The First-Stage F-Statistic
 
-Every IV fit estimates its first stage and reports the **first-stage F-statistic**, which tests $H_0\colon \pi = 0$ (all instrument coefficients are jointly zero). The classic rule of thumb is $F > 10$ for iid errors (@stockyogo2005).
+Every IV fit estimates its first stage and reports the **first-stage F-statistic**, which tests $H_0\colon \pi = 0$ (all instrument coefficients are jointly zero). The classic rule of thumb is $F > 10$ for iid errors (@staigerstock1997).
 
 
 ```{python}
@@ -375,7 +375,7 @@ print(f"First-stage p-value:     {diagnostics.p_value:.4f}")
 
 ### The Effective F-Statistic
 
-The standard F-statistic can be misleading when there are multiple endogenous regressors or when errors are non-homoskedastic. The **effective F-statistic** (@oleapflueger2013) is a more robust measure of instrument strength that remains valid under heteroskedasticity:
+The standard F-statistic can be misleading when errors are non-homoskedastic. The **effective F-statistic** (@oleapflueger2013) is a more robust measure of instrument strength that remains valid under heteroskedasticity:
 
 $$
 F_{\text{eff}} = \frac{\hat{\pi}' Q_{ZZ} \hat{\pi}}{\text{tr}(\hat{\Sigma} \, Q_{ZZ})}

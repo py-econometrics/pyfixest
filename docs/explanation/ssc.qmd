@@ -12,25 +12,33 @@ toc-title: "On this page"
 
 The `fixest` R package provides various options for small-sample corrections. While it has an excellent [vignette](https://cran.r-project.org/web/packages/fixest/vignettes/standard_errors.html) on the topic, reproducing its behavior in `pyfixest` took more time than expected. So that future developers (and my future self) can stay sane, I’ve compiled all of my hard-earned understanding of how small-sample corrections work in `fixest` and how they are implemented in `pyfixest` in this document.
 
-In both `fixest` and `pyfixest`, small-sample corrections are controlled by the `ssc` function. In `pyfixest`, `ssc` accepts four arguments: `k_adj`, `G_adj`, `k_fixef` and `G_df`.
+In both `fixest` and `pyfixest`, small-sample corrections are controlled by the `ssc` function. In `pyfixest`, `ssc` accepts four arguments: `k_adj`, `G_adj`, `k_fixef` and `G_df`. The defaults are `pf.ssc(k_adj=True, k_fixef="nonnested", G_adj=True, G_df="min")`.
 
 Based on these inputs, the adjusted variance-covariance matrix is computed as:
 
 ```
-vcov_k_adj = adj_val(N, df_k) if k_adj else 1
-          * G_adj_val(G, G_df) if G_adj else 1
-          * vcov
+vcov_adjusted = k_adj_val * G_adj_val * vcov
+```
+
+with
+
+```
+k_adj_val = (N - 1) / (N - df_k)   if k_adj is True (N / (N - df_k) for heteroskedastic errors)
+          = 1                      otherwise
+
+G_adj_val = G / (G - 1)            if G_adj is True and the errors are clustered or HAC
+          = 1                      otherwise
 ```
 
 Where:
 
-- **`k_adj`**: Enables or disables the first scalar adjustment.
-- **`G_adj`**: Enables or disables the second scalar adjustment. This argument is only relevant / applied to clustered errors.
+- **`k_adj`**: Enables or disables the first scalar adjustment, `k_adj_val`.
+- **`G_adj`**: Enables or disables the second scalar adjustment, `G_adj_val`. This argument only has an effect for clustered and HAC errors. It has no effect for IID or heteroskedastic errors.
 - **`vcov`**: The unadjusted variance-covariance matrix.
-- **`df_k`**: The number of estimated parameters considered in the first adjustment. Impacts `adj_val`.
+- **`df_k`**: The number of estimated parameters considered in the first adjustment. Impacts `k_adj_val`.
 - **`k_fixef`**: Determines how `df_k` is computed (how fixed effects are counted).
-- **`G_df`**: Determines how `G_adj_val` is computed (only relevant for multi-way clustering).
-- **`G`**: The number of unique clusters (`G = N` for heteroskedastic errors).
+- **`G_df`**: Determines which `G` is used in `G_adj_val` (only relevant for multi-way clustering).
+- **`G`**: The number of unique clusters. For HAC errors, `G` is the number of time periods. `G` is not used for IID or heteroskedastic errors.
 
 Outside of this formula, we have **`df_t`**, which is the degrees of freedom used for p-values and confidence intervals:
 
@@ -45,17 +53,17 @@ Outside of this formula, we have **`df_t`**, which is the degrees of freedom use
 
 If `k_adj = True`, the adjustment factor is:
 
-`adj_val = (N - 1) / (N - df_k)`
+`k_adj_val = (N - 1) / (N - df_k)`
 
 If `k_adj = False`, no adjustment is applied.
 
-Note that for `k_adj = True` and heteroskedastic errors, the applied correction is `N / (N-k)`.
+Note that for `k_adj = True` and heteroskedastic errors, the applied correction is `N / (N - df_k)`.
 
 ---
 
 ## `k_fixef`
 
-The `k_fixef` argument controls how fixed effects contribute to `df_k`, and thus to `adj_val`. It supports three options:
+The `k_fixef` argument controls how fixed effects contribute to `df_k`, and thus to `k_adj_val`. It supports three options:
 
 - **`"none"`**
 - **`"full"`**
@@ -94,18 +102,15 @@ where `k_fe_nested` is the count of nested fixed effects. For cluster fixed effe
 
 ## `G_adj`
 
-This argument is only relevant for clustered errors.
+This argument only has an effect for clustered and HAC errors.
 
 If `G_adj = True`, we apply a second correction:
 
-`G_df_val = G / (G - 1)`
+`G_adj_val = G / (G - 1)`
 
-Where:
+Where `G` is the number of clusters for clustered errors, or the number of time periods for HAC errors.
 
-- `G` is the number of clusters for clustered errors, or `N` for heteroskedastic errors.
-- This follows the approach in R’s `sandwich` package, interpreting heteroskedastic errors as “singleton clusters.”
-
-> *Tip:* If `G_adj = True` for IID errors, `G_df_val` defaults to `1`. For *heteroskedastic erros*, despite its name, `G_adj=True` will apply an adjustment of (N-1) / N, as there are $G = N$ singleton clusters.
+> *Tip:* For IID and heteroskedastic errors, `G_adj` has no effect, so `G_adj_val = 1` whether `G_adj` is `True` or `False`. For heteroskedastic errors, only `k_adj` matters: `k_adj = True` applies `N / (N - df_k)`. For IID errors, `k_adj = True` applies `(N - 1) / (N - df_k)`.
 
 ---
 
@@ -134,8 +139,8 @@ For multi-way clustering:
 - **Two-way**: `df_t = min(G_1 - 1, G_2 - 1)`
 - **Three-way**: `df_t = min(G_1 - 1, G_2 - 1, G_3 - 1)` *(not currently supported)*
 
-See [this implementation](https://github.com/py-econometrics/pyfixest/blob/864da9c0d1797aff70e3f5b420e4c73f7256642d/pyfixest/estimation/feols_.py#L851) for details.
+See [this implementation](https://github.com/py-econometrics/pyfixest/blob/master/pyfixest/estimation/internals/vcov_utils.py) for details.
 
 # In Code
 
-All of the above logic is implemented [here](https://github.com/py-econometrics/pyfixest/blob/69acf9d22eab4300853d80264ee6d01bc4bdcb35/pyfixest/utils/utils.py#L108).
+All of the above logic is implemented in [`get_ssc()`](/reference/utils.utils.get_ssc.qmd).

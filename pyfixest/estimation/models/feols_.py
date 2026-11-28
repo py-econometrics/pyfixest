@@ -1410,20 +1410,24 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
                 "See https://pyfixest.org/reference/estimation.models.feols_.Feols.ccv.html"
             )
         if not isinstance(treatment, str):
-            raise TypeError("treatment must be a string.")
+            raise TypeError(f"ccv() treatment must be a string; got {treatment!r}.")
         if not (isinstance(cluster, str) or cluster is None):
-            raise TypeError("cluster must be a string or None.")
+            raise TypeError(f"ccv() cluster must be a string or None; got {cluster!r}.")
         if not (isinstance(seed, int) or seed is None):
-            raise TypeError("seed must be an integer or None.")
+            raise TypeError(f"ccv() seed must be an integer or None; got {seed!r}.")
         if not isinstance(n_splits, int):
-            raise TypeError("n_splits must be an integer.")
+            raise TypeError(f"ccv() n_splits must be an integer; got {n_splits!r}.")
         if n_splits < 1:
-            raise ValueError(f"n_splits must be a positive integer, got {n_splits}.")
+            raise ValueError(
+                f"ccv() n_splits must be a positive integer; got {n_splits!r}."
+            )
         for name, share in (("pk", pk), ("qk", qk)):
             if not isinstance(share, (int, float)):
-                raise TypeError(f"{name} must be a number.")
+                raise TypeError(f"ccv() {name} must be a number; got {share!r}.")
             if not 0 <= share <= 1:
-                raise ValueError(f"{name} must be between 0 and 1, got {share}.")
+                raise ValueError(
+                    f"ccv() {name} must be between 0 and 1; got {share!r}."
+                )
 
         if self.model.has_fixef:
             raise NotImplementedError(
@@ -2276,9 +2280,8 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
 
         if self.options.has_weights:
             raise NotImplementedError(
-                """
-                Regression Weights are not supported with Randomization Inference.
-                """
+                "ritest() does not support observation weights, and this fitted "
+                "model was estimated with them. Refit without `weights`."
             )
 
         require_retained(self, "ritest", "_data")
@@ -2316,9 +2319,9 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
             )
 
         if isinstance(reps, bool) or not isinstance(reps, int):
-            raise TypeError("reps must be an integer.")
+            raise TypeError(f"ritest() reps must be an integer; got {reps!r}.")
         if reps < 1:
-            raise ValueError(f"reps must be a positive integer, got {reps}.")
+            raise ValueError(f"ritest() reps must be a positive integer; got {reps!r}.")
 
         # An assignment-cluster override belongs to this test. Use a local
         # refit with the fit's SSC instead of replacing its stored inference.

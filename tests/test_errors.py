@@ -202,7 +202,7 @@ def test_missing_model_data_errors(
     )
     with pytest.raises(
         MissingModelDataError,
-        match=rf"{match} requires retained model state.*{remedy}",
+        match=rf"`{match}` needs .*did not retain.*{remedy}",
     ):
         operation(fit, data)
 
@@ -490,7 +490,7 @@ def test_iv_identification_valid_designs(
         data["C"] *= control_scale
     fe_suffix = f" | {fixed_effects}" if fixed_effects else ""
     expected_warning = (
-        pytest.warns(UserWarning, match="dropped due to multicollinearity")
+        pytest.warns(UserWarning, match="collinear regressors? (was|were) dropped")
         if fixed_effects
         else nullcontext()
     )
@@ -1110,7 +1110,8 @@ def test_plot_error():
     df = get_data()
     fit = feols("Y ~ X1", data=df)
     with pytest.raises(
-        ValueError, match=r"plot_backend must be either 'lets_plot' or 'matplotlib'\."
+        ValueError,
+        match=r"plot_backend must be either 'lets_plot' or 'matplotlib'; got 'plotnine'\.",
     ):
         fit.coefplot(plot_backend="plotnine")
 
@@ -1158,7 +1159,9 @@ def test_ritest_error(data):
         fit_iv.ritest(resampvar="X1", reps=100)
 
     fit_wls = pf.feols("Y ~ X1", data=data, weights="weights", store_data=False)
-    with pytest.raises(NotImplementedError, match="Weights are not supported"):
+    with pytest.raises(
+        NotImplementedError, match=r"ritest\(\) does not support observation weights"
+    ):
         fit_wls.ritest(resampvar="X1", reps=100)
 
     with pytest.raises(ValueError):
@@ -1212,12 +1215,12 @@ def test_optional_dependency_fallbacks(data, monkeypatch):
         (
             lambda d: feols("Y ~ X1 + I(2 * X1)", data=d),
             UserWarning,
-            "dropped due to multicollinearity",
+            "collinear regressors? (was|were) dropped",
         ),
         (
             lambda d: fepois("Y ~ X1 + I(2 * X1)", data=get_data(model="Fepois")),
             UserWarning,
-            "dropped due to multicollinearity",
+            "collinear regressors? (was|were) dropped",
         ),
         (
             lambda d: fepois(
@@ -1231,7 +1234,7 @@ def test_optional_dependency_fallbacks(data, monkeypatch):
                 ),
             ),
             UserWarning,
-            "observations removed because of separation",
+            "rows? because of separation",
         ),
         (
             lambda d: feols("Y + Y2 ~ X1", data=d),
@@ -1267,7 +1270,7 @@ def test_optional_dependency_fallbacks(data, monkeypatch):
                 plot_backend="matplotlib",
             ),
             UserWarning,
-            "The label key 'not_a_coef' is not in the covariate names",
+            "The `labels` key 'not_a_coef' is not the name of a plotted coefficient",
         ),
         (
             lambda d: pf.coefplot(
@@ -1461,9 +1464,9 @@ def test_errors_panelview():
     "split, fsplit, expected_exception, error_message",
     [
         # Test TypeError for non-string 'split'
-        (123, None, TypeError, "The function argument split needs to be of type str."),
+        (123, None, TypeError, "split must be a string or None; got 123."),
         # Test TypeError for non-string 'fsplit'
-        (None, 456, TypeError, "The function argument fsplit needs to be of type str."),
+        (None, 456, TypeError, "fsplit must be a string or None; got 456."),
         # Test ValueError for split and fsplit not being identical
         (
             "split_column",
@@ -1524,19 +1527,19 @@ def test_separation_check_validations():
 
     with pytest.raises(
         ValueError,
-        match=r"The function argument `separation_check` must be a list of strings containing 'fe' and/or 'ir'\.",
+        match=r"separation_check must be a list of strings containing 'fe' and/or 'ir'; got \['a'\]\.",
     ):
         pf.fepois("Y ~ X1", data=data, separation_check=["a"])
 
     with pytest.raises(
         TypeError,
-        match=r"The function argument `separation_check` must be of type list\.",
+        match=r"separation_check must be a list; got 'fe'\.",
     ):
         pf.fepois("Y ~ X1", data=data, separation_check="fe")
 
     with pytest.raises(
         ValueError,
-        match=r"The function argument `separation_check` must be a list of strings containing 'fe' and/or 'ir'\.",
+        match=r"separation_check must be a list of strings containing 'fe' and/or 'ir'; got \['fe', 'invalid'\]\.",
     ):
         pf.fepois("Y ~ X1", data=data, separation_check=["fe", "invalid"])
 
@@ -1558,7 +1561,7 @@ def test_fepois_rejects_negative_fe_group():
             "f": [0, 0, 0, 1, 1, 1, 2, 2, 2, 1],
         }
     )
-    with pytest.raises(ValueError, match="must be weakly positive"):
+    with pytest.raises(ValueError, match="must be non-negative"):
         pf.fepois("Y ~ X | f", data=data)
 
 
@@ -1906,7 +1909,7 @@ def test_vcov_rejects_empty_clustering_terms(cluster):
 
 @pytest.mark.parametrize("cluster", ["f1+f1", "f1 + f2 + f1"])
 def test_vcov_rejects_repeated_clustering_columns(cluster):
-    with pytest.raises(ValueError, match=r"repeats the clustering columns \['f1'\]"):
+    with pytest.raises(ValueError, match=r"repeats the cluster variables \['f1'\]"):
         pf.feols("Y ~ X1", data=pf.get_data(), vcov={"CRV1": cluster})
 
 

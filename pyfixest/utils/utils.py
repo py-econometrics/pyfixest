@@ -426,7 +426,7 @@ def get_data(N=1000, seed=1234, beta_type="1", error_type="1", model="Feols"):
     elif beta_type == "3":
         beta = np.exp(rng.normal(0, 1, k)).reshape(k, 1)
     else:
-        raise ValueError("beta_type needs to be '1', '2' or '3'.")
+        raise ValueError(f"beta_type must be '1', '2' or '3'; got {beta_type!r}.")
 
     if error_type == "1":
         u = rng.normal(0, 1, N).reshape(N, 1)
@@ -435,7 +435,7 @@ def get_data(N=1000, seed=1234, beta_type="1", error_type="1", model="Feols"):
     elif error_type == "3":
         u = np.exp(rng.normal(0, 1, N)).reshape(N, 1)
     else:
-        raise ValueError("error_type needs to be '1', '2' or '3'.")
+        raise ValueError(f"error_type must be '1', '2' or '3'; got {error_type!r}.")
 
     if model == "Feols":
         Y = (1 + mm.to_numpy() @ beta + u).flatten()
@@ -446,7 +446,7 @@ def get_data(N=1000, seed=1234, beta_type="1", error_type="1", model="Feols"):
         Y = rng.poisson(mu, N)
         Y2 = Y + rng.choice(range(10), N, True)
     else:
-        raise ValueError("model needs to be 'Feols' or 'Fepois'.")
+        raise ValueError(f"model must be 'Feols' or 'Fepois'; got {model!r}.")
 
     Y, Y2 = (pd.Series(x.flatten()) for x in [Y, Y2])
     Y.name, Y2.name = "Y", "Y2"

@@ -554,7 +554,7 @@ class Formula:
         """Terms for the endogenous regressor in an IV formula."""
         if not self.is_instrumental_variable:
             raise AttributeError(
-                "Endogenous variables are available only in instrumental variables specifications."
+                "The formula has no instrument block, so it has no endogenous regressors."
             )
         return get_first_multistage_lhs(self._right_hand_side)
 
@@ -567,7 +567,7 @@ class Formula:
         """
         if not self.is_instrumental_variable:
             raise AttributeError(
-                "Instruments are available only in instrumental variables specifications."
+                "The formula has no instrument block, so it has no instruments."
             )
         instruments = get_first_multistage_rhs(self._right_hand_side)
         return formulaic.formula.SimpleFormula(
@@ -578,7 +578,7 @@ class Formula:
     def fixed_effects(self) -> formulaic.formula.SimpleFormula:
         """The fixed effects of a formula."""
         if not self.is_fixed_effects:
-            raise AttributeError("Not a fixed effects specification")
+            raise AttributeError("The formula has no fixed effects.")
         return formulaic.formula.SimpleFormula(
             terms_without_intercept(self._formula.rhs[1])
         )
@@ -641,7 +641,9 @@ class Formula:
     def as_first_stage(self) -> Formula:
         """Return the parsed OLS specification for an IV first stage."""
         if not self.is_instrumental_variable:
-            raise TypeError("Not an instrumental variable specification.")
+            raise TypeError(
+                "The formula has no instrument block, so it has no first stage."
+            )
         # Controls must survive collinearity selection before excluded instruments.
         # Preserve this order even when a control is an interaction and a
         # redundant instrument is a degree-one transform of that interaction.

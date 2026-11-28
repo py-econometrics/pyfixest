@@ -33,7 +33,7 @@ In the following section, we introduce two chanonical use cases of fixed effects
 ## Application 1: Twin Studies and the Returns to Education
 
 One of the most foundational question in the economics of education is "wow much does an extra year of education raise wages"?
-If we were to simply regress years of education on realized wages, we would likely overstates the return to education as there is a selection bias: *ability* drives both education and wages. Or, in other words, kids with high innate (but unobserved) ability end up with more years of education, but also higher wages! The relation between education and wages might be spurios, as both are driven by the same latent factor.
+If we were to simply regress wages on years of education, we would likely overstates the return to education as there is a selection bias: *ability* drives both education and wages. Or, in other words, kids with high innate (but unobserved) ability end up with more years of education, but also higher wages! The relation between education and wages might be spurios, as both are driven by the same latent factor.
 
  Twin studies aim to correct for this selection effect by comparing twins who share the same genetic endowment. If the latent innate ability is encoded in the genome, then twins with identical gene should have the same latent ability. Under this assumption, any difference in educational attainment between twins is not driven by innate ability. As a result any within‑twin difference in wages can be attributed to differences in schooling rather than unobserved ability.
 
@@ -97,21 +97,21 @@ panel.head()
 ### One-Way FE: Worker Fixed Effects Only
 
 ```{python}
-fit_worker = pf.feols("log_wage ~ experience + tenure + female | worker_id", data=panel)
+fit_worker = pf.feols("log_wage ~ experience + tenure | worker_id", data=panel)
 fit_worker.summary()
 ```
 
 ### Two-Way FE: Worker + Firm Fixed Effects
 
 ```{python}
-fit_twoway = pf.feols("log_wage ~ experience + tenure + female | worker_id + firm_id", data=panel)
+fit_twoway = pf.feols("log_wage ~ experience + tenure | worker_id + firm_id", data=panel)
 fit_twoway.summary()
 ```
 
 ### Adding Year Fixed Effects
 
 ```{python}
-fit_full = pf.feols("log_wage ~ experience + tenure + female | worker_id + firm_id + year", data=panel)
+fit_full = pf.feols("log_wage ~ experience + tenure | worker_id + firm_id + year", data=panel)
 fit_full.summary()
 ```
 
@@ -122,7 +122,7 @@ Here is an interesting historical fact: the first paper (to our knowledge) that 
 ```{python}
 pf.etable(
     [fit_worker, fit_twoway, fit_full],
-    labels={"log_wage": "Log Wage", "experience": "Experience", "tenure": "Tenure", "female": "Female"},
+    labels={"log_wage": "Log Wage", "experience": "Experience", "tenure": "Tenure"},
     felabels={"worker_id": "Worker FE", "firm_id": "Firm FE", "year": "Year FE"},
     caption="Worker-Firm Panel: Adding Fixed Effects Progressively",
 )

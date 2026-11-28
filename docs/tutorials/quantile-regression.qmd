@@ -25,7 +25,7 @@ data = pf.get_data()
 
 Just as in `statsmodels`, the function that runs a quantile regression is `quantreg()`.
 
-Below, we loop over 10 different quantiles.
+Below, we fit nine quantiles, 0.1 to 0.9, in a single call.
 
 ```{python}
 %%capture
@@ -42,11 +42,11 @@ We can inspect the quantile regression results using the dedicated `qplot()` fun
 pf.qplot(fits, nrow = 2)
 ```
 
-We observe some heterogeneity in the intercept, but all other variants are homogeneous across users.
+The intercept rises from about -1.8 at the 0.1 quantile to about 3.5 at the 0.9 quantile, while the coefficients on `X1` (between about -1.1 and -0.9) and `X2` (between about -0.2 and -0.15) vary little across quantiles.
 
 ## Solvers
 
-By default, `pf.quantreg` uses an interior-point solver as in [Koenker and Ng (2004)](http://www.econ.uiuc.edu/~roger/research/sparse/fn3.pdf) (`methd = "fn"`). This is different to e.g. `statsmodels`, which implements an iterated weighted least squares solver.
+By default, `pf.quantreg` uses an interior-point solver as in [Koenker and Ng (2004)](http://www.econ.uiuc.edu/~roger/research/sparse/fn3.pdf) (`method = "fn"`). This is different to e.g. `statsmodels`, which implements an iterated weighted least squares solver.
 
 For big data sets with many observations, it is often sensible to use an interior-point solver with pre-processing (as in [Portnoy and Koenker (1997)](https://experts.illinois.edu/en/publications/the-gaussian-hare-and-the-laplacian-tortoise-computability-of-squ), see [Chernozhukov et al (2019)](https://arxiv.org/abs/1909.05782) for details), which can speed up the estimation time significantly. Because the pre-processing step requires taking a random sample, the method assumes that observations are independent. Additionally, for the purpose of reproducibility, it is advisable to set a seed.
 
@@ -142,15 +142,11 @@ fit_crv = pf.quantreg("Y ~ X1 + X2 + f1", data = data, quantile = 0.5, vcov = {"
 
 ## Performance
 
-Here we benchmark the performance of the solvers accessible via the `method` and `multi_method` arguments.
-
-### Different Solvers
-
-Tba.
+Here we benchmark the performance of the solvers accessible via the `multi_method` argument.
 
 ### Quantile Regression Process
 
-We fit a quantile regression process on $q = 0.1, 0.2, ..., 0.9$ quantiles and vary sample size and number of regressors. We test pyfixest's implementation of the quantile regression process against a "naive" for loop implementation via `statsmodels`. We can see that both `multi_method = "cmf1"` and `multi_method = "cmf2"` outperform
+We fit a quantile regression process on $q = 0.1, 0.2, ..., 0.9$ quantiles and vary sample size and number of regressors. We test pyfixest's implementation of the quantile regression process against a "naive" for loop implementation via `statsmodels`. We can see that both `multi_method = "cfm1"` and `multi_method = "cfm2"` outperform
 the for-loop strategy for large problems. Note that the plot is in log-scale!
 
 ![](../figures/quantreg_benchmarks.png)
