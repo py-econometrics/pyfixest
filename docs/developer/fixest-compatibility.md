@@ -447,6 +447,36 @@ and full inference for the `0 +` models. Observed with R 4.5.3 and `fixest`
 
 **Status:** Intentional; pending maintainer review
 
+### Interaction coefficient names
+
+**pyfixest:** Keeps Formulaic's written variable order inside interaction
+coefficient names. `Y ~ X1 + X2:X1` reports `X2:X1`, and
+`Y ~ X1:Z1:X2 + X2:X1 + Z1` reports `X2:X1` and `X1:Z1:X2`. Numerical
+estimates and inference match the reordered spelling (`X1:X2`, `X1:X2:Z1`),
+but name-based alignment in `etable()`, `coefplot()`, and cross-tool
+comparisons follows the written order.
+
+**`fixest`:** `fixest` 0.14.0 (via R's `terms()`) orders the variables
+within each interaction term by their first appearance in the formula: both
+`Y ~ X1 + X2:X1` and `Y ~ X1:Z1:X2 + X2:X1 + Z1` name the two-way
+interaction `X1:X2`.
+
+**Rationale:** Preserves Formulaic's design-matrix column names rather than
+adding custom name canonicalization on top of the formula engine; the fitted
+model and estimates are identical. Users who want interaction rows aligned
+across models in `etable()` or `coefplot()` should write interacted variables
+in a consistent order. See
+[#1813](https://github.com/py-econometrics/pyfixest/issues/1813), the
+[user-facing
+explanation](../explanation/compare-fixest-pyfixest.qmd#interaction-coefficient-names),
+and [ADR 0004](../adr/0004-wilkinson-formula-semantics.md).
+
+**Tests:**
+`tests/test_formula_parse.py::test_interaction_coefficient_names_preserve_written_order`;
+Formulaic 1.2.2 and R 4.5.3 / `fixest` 0.14.0 observations recorded in #1813.
+
+**Status:** Intentional; pending maintainer review
+
 ## Adding an entry
 
 Add an entry in the same PR that introduces or formalizes the difference: a

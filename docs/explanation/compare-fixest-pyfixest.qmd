@@ -46,6 +46,33 @@ Inside `I(...)`, expressions follow Python arithmetic: `**`
 means exponentiation, while `^` means bitwise XOR. Use `I(X1**2)` when
 translating R's `I(X1^2)`.
 
+### Interaction coefficient names
+
+PyFixest keeps Formulaic's written variable order inside interaction
+coefficient names rather than canonicalizing them by first appearance as R's
+`terms()` and `fixest` 0.14.0 do:
+
+| Formula | PyFixest coefficient names | `fixest` coefficient names |
+|---|---|---|
+| `Y ~ X1 + X2:X1` | `Intercept`, `X1`, `X2:X1` | `(Intercept)`, `X1`, `X1:X2` |
+| `Y ~ X1:Z1:X2 + X2:X1 + Z1` | `Intercept`, `Z1`, `X2:X1`, `X1:Z1:X2` | `(Intercept)`, `Z1`, `X1:X2`, `X1:Z1:X2` |
+
+Estimates and standard errors are identical across variable orders, but
+name-based joins and comparisons differ. Write interacted variables in a
+consistent order across models if you want `pf.etable()` or `pf.coefplot()`
+to align them on the same row, or when comparing tables with `fixest`.
+This is an intentional naming convention; see
+[#1813](https://github.com/py-econometrics/pyfixest/issues/1813).
+
+```python
+import pyfixest as pf
+
+data = pf.get_data()
+fit_written = pf.feols("Y ~ X1 + X2:X1", data=data)
+fit_reordered = pf.feols("Y ~ X1 + X1:X2", data=data)
+fit_three_way = pf.feols("Y ~ X1:Z1:X2 + X2:X1 + Z1", data=data)
+```
+
 ## Setup
 
 

@@ -1039,6 +1039,59 @@ def test_interacted_fixed_effect_matches_manual_interaction(test_data):
     np.testing.assert_allclose(interacted.se(), manual.se())
 
 
+def test_interaction_coefficient_names_preserve_written_order(test_data):
+    """Interaction coefficient names preserve written order with identical estimates."""
+    fit_x2_x1 = pf.feols("Y ~ X1 + X2:X1", data=test_data)
+    fit_x1_x2 = pf.feols("Y ~ X1 + X1:X2", data=test_data)
+
+    assert list(fit_x2_x1.coef().index) == ["Intercept", "X1", "X2:X1"]
+    assert list(fit_x1_x2.coef().index) == ["Intercept", "X1", "X1:X2"]
+    np.testing.assert_allclose(
+        fit_x2_x1.coef().to_numpy(),
+        fit_x1_x2.coef().to_numpy(),
+        rtol=0,
+        atol=1e-12,
+        err_msg="Two-way interaction coefficients across written variable orders",
+    )
+    np.testing.assert_allclose(
+        fit_x2_x1.se().to_numpy(),
+        fit_x1_x2.se().to_numpy(),
+        rtol=0,
+        atol=1e-12,
+        err_msg="Two-way interaction standard errors across written variable orders",
+    )
+
+    fit_three_way = pf.feols("Y ~ X1:Z1:X2 + X2:X1 + Z1", data=test_data)
+    fit_three_way_reordered = pf.feols("Y ~ X1:X2:Z1 + X1:X2 + Z1", data=test_data)
+
+    assert list(fit_three_way.coef().index) == [
+        "Intercept",
+        "Z1",
+        "X2:X1",
+        "X1:Z1:X2",
+    ]
+    assert list(fit_three_way_reordered.coef().index) == [
+        "Intercept",
+        "Z1",
+        "X1:X2",
+        "X1:X2:Z1",
+    ]
+    np.testing.assert_allclose(
+        fit_three_way.coef().to_numpy(),
+        fit_three_way_reordered.coef().to_numpy(),
+        rtol=0,
+        atol=1e-12,
+        err_msg="Three-way interaction coefficients across written variable orders",
+    )
+    np.testing.assert_allclose(
+        fit_three_way.se().to_numpy(),
+        fit_three_way_reordered.se().to_numpy(),
+        rtol=0,
+        atol=1e-12,
+        err_msg="Three-way interaction standard errors across written variable orders",
+    )
+
+
 # =============================================================================
 # Part 3: Edge Case Tests
 # =============================================================================
