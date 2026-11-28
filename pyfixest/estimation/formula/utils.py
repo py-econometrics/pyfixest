@@ -212,7 +212,7 @@ def _preprocess_fixest_multiple_dependents(formula: str) -> str:
         formula_old = formula
         formula = f"{_MultipleEstimationType.sw.name}({', '.join(dependents)}) ~ {rest}"
         warnings.warn(
-            "Specifiying multiple dependent variables with `+` is deprecated and will throw an error in a future version. "
+            "Specifying multiple dependent variables with `+` is deprecated and will throw an error in a future version. "
             f"Instead of `{formula_old}` use `{formula}`",
             DeprecationWarning,
             stacklevel=_find_stack_level(),

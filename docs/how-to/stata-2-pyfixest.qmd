@@ -200,7 +200,7 @@ fit5.summary()
 ```
 
 which matches Stata exactly.  You can read all about the small-sample corrections
-implememnted by `pyfixest` at
+implemented by `pyfixest` at
 [Small-sample corrections](../explanation/ssc.qmd).
 
 ## Clustered Standard Errors

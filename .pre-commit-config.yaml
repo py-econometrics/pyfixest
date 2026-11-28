@@ -42,3 +42,17 @@ repos:
         types_or: [jupyter, pyi, python]
       - id: ruff-format
         types_or: [jupyter, pyi, python]
+  - repo: https://github.com/codespell-project/codespell
+    rev: v2.4.3
+    hooks:
+      - id: codespell
+        # Domain terms and identifiers that codespell flags but are correct here.
+        args: ["--ignore-words-list=burnin,compliers,complier,AER,COO,shat,te,datas,missings"]
+        # Generated quarto cache and fixture data are not edited by hand.
+        exclude: |
+          (?x)^(
+            docs/_freeze/.*|
+            .*\.lock|
+            .*\.csv|
+            .*\.svg
+          )$

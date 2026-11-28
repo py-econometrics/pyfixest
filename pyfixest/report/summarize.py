@@ -138,7 +138,7 @@ def etable(
         Whether to show the rows with fixed effects markers. Default is True.
     felabels: dict, optional
         A dictionary to relabel the fixed effects. Only needed if you want to relabel
-        the FE lines with a different label than the one specied for the respective
+        the FE lines with a different label than the one specified for the respective
         variable in the labels dictionary.
         The command is applied after the `keep` and `drop` commands.
     fe_present: str, optional
