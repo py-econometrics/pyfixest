@@ -105,7 +105,7 @@ Where:
 - `G` is the number of clusters for clustered errors, or `N` for heteroskedastic errors.
 - This follows the approach in R’s `sandwich` package, interpreting heteroskedastic errors as “singleton clusters.”
 
-> *Tip:* If `G_adj = True` for IID errors, `G_df_val` defaults to `1`. For *heteroskedastic erros*, despite its name, `G_adj=True` will apply an adjustment of (N-1) / N, as there are $G = N$ singleton clusters.
+> *Tip:* If `G_adj = True` for IID errors, `G_df_val` defaults to `1`. For *heteroskedastic errors*, despite its name, `G_adj=True` will apply an adjustment of (N-1) / N, as there are $G = N$ singleton clusters.
 
 ---
 

@@ -72,7 +72,7 @@ We see that half of our users are treated after half the time.
 
 In the next step, we will look at three different ways to compute the average treatment effect of our feature on the outcome:
 
-- First, we will compute a standard "difference in means" estimator and conduct a two-sampled t-test for inference. We do this both by hand and by means of linear regression. While standard, we will show that this estimator is relatively inefficient as it throws aways valuable information from the pre-treatment periods.
+- First, we will compute a standard "difference in means" estimator and conduct a two-sampled t-test for inference. We do this both by hand and by means of linear regression. While standard, we will show that this estimator is relatively inefficient as it throws away valuable information from the pre-treatment periods.
 - In a second step, we improve on the difference in means estimator and include pre-treatment measures of the outcome variable to our regression model. In the tech blog world, this method
   is often referred to as CUPED (which stands for "Controlled-experiment Using Pre-Experiment Data" as far as we know). We will demonstrate that CUPED uted leads to a significant reduction in the variance of our estimators. Pre-treatment averages are a "good control" variable because a) under uncondional randomization, pre-treatment averages should be uncorrelated of the treatment assignment and b) pre-treatment averages should be highly predictive of the post-treatment outcome. The intuition here is simply that users will behave similarly "after" the experiment starts / when receiving the treatment than they did before.
 - In a third step, we show that instead of using pre-treatment averages as a regressor, we can simply fit a panel model and control for user and time fixed effect.
@@ -157,7 +157,7 @@ of our users at hand, and we should use it in our favor!
 
 More specifically, instead of throwing away all of the pre-experimental measures, we could instead have used them as pre-treatment regressors!
 
-This should help reduce the variance of our estimators because pre-experimental behavior is likely to be highly predicitive of what users do after the launch of the experiment. Consequently, including these baselines in our regression models should help us "explain residual errors" and thereby reduce the variance of our
+This should help reduce the variance of our estimators because pre-experimental behavior is likely to be highly predictive of what users do after the launch of the experiment. Consequently, including these baselines in our regression models should help us "explain residual errors" and thereby reduce the variance of our
 estimators.
 
 If this works, it's great news, as it allows us to run the same experiment on a smaller number of users and still achieve the same level of power!
@@ -413,7 +413,7 @@ display(power_df)
 ```
 
 CUPED and the panel estimator achieve 90% power with 500 observations, while the difference in means-estimator requires a sample that is orders of magnitude larger.
-To conclude, we should mention that these effects stem from a stylized exmaple data set - in practice, the gains from CUPED / panel methods for variance reduction are much lower -
+To conclude, we should mention that these effects stem from a stylized example data set - in practice, the gains from CUPED / panel methods for variance reduction are much lower -
 companies with access to high quality panel data report reductions of 10% to 50% (see e.g. this paper by [Microsoft Bing](https://exp-platform.com/Documents/2013-02-CUPED-ImprovingSensitivityOfControlledExperiments.pdf)).
 
 ## When does CUPED not work?
