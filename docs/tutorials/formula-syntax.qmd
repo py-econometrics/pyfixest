@@ -18,7 +18,7 @@ data = pf.get_data()
 data.head()
 ```
 
-`PyFixest` specifies different regression models by Wilkinson Formulas via the `formulaic` package. Wilkinson formulas should be familiar to you if you have used R's `lm()` or `statsmodels` formula API. Many additional ideas implemented in `PyFixest`  have been developed in the `fixest` package (most notably multiple estimation syntax, the i-operator, sample splitting). By default, all formula options presented here are supported by all models available via the `pf.feols()`, `pf.feglm()`, and `pf.fepois()` APIs.
+`PyFixest` specifies different regression models by Wilkinson Formulas via the `formulaic` package. Wilkinson formulas should be familiar to you if you have used R's `lm()` or `statsmodels` formula API. Many additional ideas implemented in `PyFixest`  have been developed in the `fixest` package (most notably multiple estimation syntax, the i-operator, sample splitting). With one exception, all formula options presented here are supported by all models available via the `pf.feols()`, `pf.feglm()`, and `pf.fepois()` APIs: the instrument block for IV estimation is only available in `pf.feols()`.
 
 ## Basic Syntax
 
@@ -166,7 +166,7 @@ fit_i1 = pf.feols("Y ~ i(f1, ref = 1)", data=data)
 You can also easily interact variables:
 
 ```{python}
-# set 1 as reference level
+# interact the levels of f1 with f2 (continuous slope)
 fit_i2 = pf.feols("Y ~ i(f1, f2)", data=data)
 ```
 

@@ -14,7 +14,7 @@ toc-title: "On this page"
 
 ::: {.callout-note}
 ## Migration Notice
-Starting with pyfixest 0.41.0 (currently in development), the table functionality is powered by [maketables](https://py-econometrics.github.io/maketables/).
+Since pyfixest 0.50.0, the table functionality is powered by [maketables](https://py-econometrics.github.io/maketables/).
 The `pf.etable()` API remains unchanged and `pf.make_table()` has been removed (use `maketables.MTable()` directly).
 :::
 
@@ -268,13 +268,13 @@ fit9 = pf.feols("Y ~ X1 + X2 + i(job,ref='Managerial') + i(job,X2,ref='Manageria
 pf.etable([fit9], labels=labels, cat_template="{value}")
 ```
 
-Notice that this process will change the `_coefnames`. In this example, the new `_coefnames` are:
+Notice that this process will change the coefficient names. In this example, the new coefficient names are:
 ```{python}
-fit9._coefnames
+fit9.coef().index.tolist()
 ```
 
 ## Custom model headlines
-You can also add custom headers for each model by passing a list of strings to the `model_headers` argument.
+You can also add custom headers for each model by passing a list of strings to the `model_heads` argument.
 
 
 ```{python}
@@ -310,7 +310,7 @@ pf.etable(
 ```
 
 ## Further custom model information
-You can add further custom model statistics/information to the bottom of the table by using the `custom_stats` argument to which you pass a dictionary with the name of the row and lists of values. The length of the lists must be equal to the number of models.
+You can add further custom model statistics/information to the bottom of the table by using the `custom_model_stats` argument to which you pass a dictionary with the name of the row and lists of values. The length of the lists must be equal to the number of models.
 
 
 ```{python}
@@ -413,7 +413,7 @@ DTable(
 
 
 ## Summarize by characteristics in columns and rows
-You can summarize by characteristics using the `bycol` argument when groups are to be displayed in columns. When the number of observations is the same for all variables in a group, you can also opt to display the number of observations only once for each group byin a separate line at the bottom of the table with `counts_row_below==True`.
+You can summarize by characteristics using the `bycol` argument when groups are to be displayed in columns. When the number of observations is the same for all variables in a group, you can also opt to display the number of observations only once for each group byin a separate line at the bottom of the table with `counts_row_below=True`.
 
 
 ```{python}
@@ -439,7 +439,7 @@ DTable(
 
 You can also use custom aggregation functions to compute further statistics or affect how statistics are presented. Pyfixest provides two such functions `mean_std` and `mean_newline_std` which compute the mean and standard deviation and display both the same cell (either with line break between them or not). This allows to have more compact tables when you want to show statistics for many characteristcs in the columns.
 
-You can also hide the display of the statistics labels in the header with `hide_stats_labels=True`. In that case a table note will be added naming the statistics displayed using its label (if you have not provided a custom note).
+You can also hide the display of the statistics labels in the header with `hide_stats=True`. In that case a table note will be added naming the statistics displayed using its label (if you have not provided a custom note).
 
 
 ```{python}

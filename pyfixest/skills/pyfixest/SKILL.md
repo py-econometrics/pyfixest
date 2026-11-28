@@ -32,8 +32,11 @@ fit.coef()["X1"]  # coef(), se(), tstat(), pvalue() return Series by coefficient
 pf.etable([fit], type="md")  # prints a Markdown table
 ```
 
-Rows with missing values and observations in singleton fixed-effect groups
-are dropped (with a warning); the sample size is `fit.sample_info.n_obs`.
+Dropped rows include rows with a missing value and the row of each singleton.
+Singletons (as well as infinite values, zero weights, and separated Poisson
+observations) raise a warning; rows with missing values are dropped silently.
+The sample size is `fit.sample_info.n_obs`, and
+`fit.sample_info.dropped_by_stage` holds the number of dropped rows per stage.
 
 ## Estimation functions
 
