@@ -482,15 +482,15 @@ def feols(
     fit = pf.feols("y ~ x1 + x21 + x22 + x23", data=data_gelbach)
 
     # simple decomposition
-    res = fit.decompose(param = "x1")
+    res = fit.decompose(decomp_var = "x1")
     res.etable()
 
     # group covariates via "combine_covariates" argument
-    res = fit.decompose(param = "x1", combine_covariates={"g1": ["x21", "x22"], "g2": ["x23"]})
+    res = fit.decompose(decomp_var = "x1", combine_covariates={"g1": ["x21", "x22"], "g2": ["x23"]})
     res.etable()
 
     # group covariates via regex
-    res = fit.decompose(param="x1", combine_covariates={"g1": re.compile("x2[1-2]"), "g2": re.compile("x23")})
+    res = fit.decompose(decomp_var="x1", combine_covariates={"g1": re.compile("x2[1-2]"), "g2": re.compile("x23")})
     ```
 
     Objects of type `Feols` support a range of other methods to conduct inference.

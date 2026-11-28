@@ -196,7 +196,14 @@ class ResultAccessorMixin(TidyColumnAccessors):
         """Compute coefficient-wise SAVI sequential p-values.
 
         The sequential-p-value analogue of `evalue`. See `evalue` for the
-        `mixture_precision` argument and the supported-model restrictions.
+        supported-model restrictions.
+
+        Parameters
+        ----------
+        mixture_precision : float, optional
+            Positive mixture precision fixed before sequential monitoring.
+            Defaults to 1. Use `pyfixest.optimal_mixture_precision()` to
+            minimize confidence-sequence width at a target sample size.
 
         Returns
         -------

@@ -2207,13 +2207,12 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
             the optional `numba` extra (install via `pip install pyfixest[numba]`);
             without it, the fast path raises an `ImportError`. The slow path
             does not require numba.
-        include_plot: bool, optional
-            Whether to include a plot of the distribution p-values. Defaults to False.
         store_ritest_statistics: bool, optional
             Whether to store the simulated statistics of the RI procedure.
             Defaults to False. If True, publishes the draws, the centered
             sample statistic, and the p-value as a `RitestStatistics` value
-            in the model's `ritest_statistics` attribute.
+            in the model's `ritest_statistics` attribute, which `plot_ritest()`
+            plots.
         level: float, optional
             The level for the confidence interval of the randomization inference
             p-value. Defaults to 0.95.

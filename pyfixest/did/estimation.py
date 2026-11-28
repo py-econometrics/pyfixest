@@ -230,6 +230,10 @@ def did2s(
         The name of the cluster variable.
         Inference is fixed at estimation time, and
         post-estimation ``vcov()`` updates are rejected.
+    weights : str, optional
+        The name of the column in `data` that holds the analytic observation
+        weights. They are used in both stages. Default is None, which weights
+        all observations equally.
 
     Returns
     -------
@@ -355,11 +359,18 @@ def lpdid(
         The type of inference to employ. Defaults to {"CRV1": idname}.
         Options include "iid", "hetero", or a dictionary like {"CRV1": idname}.
     pre_window : int, optional
-        The number of periods before the treatment to include in the estimation.
-        Default is the minimum relative year in the data.
+        The earliest event time to estimate, given as a negative number. For
+        example, `pre_window=-20` estimates event times -20 through -2 (event
+        time -1 is the reference). It must equal an event time that occurs in
+        the data. Default is the minimum event time in the data. Unused during
+        estimation when `att=True` (still validated against observed event
+        times).
     post_window : int, optional
-        The number of periods after the treatment to include in the estimation.
-        Default is the maximum relative year in the data.
+        The latest event time to estimate, given as a non-negative number. For
+        example, `post_window=20` estimates event times 0 through 20 (with
+        `att=True`, the pooled ATT over these event times). It must equal an
+        event time that occurs in the data. Default is the maximum event time
+        in the data.
     never_treated : int, optional
         Value in gname indicating units never treated. Default is 0.
     att : bool, optional
