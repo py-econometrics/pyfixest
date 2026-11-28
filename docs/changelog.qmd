@@ -42,6 +42,10 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
 
 ### Bug Fixes
 
+- `quantreg(vcov="hetero")` now uses observation-level Gaussian kernel weights
+  in the heteroskedasticity-robust sandwich covariance, matching R
+  `quantreg::summary.rq(se="ker")` instead of collapsing algebraically to IID
+  standard errors. See [#1744](https://github.com/py-econometrics/pyfixest/issues/1744).
 - `etable()`, `summary()`, `iplot()`, `coefplot()`, `qplot()`, `bonferroni()`,
   `rwolf()` and `wyoung()` raise a `ValueError` naming `models` when passed an
   empty list. Before, `summary([])` returned `None` and the others failed with
