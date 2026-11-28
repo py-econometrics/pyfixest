@@ -1235,7 +1235,7 @@ def test_optional_dependency_fallbacks(data, monkeypatch):
         (
             lambda d: feols("Y + Y2 ~ X1", data=d),
             DeprecationWarning,
-            "Specifiying multiple dependent variables",
+            "Specifying multiple dependent variables",
         ),
         (
             lambda d: pf.quantreg("Y ~ X1", data=d.dropna(), quantile=0.5),
@@ -1323,7 +1323,7 @@ def test_wald_test_R_q_column_consistency():
     fml = "dep_var ~ treat"
     fit = feols(fml, data, vcov={"CRV1": "year"}, ssc=ssc(k_adj=False))
 
-    # Test with R.size[1] == number of coeffcients
+    # Test with R.size[1] == number of coefficients
     with pytest.raises(ValueError):
         fit.wald_test(R=np.array([[1, 0, 0]]))
 
@@ -1630,7 +1630,7 @@ def test_gelbach_errors():
 
     with pytest.warns(
         UserWarning,
-        match=r"You have provided combine_covariates, but agg_first is False. We recommend setting agg_first=True as this might massively decrease the computation time \(in particular when boostrapping CIs\)\.",
+        match=r"You have provided combine_covariates, but agg_first is False. We recommend setting agg_first=True as this might massively decrease the computation time \(in particular when bootstrapping CIs\)\.",
     ):
         fit.decompose(
             decomp_var="x1", combine_covariates={"g1": ["x21"]}, agg_first=False

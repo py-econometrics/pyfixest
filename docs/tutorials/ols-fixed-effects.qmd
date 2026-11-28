@@ -1,6 +1,6 @@
 ---
 title: "OLS with Fixed Effects"
-description: "Twin studies and 'AKM' regressions in worker-firm panels: two cases studies in controlling for unobserved heterogeneity with fixed effects."
+description: "Twin studies and 'AKM' regressions in worker-firm panels: two case studies in controlling for unobserved heterogeneity with fixed effects."
 categories: [Core Estimation]
 format:
   html:
@@ -24,18 +24,18 @@ $$
 Y_{it} = \beta X_{it} + \alpha_i + \psi_t + \varepsilon_{it}
 $$
 
-where $\alpha_i$ is an individual fixed effect (constant across time) and $\psi_t$ is a time fixed effect (constant across individuals). Fixed effects are not limited to panel data - any categorical grouping variable can serve as a fixed effect (for example, wage regressions with worker and firm FE) - more on that topic later!).
+where $\alpha_i$ is an individual fixed effect (constant across time) and $\psi_t$ is a time fixed effect (constant across individuals). Fixed effects are not limited to panel data - any categorical grouping variable can serve as a fixed effect (for example, wage regressions with worker and firm FE - more on that topic later!).
 
-`PyFixest` efficiently estimates fixed effects models by applying the [Frisch-Waugh-Lovell](https://mattblackwell.github.io/gov2002-book/least_squares.html#residual-regression) , which, among other things, avoids the need to create hundreds of dummy variables.
+`PyFixest` efficiently estimates fixed effects models by applying the [Frisch-Waugh-Lovell](https://mattblackwell.github.io/gov2002-book/least_squares.html#residual-regression) theorem, which, among other things, avoids the need to create hundreds of dummy variables.
 
-In the following section, we introduce two chanonical use cases of fixed effects regression.
+In the following section, we introduce two canonical use cases of fixed effects regression.
 
 ## Application 1: Twin Studies and the Returns to Education
 
-One of the most foundational question in the economics of education is "wow much does an extra year of education raise wages"?
-If we were to simply regress years of education on realized wages, we would likely overstates the return to education as there is a selection bias: *ability* drives both education and wages. Or, in other words, kids with high innate (but unobserved) ability end up with more years of education, but also higher wages! The relation between education and wages might be spurios, as both are driven by the same latent factor.
+One of the most foundational questions in the economics of education is "how much does an extra year of education raise wages"?
+If we were to simply regress years of education on realized wages, we would likely overstate the return to education as there is a selection bias: *ability* drives both education and wages. Or, in other words, kids with high innate (but unobserved) ability end up with more years of education, but also higher wages! The relation between education and wages might be spurious, as both are driven by the same latent factor.
 
- Twin studies aim to correct for this selection effect by comparing twins who share the same genetic endowment. If the latent innate ability is encoded in the genome, then twins with identical gene should have the same latent ability. Under this assumption, any difference in educational attainment between twins is not driven by innate ability. As a result any within‑twin difference in wages can be attributed to differences in schooling rather than unobserved ability.
+ Twin studies aim to correct for this selection effect by comparing twins who share the same genetic endowment. If the latent innate ability is encoded in the genome, then twins with identical genes should have the same latent ability. Under this assumption, any difference in educational attainment between twins is not driven by innate ability. As a result any within‑twin difference in wages can be attributed to differences in schooling rather than unobserved ability.
 
  In practice, twin fixed‑effects regressions compare each twin to their sibling, netting out shared genes and family background. The estimated coefficient on schooling then captures the causal return to education under the assumption that the only remaining differences between twins are not systematically related to both schooling and wages.
 

@@ -42,3 +42,8 @@ repos:
         types_or: [jupyter, pyi, python]
       - id: ruff-format
         types_or: [jupyter, pyi, python]
+  - repo: https://github.com/codespell-project/codespell
+    rev: v2.4.3
+    hooks:
+      - id: codespell
+        additional_dependencies: [tomli]

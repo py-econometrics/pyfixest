@@ -306,7 +306,7 @@ estimators are implemented (beyond the already-presented saturated Sun-Abraham a
 
 ### Gardner's 2-Step Estimator
 
-To do the same via Gardners 2-stage estimator, we employ the the `pf.did2s()` function:
+To do the same via Gardner's 2-stage estimator, we employ the `pf.did2s()` function:
 
 ```{python}
 fit_did2s = pf.did2s(

@@ -1,6 +1,6 @@
 ---
 title: "Formula Syntax"
-description: "In this tutorial, we showcase all of PyFixest formulas syntax; including syntax for fitting models with fixed effects, interactions, and multiple-estimation operators."
+description: "In this tutorial, we showcase all of PyFixest's formula syntax; including syntax for fitting models with fixed effects, interactions, and multiple-estimation operators."
 categories: [Core Estimation]
 format:
   html:
@@ -275,7 +275,7 @@ y ~ csw(x1, x2, ..., x16) | indiv_id + firm_id + year
 
 to demonstrate the speed gains possible with multiple estimation and caching.
 
-In the specified multiple estimation formula, we fit sixteen models via one`csw()` call. Those sixteen models fit can be sped up by caching already demeaned variables. The idea is very simple - after the first fit, `y` and `x1` are already demeaned, so we do not have to do it
+In the specified multiple estimation formula, we fit sixteen models via one `csw()` call. Those sixteen model fits can be sped up by caching already demeaned variables. The idea is very simple - after the first fit, `y` and `x1` are already demeaned, so we do not have to do it
 again in fit 2. After fit 2, `x2` is demeaned, so we do not need to do it again in fit 3, and so on.
 
 In contrast, if you fit the sixteen models one by one, you have to demean `y` and `x1` in all 16 specifications and set up the preconditioner for every fit.

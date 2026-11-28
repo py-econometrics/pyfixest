@@ -72,9 +72,9 @@ We see that half of our users are treated after half the time.
 
 In the next step, we will look at three different ways to compute the average treatment effect of our feature on the outcome:
 
-- First, we will compute a standard "difference in means" estimator and conduct a two-sampled t-test for inference. We do this both by hand and by means of linear regression. While standard, we will show that this estimator is relatively inefficient as it throws aways valuable information from the pre-treatment periods.
+- First, we will compute a standard "difference in means" estimator and conduct a two-sampled t-test for inference. We do this both by hand and by means of linear regression. While standard, we will show that this estimator is relatively inefficient as it throws away valuable information from the pre-treatment periods.
 - In a second step, we improve on the difference in means estimator and include pre-treatment measures of the outcome variable to our regression model. In the tech blog world, this method
-  is often referred to as CUPED (which stands for "Controlled-experiment Using Pre-Experiment Data" as far as we know). We will demonstrate that CUPED uted leads to a significant reduction in the variance of our estimators. Pre-treatment averages are a "good control" variable because a) under uncondional randomization, pre-treatment averages should be uncorrelated of the treatment assignment and b) pre-treatment averages should be highly predictive of the post-treatment outcome. The intuition here is simply that users will behave similarly "after" the experiment starts / when receiving the treatment than they did before.
+  is often referred to as CUPED (which stands for "Controlled-experiment Using Pre-Experiment Data" as far as we know). We will demonstrate that CUPED leads to a significant reduction in the variance of our estimators. Pre-treatment averages are a "good control" variable because a) under unconditional randomization, pre-treatment averages should be uncorrelated of the treatment assignment and b) pre-treatment averages should be highly predictive of the post-treatment outcome. The intuition here is simply that users will behave similarly "after" the experiment starts / when receiving the treatment than they did before.
 - In a third step, we show that instead of using pre-treatment averages as a regressor, we can simply fit a panel model and control for user and time fixed effect.
 
 All three estimators identify the same average treatment effect, but the CUPED and panel estimator are much more efficient: they produce lower variances.
@@ -132,7 +132,7 @@ def _difference_in_means_pd(data):
 _difference_in_means_pd(data)
 ```
 
-Because linear regression is just a fency way to compute and compare differences, we could also have estimated this via `pf.feols()`:
+Because linear regression is just a fancy way to compute and compare differences, we could also have estimated this via `pf.feols()`:
 
 ```{python}
 def _difference_in_means(data):
@@ -157,7 +157,7 @@ of our users at hand, and we should use it in our favor!
 
 More specifically, instead of throwing away all of the pre-experimental measures, we could instead have used them as pre-treatment regressors!
 
-This should help reduce the variance of our estimators because pre-experimental behavior is likely to be highly predicitive of what users do after the launch of the experiment. Consequently, including these baselines in our regression models should help us "explain residual errors" and thereby reduce the variance of our
+This should help reduce the variance of our estimators because pre-experimental behavior is likely to be highly predictive of what users do after the launch of the experiment. Consequently, including these baselines in our regression models should help us "explain residual errors" and thereby reduce the variance of our
 estimators.
 
 If this works, it's great news, as it allows us to run the same experiment on a smaller number of users and still achieve the same level of power!
@@ -257,15 +257,15 @@ pf.etable(
 )
 ```
 
-The panel errors produces point estimates and standard errors for the treatment variable that are very close to CUPED.
+The panel estimator produces point estimates and standard errors for the treatment variable that are very close to CUPED.
 
-The sceptical reader might now object that this is all far from overwhelming evidence. After all , we fit each model only once! So it might well be
+The sceptical reader might now object that this is all far from overwhelming evidence. After all, we fit each model only once! So it might well be
 that we were just lucky and our results are driven by sampling error. In the next section, we will argue that this is not the case by means of a monte carlo simulation.
 
 ### Digression: Heterogeneous Effects over Time via Panel Estimators
 
 One example of the panel estimator is that it allows us to track treatment effects over time. This allows us to track novelty effects where in the beginning,
-users interact a lot with a new feature, i.e. they spend a lot of time playing a gamee, but over time lose interest.
+users interact a lot with a new feature, i.e. they spend a lot of time playing a game, but over time lose interest.
 
 ```{python}
 fit_panel_time = pf.feols(
@@ -289,7 +289,7 @@ For more examples, see the paper by [Lal et al](https://arxiv.org/abs/2410.09952
 
 ## Monte Carlo Simulation
 
-To rule out that the examples above were purely do to look, we simply repeat them a couple of times using a monte carlo simulation.
+To rule out that the examples above were purely due to luck, we simply repeat them a couple of times using a monte carlo simulation.
 
 ```{python}
 def _variance_monte_carlo(data):
@@ -413,7 +413,7 @@ display(power_df)
 ```
 
 CUPED and the panel estimator achieve 90% power with 500 observations, while the difference in means-estimator requires a sample that is orders of magnitude larger.
-To conclude, we should mention that these effects stem from a stylized exmaple data set - in practice, the gains from CUPED / panel methods for variance reduction are much lower -
+To conclude, we should mention that these effects stem from a stylized example data set - in practice, the gains from CUPED / panel methods for variance reduction are much lower -
 companies with access to high quality panel data report reductions of 10% to 50% (see e.g. this paper by [Microsoft Bing](https://exp-platform.com/Documents/2013-02-CUPED-ImprovingSensitivityOfControlledExperiments.pdf)).
 
 ## When does CUPED not work?

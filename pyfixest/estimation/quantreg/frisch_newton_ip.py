@@ -93,7 +93,7 @@ def _solve_ADAt(
 def cold_start(
     A: np.ndarray, c: np.ndarray, q: float, chol: np.ndarray, P: np.ndarray
 ) -> tuple[np.ndarray, ...]:
-    "Initiatiate Frisch-Newton solver with a cold start."
+    "Initiate Frisch-Newton solver with a cold start."
     n = A.shape[1]
     x = np.full(n, 1.0 - q)
 

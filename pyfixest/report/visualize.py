@@ -439,7 +439,7 @@ def qplot(
     Returns
     -------
     object
-        A matplotplit figure.
+        A matplotlib figure.
 
     Examples
     --------

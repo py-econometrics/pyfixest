@@ -119,7 +119,7 @@ pf.coefplot(
 )
 ```
 
-We see that the fixed effect design gives us estimates that are much closer to the model in which we correctly control for the unoberserved confounder. By controlling for twin fixed effects, we have managed to control for an unobserved confounder, ability.
+We see that the fixed effect design gives us estimates that are much closer to the model in which we correctly control for the unobserved confounder. By controlling for twin fixed effects, we have managed to control for an unobserved confounder, ability.
 
 ## Where to Go Next
 

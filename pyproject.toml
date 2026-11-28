@@ -170,6 +170,10 @@ convention = "numpy"
 docstring-code-format = true
 docstring-code-line-length = 88
 
+[tool.codespell]
+skip = "docs/_freeze,docs/_site,docs/reference,docs/developer,.agents,AGENTS.md,GLOSSARY.md,*.lock,*.ipynb,*.csv,*.bib,*.svg,*.json,tests/snapshots"
+ignore-words-list = "aer,burnin,coo,complier,compliers,datas,missings,shat,te"
+
 [tool.ty.analysis]
 replace-imports-with-any = ["formulaic", "formulaic.**"]
 [tool.ty.src]

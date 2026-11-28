@@ -10,7 +10,7 @@ toc: true
 toc-title: "On this page"
 ---
 
-The `fixest` R package provides various options for small-sample corrections. While it has an excellent [vignette](https://cran.r-project.org/web/packages/fixest/vignettes/standard_errors.html) on the topic, reproducing its behavior in `pyfixest` took more time than expected. So that future developers (and my future self) can stay sane, I’ve compiled all of my hard-earned understanding of how small-sample corrections work in `fixest` and how they are implemented in `pyfixest` in this document.
+This page documents how small-sample corrections work in `fixest` and how `pyfixest` implements them. The `fixest` R package provides various options for small-sample corrections, which its [vignette](https://cran.r-project.org/web/packages/fixest/vignettes/standard_errors.html) describes in detail.
 
 In both `fixest` and `pyfixest`, small-sample corrections are controlled by the `ssc` function. In `pyfixest`, `ssc` accepts four arguments: `k_adj`, `G_adj`, `k_fixef` and `G_df`.
 
@@ -105,7 +105,7 @@ Where:
 - `G` is the number of clusters for clustered errors, or `N` for heteroskedastic errors.
 - This follows the approach in R’s `sandwich` package, interpreting heteroskedastic errors as “singleton clusters.”
 
-> *Tip:* If `G_adj = True` for IID errors, `G_df_val` defaults to `1`. For *heteroskedastic erros*, despite its name, `G_adj=True` will apply an adjustment of (N-1) / N, as there are $G = N$ singleton clusters.
+> *Tip:* If `G_adj = True` for IID errors, `G_df_val` defaults to `1`. For *heteroskedastic errors*, despite its name, `G_adj=True` will apply an adjustment of (N-1) / N, as there are $G = N$ singleton clusters.
 
 ---
 
