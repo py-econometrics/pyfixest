@@ -22,7 +22,7 @@ fit = pf.feols("Y ~ X1 + X2 | f1", data, vcov={"CRV1": "f1"})
 | `i(f, k)`, numeric `k` | `i(f, k)`: one `k` slope per level of `f` |
 | `i(f, i.k)`, `i(f, factor(k))` | `i(f, C(k))` |
 | `i(f, keep = ...)` | no `keep`; filter rows or merge levels with `bin=` |
-| `\| f1^f2` | `\| f1:f2` (`^` still runs, with a `DeprecationWarning`) |
+| `\| f1^f2` | `\| f1:f2` (`^` still runs, with a `PyfixestDeprecationWarning`) |
 | `\| f1[x]`, `\| f1[[x]]` | same |
 | `y ~ x \| f \| d ~ z` | `y ~ x + [d ~ z] \| f` |
 | `y ~ x \| d ~ z` | `y ~ x + [d ~ z]` |

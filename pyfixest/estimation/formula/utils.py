@@ -8,7 +8,7 @@ import pandas as pd
 from formulaic.parser.algos import tokenize
 from formulaic.parser.types import Token
 
-from pyfixest.errors import FormulaSyntaxError
+from pyfixest.errors import FormulaSyntaxError, PyfixestDeprecationWarning
 from pyfixest.utils.dev_utils import _find_stack_level
 
 
@@ -119,7 +119,7 @@ def _preprocess_fixed_effect_interactions(formula: str) -> str:
         "The `^` operator for fixed-effect interactions is deprecated and will "
         "throw an error in a future version. "
         f"Instead of `{formula_old}` use `{formula}`",
-        DeprecationWarning,
+        PyfixestDeprecationWarning,
         stacklevel=_find_stack_level(),
     )
     return formula
@@ -189,7 +189,7 @@ def _preprocess_fixest_instrumental_variable(formula: str) -> str:
     warnings.warn(
         "The fixest-style syntax for instrumental variable regressions is deprecated and will throw an error in a future version. "
         f"Instead of `{formula_old}` use `{formula}`",
-        DeprecationWarning,
+        PyfixestDeprecationWarning,
         stacklevel=_find_stack_level(),
     )
     return formula
@@ -214,7 +214,7 @@ def _preprocess_fixest_multiple_dependents(formula: str) -> str:
         warnings.warn(
             "Specifiying multiple dependent variables with `+` is deprecated and will throw an error in a future version. "
             f"Instead of `{formula_old}` use `{formula}`",
-            DeprecationWarning,
+            PyfixestDeprecationWarning,
             stacklevel=_find_stack_level(),
         )
     return formula

@@ -18,7 +18,11 @@ from within import Effect
 
 from pyfixest.core.demean import Preconditioner
 from pyfixest.demeaners import LsmrDemeaner
-from pyfixest.errors import EmptyEstimationSampleError, VcovTypeNotSupportedError
+from pyfixest.errors import (
+    EmptyEstimationSampleError,
+    PyfixestDeprecationWarning,
+    VcovTypeNotSupportedError,
+)
 from pyfixest.estimation.formula import FORMULAIC_TRANSFORMS
 from pyfixest.estimation.formula.formulaic_compat import (
     formula_required_variables,
@@ -1757,7 +1761,7 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
         if has_param:
             warnings.warn(
                 "The 'param' argument is deprecated. Please use 'decomp_var' instead.",
-                FutureWarning,
+                PyfixestDeprecationWarning,
                 stacklevel=_find_stack_level(),
             )
             decomp_var = param

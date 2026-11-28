@@ -182,7 +182,7 @@ pf.feols("Y ~ X1 | f1", data, fsplit="f3")  # full sample first, then each value
 
 ## Spellings that changed in 0.70
 
-These still run with a `DeprecationWarning`:
+These still run with a `PyfixestDeprecationWarning`:
 
 ```text
 Y ~ X1 | f1^f2          ->  Y ~ X1 | f1:f2

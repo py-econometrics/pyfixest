@@ -113,7 +113,7 @@ fit_iv = pf.feols("Y ~ X2 + [X1 ~ Z1] | f1 + f2", data=data)
 ## Legacy IV syntax is deprecated
 
 The former fixest-style syntax, `Y ~ X2 | f1 + f2 | X1 ~ Z1`, still works in
-0.70, but raises a `DeprecationWarning` and will become an error in a future
+0.70, but raises a `PyfixestDeprecationWarning` (a `FutureWarning`) and will become an error in a future
 release. Update formulas to the bracketed syntax above. See the
 [Formulas Parsed by `formulaic` section of the changelog](/changelog.qmd#formulas-parsed-by-formulaic)
 for the full set of formula-parsing changes in 0.70.
