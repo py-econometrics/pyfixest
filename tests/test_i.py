@@ -507,7 +507,9 @@ def df_unused_categories(df_test) -> pd.DataFrame:
 def test_unused_categories(df_unused_categories, r_fml, py_fml):
     """Unused categories of a categorical produce no columns, as in fixest."""
     with warnings.catch_warnings():
-        warnings.filterwarnings("error", message=r"\s*\d+ variables dropped")
+        warnings.filterwarnings(
+            "error", message=r"\d+ collinear regressors? (was|were) dropped"
+        )
         py_names, py_values, r_names, r_values = compare_with_r(
             r_fml, df_unused_categories, py_fml
         )
@@ -540,7 +542,7 @@ def test_levels_fixed_before_missing_row_filter(df_unused_categories, r_fml, py_
     """Levels observed only on excluded rows still affect reference selection."""
     df = df_unused_categories.copy()
     df.loc[(df["f_str"] == "apple") | (df["g"] == "X"), "Y"] = np.nan
-    with pytest.warns(UserWarning, match="variables dropped"):
+    with pytest.warns(UserWarning, match="collinear regressors? (was|were) dropped"):
         py_names, py_values, r_names, r_values = compare_with_r(r_fml, df, py_fml)
     assert_models_match(py_names, py_values, r_names, r_values)
 

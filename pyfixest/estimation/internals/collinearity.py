@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import warnings
+from typing import Literal
 
 import numpy as np
 
@@ -13,6 +14,7 @@ def drop_multicollinear_variables(
     X: np.ndarray,
     names: list[str],
     collin_tol: float,
+    matrix: Literal["design", "instrument"] = "design",
 ) -> tuple[np.ndarray, CollinearityCheck]:
     """
     Check for collinear regressors and instruments in the design and instrument matrices.
@@ -25,6 +27,8 @@ def drop_multicollinear_variables(
         The names of the coefficients.
     collin_tol : float
         The tolerance level for the multicollinearity check.
+    matrix : {"design", "instrument"}
+        The matrix that `X` holds. It only selects the wording of the warning.
 
     Returns
     -------
@@ -53,19 +57,26 @@ def drop_multicollinear_variables(
     names_array = np.array(names)
     if n_excl > 0:
         collin_vars = names_array[id_excl].tolist()
+        shown = repr(collin_vars[:5])
         if len(collin_vars) > 5:
-            indent = "    "
-            formatted_collinear_vars = (
-                f"\n{indent}" + f"\n{indent}".join(collin_vars[:5]) + f"\n{indent}..."
+            shown = shown[:-1] + ", ...]"
+        n_collin = len(collin_vars)
+        singular = n_collin == 1
+        if matrix == "instrument":
+            message = (
+                f"{n_collin} {'column' if singular else 'columns'} of the "
+                f"instrument matrix {'is' if singular else 'are'} collinear and "
+                f"{'was' if singular else 'were'} dropped: {shown}."
             )
         else:
-            formatted_collinear_vars = str(collin_vars)
+            message = (
+                f"{n_collin} collinear {'regressor' if singular else 'regressors'} "
+                f"{'was' if singular else 'were'} dropped from the design matrix "
+                f"and {'gets' if singular else 'get'} no coefficient: {shown}."
+            )
 
         warnings.warn(
-            f"""
-            {len(collin_vars)} variables dropped due to multicollinearity.
-            The following variables are dropped: {formatted_collinear_vars}.
-            """,
+            message,
             UserWarning,
             stacklevel=_find_stack_level(),
         )

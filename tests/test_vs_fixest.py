@@ -1693,7 +1693,7 @@ def test_wls_zero_weights(fml):
     data = get_data().dropna()
     data.loc[data.index[:5], "weights"] = 0.0
 
-    with pytest.warns(UserWarning, match="5 rows with zero weight dropped"):
+    with pytest.warns(UserWarning, match="Dropped 5 rows with zero weight"):
         fit_py = feols(fml, data=data, weights="weights", vcov="hetero")
     fit_r = fixest.feols(
         ro.Formula(fml),
@@ -2009,7 +2009,7 @@ def test_inf_dropping(fml, weights):
     n_zeros = (data.Y == 0).sum()
     with pytest.warns(
         UserWarning,
-        match=f"{n_zeros} rows with infinite values dropped from the model.",
+        match=f"Dropped {n_zeros} rows with an infinite value.",
     ):
         fit_py = feols(fml=fml, data=data, weights=weights, fixef_rm="none")
 

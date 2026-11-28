@@ -94,9 +94,7 @@ def test_separation_fe():
             "X": rng.normal(0, 1, 6),
         }
     )
-    with pytest.warns(
-        UserWarning, match="2 observations removed because of separation."
-    ):
+    with pytest.warns(UserWarning, match="Dropped 2 rows because of separation."):
         fepois("Y ~ X  | fe1", data=example1, vcov="hetero", separation_check=["fe"])
 
 

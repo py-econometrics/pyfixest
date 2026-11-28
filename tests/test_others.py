@@ -509,7 +509,9 @@ def test_fixef_excludes_singleton_levels_from_prediction():
         }
     )
 
-    with pytest.warns(UserWarning, match="1 singleton fixed effect"):
+    with pytest.warns(
+        UserWarning, match="Dropped 1 row in a singleton fixed-effect level"
+    ):
         fit = feols("Y ~ X1 | g:h", data=df)
 
     prediction = fit.predict(newdata=df)

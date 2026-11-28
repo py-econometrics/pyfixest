@@ -86,8 +86,11 @@ def check_for_separation(
         )
 
     if separation_na:
+        n_separated = len(separation_na)
+        rows = "row" if n_separated == 1 else "rows"
         warnings.warn(
-            f"{len(separation_na)!s} observations removed because of separation.",
+            f"Dropped {n_separated} {rows} because of separation. "
+            "`fit.sample_info.dropped_by_stage` holds the counts.",
             UserWarning,
             stacklevel=_find_stack_level(),
         )
