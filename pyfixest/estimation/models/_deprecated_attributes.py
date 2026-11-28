@@ -191,7 +191,10 @@ def _eff_f(fit: Feiv) -> float:
     """0.60 `_eff_F`, set only once `IV_Diag()` or `eff_F()` ran."""
     eff_f = fit.first_stage.diagnostics.eff_f
     if eff_f is None:
-        raise AttributeError("run `IV_Diag()` or `eff_F()` first")
+        raise AttributeError(
+            "`fit.first_stage.diagnostics.eff_f` is not set until "
+            "`fit.IV_Diag()` or `fit.eff_F()` runs"
+        )
     return eff_f
 
 

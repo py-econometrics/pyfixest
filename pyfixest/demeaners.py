@@ -68,18 +68,18 @@ def _require_fixed_effect_codes(
 def _validate_unit_interval_float(value: float, name: str) -> None:
 
     if isinstance(value, bool) or not isinstance(value, Real):
-        raise TypeError(f"`{name}` must be a real number.")
+        raise TypeError(f"`{name}` must be a real number; got {value!r}.")
     if value <= 0:
-        raise ValueError(f"`{name}` must be strictly positive.")
+        raise ValueError(f"`{name}` must be strictly positive; got {value!r}.")
     if value >= 1:
-        raise ValueError(f"`{name}` must be less than one.")
+        raise ValueError(f"`{name}` must be less than one; got {value!r}.")
 
 
 def _validate_positive_int(value: int, name: str) -> None:
     if isinstance(value, bool) or not isinstance(value, Integral):
-        raise TypeError(f"`{name}` must be an int.")
+        raise TypeError(f"`{name}` must be an int; got {value!r}.")
     if value <= 0:
-        raise ValueError(f"`{name}` must be strictly positive.")
+        raise ValueError(f"`{name}` must be strictly positive; got {value!r}.")
 
 
 def _get_numba_demean() -> Callable[..., tuple[np.ndarray, bool]]:
@@ -333,7 +333,10 @@ class LsmrDemeaner(BaseDemeaner):
         _validate_unit_interval_float(self.fixef_btol, "fixef_btol")
 
         if not isinstance(self.warn_on_cpu_fallback, bool):
-            raise TypeError("`warn_on_cpu_fallback` must be a bool.")
+            raise TypeError(
+                "`warn_on_cpu_fallback` must be a bool; "
+                f"got {self.warn_on_cpu_fallback!r}."
+            )
         if isinstance(self.preconditioner, Preconditioner):
             if self.backend != "within":
                 raise ValueError(

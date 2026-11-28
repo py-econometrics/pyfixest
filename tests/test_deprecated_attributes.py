@@ -59,5 +59,8 @@ def test_removed_names_do_not_shadow_current_internal_state():
 def test_eff_f_reports_diagnostics_requirement_before_it_is_computed():
     data = pf.get_data(N=500, seed=2026).dropna()
     fit = pf.feols("Y ~ X2 + [X1 ~ Z1]", data)
-    with pytest.raises(AttributeError, match=r"run `IV_Diag\(\)` or `eff_F\(\)` first"):
+    with pytest.raises(
+        AttributeError,
+        match=r"not set until `fit.IV_Diag\(\)` or `fit.eff_F\(\)` runs",
+    ):
         _ = fit._eff_F

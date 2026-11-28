@@ -16,7 +16,7 @@ def _check_label_keys_in_covars(label_keys: list[str], covariate_names: list[str
     for label_key in label_keys:
         if label_key not in covariate_names:
             warnings.warn(
-                f"The label key '{label_key}' is not in the covariate names.",
+                f"The `labels` key '{label_key}' is not the name of a plotted coefficient.",
                 UserWarning,
                 stacklevel=_find_stack_level(),
             )

@@ -101,7 +101,7 @@ def event_study(
     ```
     """
     if not isinstance(data, pd.DataFrame):
-        raise TypeError("data must be a pandas DataFrame.")
+        raise TypeError(f"data must be a pandas DataFrame; got {type(data).__name__}.")
     for name, value in (
         ("yname", yname),
         ("idname", idname),
@@ -109,12 +109,13 @@ def event_study(
         ("gname", gname),
     ):
         if not isinstance(value, str):
-            raise TypeError(f"{name} must be a string.")
+            raise TypeError(f"{name} must be a string; got {value!r}.")
     if not (isinstance(xfml, str) or xfml is None):
-        raise TypeError("xfml must be a string or None.")
+        raise TypeError(f"xfml must be a string or None; got {xfml!r}.")
     if not isinstance(estimator, str):
         raise TypeError(
-            "estimator must be a string: one of 'twfe', 'did2s', or 'saturated'."
+            "estimator must be a string, one of 'twfe', 'did2s', or 'saturated'; "
+            f"got {estimator!r}."
         )
     if estimator not in ("twfe", "did2s", "saturated"):
         raise ValueError(
@@ -122,9 +123,9 @@ def event_study(
             f"got {estimator!r}."
         )
     if not isinstance(att, bool):
-        raise TypeError("att must be a boolean.")
+        raise TypeError(f"att must be a boolean; got {att!r}.")
     if not (isinstance(cluster, str) or cluster is None):
-        raise TypeError("cluster must be a string or None.")
+        raise TypeError(f"cluster must be a string or None; got {cluster!r}.")
 
     cluster = idname if cluster is None else cluster
 
